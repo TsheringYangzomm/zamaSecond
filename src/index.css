@@ -1,15 +1,17 @@
-@import "tailwindcss";
 @import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
  
 @theme {
   --font-primary: "Bricolage Grotesque", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
   --font-secondary: "DM Sans", "Inter", "Helvetica Neue", Arial, sans-serif;
  
-  --color-brand-green: #15b63d;
-  --color-brand-yellow: #ffe500;
-  --color-brand-orange: #f59f00;
-  --color-brand-black: #262626;
+  --color-brand-green: #00b94f;
+  --color-brand-green-ink: #007a3d;
+  --color-brand-yellow: #ffde00;
+  --color-brand-orange: #ff7800;
+  --color-brand-black: #202020;
   --color-brand-white: #ffffff;
+  --color-brand-cream: #fffdf5;
  
   /* hand-drawn / wobbly border radii used across cards, buttons, tags */
   --radius-wobbly: 255px 18px 225px 18px / 18px 225px 18px 255px;
@@ -20,8 +22,10 @@
   /* sketch-style offset shadows */
   --shadow-brand: 4px 4px 0 0 var(--color-brand-black);
   --shadow-brand-big: 8px 8px 0 0 var(--color-brand-black);
-  --shadow-brand-soft: 3px 3px 0 0 rgb(38 38 38 / 0.16);
-  --shadow-brand-sm: 3px 3px 0 0 rgb(38 38 38 / 0.16);
+  --shadow-brand-soft: 3px 3px 0 0 color-mix(in srgb, var(--color-brand-black) 16%, transparent);
+  --shadow-brand-sm: 3px 3px 0 0 color-mix(in srgb, var(--color-brand-black) 16%, transparent);
+  --shadow-brand-button: 3px 3px 0 0 var(--color-brand-black);
+  --shadow-brand-hover: 6px 6px 0 0 var(--color-brand-black);
   --shadow-brand-tight: 2px 2px 0 0 var(--color-brand-black);
  
   /* custom breakpoints matched to the original desktop-first media queries
@@ -30,17 +34,46 @@
   --breakpoint-md: 820px;
   --breakpoint-lg: 1060px;
 }
+
+@utility section-shell {
+  width: min(1120px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+@utility deferred-section {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 720px;
+}
+
+@utility brand-pattern {
+  background:
+    radial-gradient(circle at 16px 16px, color-mix(in srgb, var(--color-brand-green) 42%, transparent) 0 4px, transparent 4.5px),
+    radial-gradient(circle at 42px 36px, color-mix(in srgb, var(--color-brand-orange) 48%, transparent) 0 3px, transparent 3.5px),
+    radial-gradient(circle at 64px 12px, color-mix(in srgb, var(--color-brand-yellow) 76%, transparent) 0 3px, transparent 3.5px),
+    var(--color-brand-white);
+  background-size: 78px 62px;
+}
+
+@utility editorial-rule {
+  width: min(100%, 220px);
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-brand-green) 0 55%, var(--color-brand-yellow) 55% 78%, var(--color-brand-orange) 78%);
+}
  
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
+  color-scheme: light;
 }
  
 body {
   background:
-    radial-gradient(rgb(255 229 0 / 0.22) 1px, transparent 1px) 0 0 / 24px 24px,
-    linear-gradient(90deg, rgb(245 159 0 / 0.06) 1px, transparent 1px) 74px 0 / 100% 100%,
-    #ffffff;
+    radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 20%, transparent) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, color-mix(in srgb, var(--color-brand-orange) 6%, transparent) 1px, transparent 1px) 74px 0 / 100% 100%,
+    var(--color-brand-cream);
   overflow-x: hidden;
+  -webkit-tap-highlight-color: color-mix(in srgb, var(--color-brand-yellow) 55%, transparent);
 }
  
 body::before {
@@ -53,14 +86,14 @@ body::before {
     0deg,
     transparent 0,
     transparent 37px,
-    rgb(21 182 61 / 0.075) 38px,
+    color-mix(in srgb, var(--color-brand-green) 8%, transparent) 38px,
     transparent 39px
   );
 }
  
 ::selection {
-  background: #ffe500;
-  color: #262626;
+  background: var(--color-brand-yellow);
+  color: var(--color-brand-black);
 }
  
 /* ---------- Button underline squiggle (::after) ---------- */
@@ -84,8 +117,8 @@ body::before {
 /* ---------- Header tape marks + gradient wash ---------- */
 .site-header {
   background:
-    linear-gradient(105deg, rgb(255 229 0 / 0.36), transparent 34%),
-    rgb(255 255 255 / 0.96);
+    linear-gradient(105deg, color-mix(in srgb, var(--color-brand-yellow) 36%, transparent), transparent 34%),
+    color-mix(in srgb, var(--color-brand-white) 96%, transparent);
 }
 .site-header::before,
 .site-header::after {
@@ -94,8 +127,8 @@ body::before {
   width: 78px;
   height: 22px;
   content: "";
-  background: rgb(255 229 0 / 0.38);
-  border: 2px dashed rgb(38 38 38 / 0.34);
+  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 34%, transparent);
 }
 .site-header::before {
   left: 20%;
@@ -117,9 +150,9 @@ body::before {
   background: linear-gradient(
     90deg,
     transparent 0 8%,
-    #f59f00 8% 20%,
+    var(--color-brand-orange) 8% 20%,
     transparent 20% 32%,
-    #f59f00 32% 68%,
+    var(--color-brand-orange) 32% 68%,
     transparent 68%
   );
   opacity: 0;
@@ -142,7 +175,7 @@ body::before {
   height: 62px;
   content: "";
   opacity: 0.75;
-  border: 3px dashed #15b63d;
+  border: 3px dashed var(--color-brand-green);
   border-radius: 54% 46% 58% 42% / 46% 56% 44% 54%;
   transform: rotate(-12deg);
 }
@@ -154,7 +187,7 @@ body::before {
   height: 58px;
   content: "";
   opacity: 0.72;
-  border-top: 4px dashed #262626;
+  border-top: 4px dashed var(--color-brand-black);
   border-radius: 50%;
   transform: rotate(17deg);
 }
@@ -166,14 +199,14 @@ body::before {
   height: 52px;
   content: "";
   opacity: 0.85;
-  border: 3px solid #f59f00;
+  border: 3px solid var(--color-brand-orange);
   border-radius: 48% 52% 44% 56% / 56% 44% 52% 48%;
   transform: rotate(16deg);
 }
 .hero-h1::after {
   display: inline-block;
   margin-left: 0.1em;
-  color: #f59f00;
+  color: var(--color-brand-orange);
   content: "!";
   transform: rotate(11deg);
 }
@@ -185,7 +218,7 @@ body::before {
   height: 46px;
   content: "";
   opacity: 0.82;
-  border-bottom: 3px dashed #262626;
+  border-bottom: 3px dashed var(--color-brand-black);
   border-radius: 50%;
   transform: rotate(-18deg);
 }
@@ -193,8 +226,8 @@ body::before {
   position: absolute;
   inset: 8% 5% 7%;
   content: "";
-  background: #ffe500;
-  border: 4px solid #262626;
+  background: var(--color-brand-yellow);
+  border: 4px solid var(--color-brand-black);
   border-radius: 42px 24px 52px 28px / 28px 54px 30px 46px;
   box-shadow: var(--shadow-brand-big);
   transform: rotate(-2.5deg);
@@ -206,8 +239,8 @@ body::before {
   width: 104px;
   height: 28px;
   content: "";
-  background: rgb(255 229 0 / 0.38);
-  border: 2px dashed rgb(38 38 38 / 0.28);
+  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 28%, transparent);
   transform: translateX(-50%) rotate(-3deg);
 }
 .harvest-note-shell::before {
@@ -217,8 +250,8 @@ body::before {
   width: 18px;
   height: 18px;
   content: "";
-  background: #f59f00;
-  border: 3px solid #262626;
+  background: var(--color-brand-orange);
+  border: 3px solid var(--color-brand-black);
   border-radius: 50%;
   transform: translateX(-50%);
 }
@@ -231,8 +264,8 @@ body::before {
   width: 72px;
   height: 24px;
   content: "";
-  background: rgb(255 229 0 / 0.38);
-  border: 2px dashed rgb(38 38 38 / 0.3);
+  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: translateX(-50%) rotate(-2deg);
 }
  
@@ -244,7 +277,7 @@ body::before {
   width: 46%;
   height: 14px;
   content: "";
-  border-bottom: 3px dashed rgb(38 38 38 / 0.42);
+  border-bottom: 3px dashed color-mix(in srgb, var(--color-brand-black) 42%, transparent);
   border-radius: 50%;
 }
 .product-row-reverse-shell::after {
@@ -257,13 +290,13 @@ body::before {
   inset: 7% 5%;
   content: "";
   background: #ffffff;
-  border: 4px solid #262626;
+  border: 4px solid var(--color-brand-black);
   border-radius: var(--radius-wobbly-card);
   box-shadow: var(--shadow-brand);
   transform: rotate(-1.8deg);
 }
 .product-art-shell-alt::before {
-  background: #ffe500;
+  background: var(--color-brand-yellow);
   transform: rotate(1.6deg);
 }
 .product-art-shell::after {
@@ -273,9 +306,14 @@ body::before {
   width: 86px;
   height: 24px;
   content: "";
-  background: rgb(255 229 0 / 0.28);
-  border: 2px dashed rgb(38 38 38 / 0.28);
+  background: color-mix(in srgb, var(--color-brand-yellow) 28%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 28%, transparent);
   transform: translateX(-50%) rotate(3deg);
+}
+
+.section-heading > div > h2,
+.section-heading > h2 {
+  color: var(--color-brand-green-ink);
 }
  
 /* ---------- Kit card tape ---------- */
@@ -286,8 +324,8 @@ body::before {
   width: 78px;
   height: 26px;
   content: "";
-  background: rgb(255 229 0 / 0.38);
-  border: 2px dashed rgb(38 38 38 / 0.3);
+  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: rotate(4deg);
 }
  
@@ -299,8 +337,8 @@ body::before {
   width: 96px;
   height: 28px;
   content: "";
-  background: rgb(255 229 0 / 0.38);
-  border: 2px dashed rgb(38 38 38 / 0.3);
+  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: rotate(-3deg);
 }
  
@@ -312,7 +350,7 @@ body::before {
   left: 8%;
   height: 20px;
   content: "";
-  border-top: 4px dashed rgb(38 38 38 / 0.44);
+  border-top: 4px dashed color-mix(in srgb, var(--color-brand-black) 44%, transparent);
   border-radius: 50%;
 }
 @media (max-width: 820px) {
@@ -328,7 +366,7 @@ body::before {
   height: 12px;
   margin-top: 0.7rem;
   content: "";
-  border-bottom: 4px dashed #f59f00;
+  border-bottom: 4px dashed var(--color-brand-orange);
   border-radius: 50%;
   transform: rotate(-2deg);
 }
@@ -342,8 +380,8 @@ body::before {
   width: 18px;
   height: 18px;
   content: "";
-  background: #f59f00;
-  border: 3px solid #262626;
+  background: var(--color-brand-orange);
+  border: 3px solid var(--color-brand-black);
   border-radius: 50%;
   transform: translateX(-50%);
 }
@@ -355,7 +393,7 @@ body::before {
   width: 96px;
   height: 96px;
   content: "";
-  border: 3px dashed #f59f00;
+  border: 3px dashed var(--color-brand-orange);
   border-radius: 50%;
   transform: rotate(10deg);
 }
@@ -368,16 +406,16 @@ body::before {
   width: 112px;
   height: 28px;
   content: "";
-  background: rgb(255 229 0 / 0.38);
-  border: 2px dashed rgb(38 38 38 / 0.3);
+  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: rotate(-3deg);
 }
  
 /* ---------- App preview tape + dotted backdrop ---------- */
 .app-preview-shell {
   background:
-    radial-gradient(rgb(255 229 0 / 0.22) 1px, transparent 1px) 0 0 / 18px 18px,
-    #ffffff;
+    radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 20%, transparent) 1px, transparent 1px) 0 0 / 18px 18px,
+    var(--color-brand-white);
 }
 .app-preview-shell::before {
   position: absolute;
@@ -386,17 +424,17 @@ body::before {
   width: 92px;
   height: 24px;
   content: "";
-  background: rgb(255 229 0 / 0.38);
-  border: 2px dashed rgb(38 38 38 / 0.3);
+  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: translateX(-50%) rotate(-2deg);
 }
  
 /* ---------- Mini map dashed route + dot trail ---------- */
 .mini-map-shell {
   background:
-    linear-gradient(45deg, rgb(255 229 0 / 0.72) 25%, transparent 25%) 0 0 / 28px 28px,
-    linear-gradient(-45deg, rgb(21 182 61 / 0.16) 25%, transparent 25%) 0 0 / 28px 28px,
-    #ffffff;
+    linear-gradient(45deg, color-mix(in srgb, var(--color-brand-yellow) 72%, transparent) 25%, transparent 25%) 0 0 / 28px 28px,
+    linear-gradient(-45deg, color-mix(in srgb, var(--color-brand-green) 16%, transparent) 25%, transparent 25%) 0 0 / 28px 28px,
+    var(--color-brand-white);
 }
 .mini-map-shell::before {
   position: absolute;
@@ -405,10 +443,10 @@ body::before {
   left: 58px;
   height: 0;
   content: "";
-  border-top: 4px dashed #15b63d;
+  border-top: 4px dashed var(--color-brand-green);
 }
 .mini-map-dot {
-  box-shadow: -70px 0 0 -2px #15b63d, 70px 0 0 -2px #15b63d;
+  box-shadow: -70px 0 0 -2px var(--color-brand-green), 70px 0 0 -2px var(--color-brand-green);
 }
  
 /* ---------- Footer link underline ---------- */
@@ -425,6 +463,27 @@ body::before {
 .footer-link:hover::after,
 .footer-link:focus-visible::after {
   opacity: 1;
+}
+
+/* ---------- Readability + motion guardrails ---------- */
+.hero-h1,
+.section-heading {
+  text-wrap: balance;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ---------- Footer watermark logo mask (keeps it inside the footer bounds) ---------- */
