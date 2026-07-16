@@ -6,7 +6,7 @@ import { navLinkClass } from "../ui/styles";
 function DesktopNav() {
   return (
     <nav
-      className="site-nav hidden sm:order-3 sm:col-span-2 sm:flex sm:flex-wrap sm:justify-start sm:gap-[clamp(0.85rem,2.2vw,2.25rem)] sm:text-[1.07rem] lg:order-none lg:col-span-1"
+      className="site-nav hidden sm:order-3 sm:col-span-2 sm:flex sm:flex-wrap sm:justify-start sm:gap-[clamp(0.85rem,2.2vw,2.25rem)] sm:text-[1.07rem] md:order-none md:col-span-1"
       aria-label="Main navigation"
     >
       {navItems.map((item) => (
@@ -21,7 +21,7 @@ function DesktopNav() {
 function MobileNav({ onSelect, isOpen }: { onSelect: () => void; isOpen: boolean }) {
   return (
     <nav
-      className={`grid min-h-0 gap-[0.6rem] overflow-hidden rounded-wobbly-md bg-brand-white shadow-brand transition-[border-width,padding] duration-300 ${isOpen ? "border-3 border-brand-black p-[0.9rem]" : "border-0 p-0"}`}
+      className={`grid min-h-0 gap-[0.6rem] overflow-hidden rounded-wobbly-md bg-brand-warm-white shadow-brand transition-[border-width,padding] duration-300 ${isOpen ? "border-3 border-brand-forest p-[0.9rem]" : "border-0 p-0"}`}
       aria-label="Mobile navigation"
     >
       {navItems.map((item) => (
@@ -42,8 +42,8 @@ export function SiteHeader() {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
-    <header className="site-header relative z-20 mx-auto mt-3 w-[calc(100%-28px)] max-w-280 rounded-[26px_18px_28px_14px/16px_30px_18px_28px] border-3 border-brand-black px-[0.9rem] py-[0.7rem] shadow-brand sm:sticky sm:top-2.5 sm:w-[min(1260px,calc(100%-40px))]">
-      <div className="grid grid-cols-[auto_1fr] items-center gap-[0.9rem] sm:grid-cols-[auto_1fr] sm:gap-[1.4rem] lg:grid-cols-[auto_1fr_auto]">
+    <header className="site-header sticky top-2.5 z-20 mx-auto mt-3 w-[calc(100%-28px)] max-w-280 rounded-[26px_18px_28px_14px/16px_30px_18px_28px] border-3 border-brand-forest px-[0.9rem] py-[0.7rem] shadow-brand sm:w-[min(1260px,calc(100%-40px))]">
+      <div className="grid grid-cols-[auto_1fr] items-center gap-[0.9rem] sm:grid-cols-[auto_1fr] sm:gap-[1.4rem] md:grid-cols-[auto_1fr_auto]">
         <a className="brand inline-flex shrink-0 -rotate-2 items-center" href="#top" aria-label="Zama home">
           <img className="w-20 sm:w-24" src="assets/zama_logo.png" alt="Zama" width="96" height="42" />
         </a>
@@ -52,7 +52,7 @@ export function SiteHeader() {
 
         <div className="header-actions hidden items-center gap-[0.7rem] sm:flex sm:justify-end" aria-label="Primary actions">
           <SmallOutlineLink href="#b2b">Partner with us</SmallOutlineLink>
-          <SmallPrimaryLink href="#waitlist">Join Waitlist</SmallPrimaryLink>
+          <SmallPrimaryLink href="#waitlist">Join launch updates</SmallPrimaryLink>
         </div>
 
         <div className="flex items-center justify-end gap-[0.55rem] sm:hidden">
@@ -61,7 +61,7 @@ export function SiteHeader() {
           </SmallPrimaryLink>
           <button
             type="button"
-            className="grid h-10.5 w-10.5 shrink-0 touch-manipulation place-items-center rounded-wobbly-md border-3 border-brand-black bg-brand-white text-brand-black shadow-brand-tight transition-transform duration-120 ease-in-out active:translate-x-px active:translate-y-px active:shadow-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4"
+            className="grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-wobbly-md border-3 border-brand-forest bg-brand-white text-brand-forest shadow-brand-tight transition-transform duration-120 ease-in-out active:translate-x-px active:translate-y-px active:shadow-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4"
             aria-expanded={menuOpen}
             aria-controls="mobile-menu"
             aria-label={menuOpen ? "Close menu" : "Open menu"}

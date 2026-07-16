@@ -1,121 +1,309 @@
 import { useState, type FormEvent } from "react";
 import { shopProducts } from "../../data/landing";
-import { OutlineLink, PrimaryLink } from "../../components/ui/action-link";
 import { OutlineTag, YellowTag } from "../../components/ui/tag";
 import { btnPrimaryKit, sectionShell } from "../../components/ui/styles";
+import { submitLaunchInterest } from "../../launch-interest";
 
 type ShopProduct = (typeof shopProducts)[number];
+type Basket = Record<string, number>;
 
 const categories = ["All", "Fresh boxes", "Meal kits", "Groceries"] as const;
+type Category = (typeof categories)[number];
+
+const categoryBadgeClasses: Record<ShopProduct["category"], string> = {
+  "Fresh boxes": "bg-brand-lime text-brand-forest",
+  "Meal kits": "bg-brand-purple text-brand-white",
+  Groceries: "bg-brand-orange/18 text-brand-orange-ink",
+};
+
+const categoryRailClasses: Record<ShopProduct["category"], string> = {
+  "Fresh boxes": "border-t-brand-leaf",
+  "Meal kits": "border-t-brand-purple",
+  Groceries: "border-t-brand-orange",
+};
+
+const numberFormatter = new Intl.NumberFormat("en-BT", { maximumFractionDigits: 0 });
+
+function categorySlug(category: Category) {
+  return category.toLowerCase().replaceAll(" ", "-");
+}
+
+function getInitialCategory(): Category {
+  if (typeof window === "undefined") return "All";
+  const requestedCategory = new URLSearchParams(window.location.search).get("category");
+  return categories.find((category) => categorySlug(category) === requestedCategory) ?? "All";
+}
+
+function productPrice(product: ShopProduct) {
+  return product.priceAmount === null ? product.priceLabel : `Nu. ${numberFormatter.format(product.priceAmount)} ${product.priceUnit}`;
+}
 
 function ProductDetail({ product }: { product: ShopProduct }) {
   return (
-    <details className="mt-3 rounded-wobbly-md border-2 border-dashed border-brand-black/42 bg-brand-white/70 px-3 py-2 text-sm text-brand-black">
-      <summary className="cursor-pointer font-bold">Product details</summary>
+    <details className="mt-1 rounded-wobbly-md border-2 border-dashed border-brand-forest/36 bg-brand-buff/70 px-3 py-2 text-sm text-brand-black">
+      <summary className="flex min-h-11 cursor-pointer items-center font-bold focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3">Ingredients, storage & nutrition</summary>
       <dl className="mt-3 grid gap-2">
-        <div className="grid gap-1 sm:grid-cols-[120px_1fr]"><dt className="font-bold">Price</dt><dd>{product.priceLabel} · {product.priceUnit}</dd></div>
-        <div className="grid gap-1 sm:grid-cols-[120px_1fr]"><dt className="font-bold">Portion</dt><dd>{product.servings}</dd></div>
-        <div className="grid gap-1 sm:grid-cols-[120px_1fr]"><dt className="font-bold">Source</dt><dd>{product.source}</dd></div>
-        <div className="grid gap-1 sm:grid-cols-[120px_1fr]"><dt className="font-bold">Nutrition</dt><dd>{product.nutrition}</dd></div>
-        <div className="grid gap-1 sm:grid-cols-[120px_1fr]"><dt className="font-bold">Availability</dt><dd>Preview item; final stock is confirmed before launch.</dd></div>
+        <div className="grid gap-1"><dt className="font-bold">Ingredients</dt><dd className="text-brand-black/72">{product.ingredients}</dd></div>
+        <div className="grid gap-1"><dt className="font-bold">Allergens</dt><dd className="text-brand-black/72">{product.allergenNotice}</dd></div>
+        <div className="grid gap-1"><dt className="font-bold">Storage</dt><dd className="text-brand-black/72">{product.storage}</dd></div>
+        <div className="grid gap-1"><dt className="font-bold">Source</dt><dd className="text-brand-black/72">{product.source}</dd></div>
+        <div className="grid gap-1"><dt className="font-bold">Nutrition</dt><dd className="text-brand-black/72">{product.nutrition}</dd></div>
+        <div className="grid gap-1"><dt className="font-bold">SKU</dt><dd className="break-words font-mono text-xs text-brand-black/72" translate="no">{product.sku}</dd></div>
       </dl>
     </details>
   );
 }
 
-function ShopCard({ product, onAdd }: { product: ShopProduct; onAdd: (product: ShopProduct) => void }) {
+function ProductFacts({ product, compact = false }: { product: ShopProduct; compact?: boolean }) {
   return (
-    <article className="relative grid content-start gap-3 rounded-wobbly-card border-3 border-brand-black bg-brand-white p-4 shadow-brand-soft transition-[box-shadow,transform] duration-120 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand">
-      <div className="brand-pattern relative grid min-h-52 place-items-center overflow-hidden rounded-wobbly-md border-2 border-dashed border-brand-black/42 p-3">
-        <img className="h-44 w-full object-contain" src={product.image} alt={product.alt} loading="lazy" decoding="async" width="420" height="340" />
-        <span className="absolute left-3 top-3 rounded-full border-2 border-brand-black bg-brand-white px-2 py-1 text-xs font-bold text-brand-black">Preview</span>
+    <dl className={`grid grid-cols-2 gap-2 rounded-wobbly-md border-2 border-brand-forest/18 bg-brand-mint p-3 text-sm ${compact ? "text-xs" : ""}`}>
+      <div className="grid min-w-0 gap-0.5"><dt className="text-[0.68rem] font-bold uppercase tracking-[0.06em] text-brand-green-ink">Portion</dt><dd className="text-brand-black/72">{product.servings}</dd></div>
+      <div className="grid min-w-0 gap-0.5"><dt className="text-[0.68rem] font-bold uppercase tracking-[0.06em] text-brand-green-ink">Prep</dt><dd className="text-brand-black/72">{product.cookingTime}</dd></div>
+      {!compact ? <div className="col-span-2 flex min-w-0 items-start justify-between gap-3 border-t border-dashed border-brand-forest/24 pt-2"><dt className="text-[0.68rem] font-bold uppercase tracking-[0.06em] text-brand-green-ink">Availability</dt><dd className="text-right text-brand-black/72">{product.availability}</dd></div> : null}
+    </dl>
+  );
+}
+
+function FeaturedShopCard({ product, onAdd }: { product: ShopProduct; onAdd: (product: ShopProduct) => void }) {
+  const headingId = `${product.id}-title`;
+
+  return (
+    <article className="shop-feature-card relative grid gap-4 overflow-hidden rounded-wobbly-card border-4 border-brand-forest bg-brand-white p-4 shadow-brand transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand-hover sm:p-5 md:grid-cols-[minmax(240px,0.9fr)_minmax(0,1.1fr)]" id={product.id} aria-labelledby={headingId}>
+      <div className="brand-pattern relative grid min-h-72 place-items-center overflow-hidden rounded-wobbly-card border-2 border-dashed border-brand-forest/36 p-4 md:min-h-110">
+        <img className="h-64 w-full object-contain md:h-auto md:max-h-100" src={product.image} alt={product.alt} loading="lazy" decoding="async" width="420" height="340" />
+        <span className="absolute left-3 top-3 rounded-full border-2 border-brand-forest bg-brand-yellow px-2 py-1 text-xs font-bold text-brand-black">Today’s field pick</span>
+        <span className={`absolute right-3 bottom-3 rounded-full border-2 border-brand-forest px-2 py-1 text-xs font-bold ${categoryBadgeClasses[product.category]}`}>{product.category}</span>
       </div>
-      <div className="grid gap-2">
+      <div className="grid min-w-0 content-start gap-3">
         <YellowTag>{product.eyebrow}</YellowTag>
-        <h3 className="font-primary text-[clamp(1.55rem,2.4vw,2.15rem)] font-bold leading-[1.02] text-brand-black">{product.name}</h3>
-        <p className="text-brand-black/72">{product.description}</p>
+        <h3 className="font-primary text-[clamp(2rem,4vw,3.4rem)] font-bold leading-[0.98] text-brand-black" id={headingId}>{product.name}</h3>
+        <p className="text-[1.05rem] leading-[1.5] text-brand-black/72">{product.description}</p>
+        <ProductFacts product={product} />
         <div className="flex flex-wrap gap-2">
-          {product.tags.map((tag) => <span className="rounded-full border-2 border-brand-black/42 px-2 py-1 text-xs text-brand-black/72" key={tag}>{tag}</span>)}
+          {product.tags.map((tag) => <span className="rounded-full border-2 border-brand-forest/30 bg-brand-white px-2 py-1 text-xs font-medium text-brand-black/72" key={tag}>{tag}</span>)}
         </div>
-        <strong className="text-brand-orange">{product.priceLabel}</strong>
+        <strong className="text-brand-orange-ink">{productPrice(product)}</strong>
+        <p className="text-xs text-brand-black/64">{product.deliveryEstimate}</p>
+        <ProductDetail product={product} />
+        <button className={`${btnPrimaryKit} mt-auto w-full`} type="button" onClick={() => onAdd(product)} aria-label={`Add ${product.name} to launch basket`}>
+          Add to Basket
+        </button>
       </div>
-      <ProductDetail product={product} />
-      <button className={btnPrimaryKit} type="button" onClick={() => onAdd(product)} aria-label={`Add ${product.name} to launch basket`}>
-        Add to launch basket
+    </article>
+  );
+}
+
+function SupportingShopCard({ product, onAdd }: { product: ShopProduct; onAdd: (product: ShopProduct) => void }) {
+  const headingId = `${product.id}-title`;
+
+  return (
+    <article className={`shop-note-card grid grid-cols-[112px_minmax(0,1fr)] gap-3 rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRailClasses[product.category]} bg-brand-white p-3 shadow-brand-soft transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand`} id={product.id} aria-labelledby={headingId}>
+      <div className="brand-pattern relative grid min-h-34 place-items-center overflow-hidden rounded-wobbly-md border-2 border-dashed border-brand-forest/30 p-2">
+        <img className="h-28 w-full object-contain" src={product.image} alt={product.alt} loading="lazy" decoding="async" width="210" height="170" />
+        <span className={`absolute right-1.5 bottom-1.5 rounded-full border-2 border-brand-forest px-2 py-1 text-[0.65rem] font-bold ${categoryBadgeClasses[product.category]}`}>{product.category}</span>
+      </div>
+      <div className="grid min-w-0 content-start gap-1.5">
+        <p className="text-[0.68rem] font-bold uppercase tracking-[0.08em] text-brand-green-ink">{product.eyebrow}</p>
+        <h3 className="font-primary text-[1.45rem] font-bold leading-[1] text-brand-black" id={headingId}>{product.name}</h3>
+        <p className="line-clamp-2 text-sm leading-[1.35] text-brand-black/72">{product.description}</p>
+        <strong className="text-sm text-brand-orange-ink">{productPrice(product)}</strong>
+      </div>
+      <div className="col-span-full"><ProductFacts product={product} compact /></div>
+      <div className="col-span-full"><ProductDetail product={product} /></div>
+      <button className={`${btnPrimaryKit} col-span-full w-full`} type="button" onClick={() => onAdd(product)} aria-label={`Add ${product.name} to launch basket`}>
+        Add to Basket
       </button>
     </article>
   );
 }
 
-export function ShopSection() {
-  const [category, setCategory] = useState<(typeof categories)[number]>("All");
-  const [basket, setBasket] = useState<string[]>([]);
-  const [submitted, setSubmitted] = useState(false);
-  const visibleProducts = category === "All" ? shopProducts : shopProducts.filter((product) => product.category === category);
+function BasketLine({ product, quantity, onChange, onRemove }: { product: ShopProduct; quantity: number; onChange: (productId: string, difference: number) => void; onRemove: (productId: string) => void }) {
+  return (
+    <li className="grid gap-3 rounded-wobbly-md border-2 border-brand-forest bg-brand-white p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <p className="font-bold text-brand-black">{product.name}</p>
+        <p className="text-sm text-brand-black/64">{productPrice(product)}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button className="grid h-11 w-11 touch-manipulation place-items-center rounded-wobbly-md border-2 border-brand-forest bg-brand-white font-bold text-brand-forest shadow-brand-tight hover:bg-brand-mint focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onChange(product.id, -1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
+        <span className="min-w-8 text-center font-bold tabular-nums" aria-label={`${quantity} selected`}>{quantity}</span>
+        <button className="grid h-11 w-11 touch-manipulation place-items-center rounded-wobbly-md border-2 border-brand-forest bg-brand-leaf font-bold text-brand-white shadow-brand-tight hover:bg-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onChange(product.id, 1)} aria-label={`Increase ${product.name} quantity`}>+</button>
+        <button className="min-h-11 touch-manipulation rounded-wobbly-md px-2 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onRemove(product.id)}>Remove</button>
+      </div>
+    </li>
+  );
+}
 
-  function addToBasket(product: ShopProduct) {
-    setBasket((current) => current.includes(product.id) ? current : [...current, product.id]);
-    setSubmitted(false);
+export function ShopSection() {
+  const [category, setCategory] = useState<Category>(getInitialCategory);
+  const [basket, setBasket] = useState<Basket>({});
+  const [area, setArea] = useState("");
+  const [areaMessage, setAreaMessage] = useState("");
+  const [submissionMessage, setSubmissionMessage] = useState("");
+  const [submissionError, setSubmissionError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const visibleProducts = category === "All" ? shopProducts : shopProducts.filter((product) => product.category === category);
+  const [featuredProduct, ...supportingProducts] = visibleProducts;
+  const basketItems = shopProducts.filter((product) => (basket[product.id] ?? 0) > 0);
+  const basketQuantity = basketItems.reduce((total, product) => total + basket[product.id], 0);
+  const hasCompletePricing = basketItems.length > 0 && basketItems.every((product) => product.priceAmount !== null);
+  const subtotal = basketItems.reduce((total, product) => total + (product.priceAmount ?? 0) * basket[product.id], 0);
+
+  function selectCategory(nextCategory: Category) {
+    setCategory(nextCategory);
+    const url = new URL(window.location.href);
+    if (nextCategory === "All") url.searchParams.delete("category");
+    else url.searchParams.set("category", categorySlug(nextCategory));
+    window.history.replaceState(window.history.state, "", url);
   }
 
-  function handleLaunchRequest(event: FormEvent<HTMLFormElement>) {
+  function addToBasket(product: ShopProduct) {
+    setBasket((current) => ({ ...current, [product.id]: (current[product.id] ?? 0) + 1 }));
+    setSubmissionMessage("");
+  }
+
+  function changeQuantity(productId: string, difference: number) {
+    setBasket((current) => {
+      const nextQuantity = Math.max(0, (current[productId] ?? 0) + difference);
+      if (nextQuantity === 0) {
+        const remaining = { ...current };
+        delete remaining[productId];
+        return remaining;
+      }
+      return { ...current, [productId]: nextQuantity };
+    });
+    setSubmissionMessage("");
+  }
+
+  function removeFromBasket(productId: string) {
+    setBasket((current) => {
+      const remaining = { ...current };
+      delete remaining[productId];
+      return remaining;
+    });
+    setSubmissionMessage("");
+  }
+
+  function checkArea(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitted(true);
+    const trimmedArea = area.trim();
+    if (!trimmedArea) {
+      setAreaMessage("Enter your neighborhood or a nearby landmark so Zama can review it.");
+      return;
+    }
+    setArea(trimmedArea);
+    setAreaMessage(`Coverage for ${trimmedArea} is being reviewed. Final serviceability, fee, and delivery window will be confirmed before ordering.`);
+  }
+
+  async function handleLaunchRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const email = formData.get("email");
+
+    if (basketQuantity === 0 || typeof email !== "string" || !area.trim()) {
+      setSubmissionError(true);
+      setSubmissionMessage("Add at least 1 product, check your delivery area, and enter your email address.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmissionError(false);
+    setSubmissionMessage("");
+
+    try {
+      const result = await submitLaunchInterest({
+        email: email.trim(),
+        area: area.trim(),
+        source: "launch-basket",
+        items: basketItems.map((product) => ({ sku: product.sku, quantity: basket[product.id] })),
+      });
+      setSubmissionMessage(result.mode === "preview" ? "Preview saved for this browser session. Connect the launch endpoint before publishing." : "Your product and delivery-area interest has been saved. Zama will contact you before orders open.");
+      form.reset();
+    } catch (error) {
+      setSubmissionError(true);
+      setSubmissionMessage(error instanceof Error ? error.message : "We could not save your request. Please try again or email hello@zama.bt.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
-    <section className={`shop-section grid gap-6 py-[clamp(2.8rem,6vw,5rem)] ${sectionShell}`} id="shop" aria-labelledby="shop-title">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(260px,0.62fr)] sm:items-end sm:gap-8">
-        <div className="grid gap-2">
-          <OutlineTag>Shop preview</OutlineTag>
-          <h2 id="shop-title" className="font-primary text-[clamp(2.35rem,5vw,5rem)] font-bold leading-[1.02] text-brand-green-ink">Build a better basket.</h2>
-          <p className="max-w-160 text-[1.1rem] text-brand-black/72">Explore the planned range and add ideas to a launch basket. Final stock, pricing, delivery, and checkout details will be shown before orders open.</p>
+    <section className={`shop-section grid gap-7 py-[clamp(2.5rem,5vw,4.5rem)] ${sectionShell}`} id="shop" aria-labelledby="shop-title">
+      <div className="market-board relative grid gap-6 overflow-hidden rounded-[38px_24px_46px_28px/28px_46px_24px_38px] border-4 border-brand-forest bg-brand-yellow p-5 shadow-brand-big sm:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.7fr)] sm:items-center sm:p-7 lg:p-9">
+        <div className="relative z-[1] grid gap-3">
+          <OutlineTag>Today’s Market Board</OutlineTag>
+          <h2 id="shop-title" className="max-w-170 text-balance font-primary text-[clamp(2.7rem,6vw,5.4rem)] font-bold leading-[0.93] tracking-[-0.035em] text-brand-forest">Build a better <span className="inline-block -rotate-2 rounded-wobbly-tag border-3 border-brand-forest bg-brand-warm-white px-2.5 py-1 shadow-brand">basket.</span></h2>
+          <p className="max-w-155 text-pretty text-[1.05rem] leading-[1.5] text-brand-black/72">Compare the planned range, check what is inside, and save the boxes you want Zama to prioritize for launch.</p>
         </div>
-        <div className="rounded-wobbly-md border-3 border-brand-black bg-brand-yellow p-4 shadow-brand">
-          <p className="text-sm font-bold uppercase tracking-[0.12em] text-brand-black/72">Launch geography</p>
-          <p className="mt-1 font-primary text-2xl font-bold text-brand-black">Thimphu first</p>
-          <p className="mt-1 text-sm text-brand-black/72">Future areas can join the launch list while coverage is finalized.</p>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2" aria-label="Shop categories">
-        {categories.map((item) => (
-          <button className={`touch-manipulation rounded-full border-2 border-brand-black px-3 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 ${category === item ? "bg-brand-green" : "bg-brand-white hover:bg-brand-yellow"}`} key={item} type="button" onClick={() => setCategory(item)} aria-pressed={category === item}>
-            {item}
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {visibleProducts.map((product) => <ShopCard key={product.id} product={product} onAdd={addToBasket} />)}
-      </div>
-
-      <div className="grid gap-5 rounded-[28px_18px_32px_16px/18px_32px_20px_28px] border-3 border-brand-black bg-brand-green/12 p-5 shadow-brand sm:grid-cols-[minmax(0,1fr)_minmax(300px,0.7fr)] sm:items-center sm:p-6">
-        <div className="grid gap-2">
-          <OutlineTag>Launch basket</OutlineTag>
-          <h3 className="font-primary text-[clamp(1.8rem,3vw,3rem)] font-bold leading-[1.02] text-brand-black">Tell us what you want first.</h3>
-          <p className="text-brand-black/72">Your basket is a launch-interest list, not a payment or order confirmation. We will use it to prioritize the first Thimphu range.</p>
-          {basket.length > 0 ? <p className="text-sm font-bold text-brand-green-ink" aria-live="polite">{basket.length} product idea{basket.length === 1 ? "" : "s"} selected.</p> : <p className="text-sm text-brand-black/64">Select a preview product to add it here.</p>}
-          <div className="flex flex-wrap gap-2">
-            {basket.map((id) => <span className="rounded-full border-2 border-brand-black bg-brand-white px-2 py-1 text-xs" key={id}>{shopProducts.find((product) => product.id === id)?.name}</span>)}
+        <form className="market-ticket relative z-[1] grid gap-3 rotate-[0.8deg] rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:p-5" onSubmit={checkArea} aria-label="Check launch delivery area">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-ink">Thimphu Delivery Ticket</p>
+            <p className="mt-1 text-sm text-brand-black/72">Check whether your neighborhood is in the launch plan.</p>
           </div>
-        </div>
-        <form className="grid gap-3 rounded-wobbly-md border-3 border-brand-black bg-brand-white p-4" onSubmit={handleLaunchRequest}>
-          <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="launch-area">Your Thimphu area
-            <input className="min-h-11 rounded-wobbly-md border-2 border-brand-black px-3 font-normal outline-none focus:border-brand-green-ink focus:ring-4 focus:ring-brand-green/20" id="launch-area" name="area" placeholder="Neighborhood or landmark…" required />
+          <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="service-area">Neighborhood or landmark
+            <input className="min-h-11 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="service-area" name="service-area" value={area} onChange={(event) => { setArea(event.target.value); setAreaMessage(""); }} placeholder="Example: Changzamtok…" autoComplete="address-line1" required />
           </label>
-          <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="launch-email">Email for launch updates
-            <input className="min-h-11 rounded-wobbly-md border-2 border-brand-black px-3 font-normal outline-none focus:border-brand-green-ink focus:ring-4 focus:ring-brand-green/20" id="launch-email" name="email" type="email" placeholder="you@example.com…" autoComplete="email" required />
-          </label>
-          <button className={btnPrimaryKit} type="submit">Save my launch interest</button>
-          {submitted ? <p className="text-sm font-bold text-brand-green-ink" role="status">Thanks — your launch interest is noted for this session. Connect the form to your email system before going live.</p> : null}
+          <button className={btnPrimaryKit} type="submit">Check Launch Area</button>
+          <p className="min-h-[1.25rem] text-sm font-medium text-brand-black" role="status" aria-live="polite">{areaMessage}</p>
         </form>
       </div>
 
-      <div className="flex flex-wrap gap-3">
-        <PrimaryLink href="#waitlist">Join the full launch list</PrimaryLink>
-        <OutlineLink href="#delivery">See delivery details</OutlineLink>
+      <div className="market-filter-bar grid gap-3 rounded-[24px_18px_28px_16px/18px_28px_16px_24px] border-3 border-brand-forest bg-brand-warm-white p-3 shadow-brand sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-4">
+        <div className="flex flex-wrap gap-2" aria-label="Shop categories">
+          {categories.map((item) => (
+            <button className={`min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 ${category === item ? "bg-brand-forest text-brand-white" : "bg-brand-white text-brand-forest hover:bg-brand-yellow"}`} key={item} type="button" onClick={() => selectCategory(item)} aria-pressed={category === item} aria-controls="product-grid">
+              {item}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm font-bold text-brand-green-ink" aria-live="polite">{visibleProducts.length} launch product{visibleProducts.length === 1 ? "" : "s"} on the shelf</p>
       </div>
+
+      <div className="grid gap-5" id="product-grid">
+        {featuredProduct ? <FeaturedShopCard product={featuredProduct} onAdd={addToBasket} /> : null}
+        {supportingProducts.length > 0 ? (
+          <div className={`grid content-start gap-4 ${supportingProducts.length >= 2 ? "md:grid-cols-2" : ""} ${supportingProducts.length >= 3 ? "lg:grid-cols-3" : ""}`}>
+            {supportingProducts.map((product) => <SupportingShopCard key={product.id} product={product} onAdd={addToBasket} />)}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="launch-counter relative grid gap-6 overflow-hidden rounded-[36px_22px_42px_26px/26px_42px_22px_36px] border-4 border-brand-forest bg-brand-forest p-5 text-brand-warm-white shadow-brand-big sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.62fr)] lg:items-start">
+        <div className="relative z-[1] grid gap-3">
+          <OutlineTag>Launch Basket</OutlineTag>
+          <h3 className="max-w-155 text-balance font-primary text-[clamp(2.2rem,4vw,4rem)] font-bold leading-[0.98] text-brand-warm-white">Take your picks to the counter.</h3>
+          <p className="text-brand-warm-white/72">Save product interest only. No payment or order is created.</p>
+          {basketItems.length > 0 ? (
+            <ul className="grid gap-2">
+              {basketItems.map((product) => <BasketLine key={product.id} product={product} quantity={basket[product.id]} onChange={changeQuantity} onRemove={removeFromBasket} />)}
+            </ul>
+          ) : (
+            <div className="rounded-wobbly-md border-2 border-dashed border-brand-yellow/46 bg-brand-warm-white/10 p-4 text-brand-warm-white/68">Your basket is empty. Add a launch product above to begin.</div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-brand-warm-white/24 pt-3">
+            <p className="font-bold text-brand-warm-white"><span className="tabular-nums">{basketQuantity}</span> item{basketQuantity === 1 ? "" : "s"}</p>
+            <p className="font-bold text-brand-yellow">{hasCompletePricing ? `Estimated subtotal: Nu. ${numberFormatter.format(subtotal)}` : "Final total shown before payment"}</p>
+          </div>
+        </div>
+
+        <form className="basket-receipt relative z-[1] grid gap-3 rotate-[0.6deg] rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand" onSubmit={handleLaunchRequest} aria-label="Save launch basket interest">
+          <p className="font-primary text-xl font-bold text-brand-black">Save Your Market Picks</p>
+          <div className="rounded-wobbly-md border-2 border-dashed border-brand-forest/36 bg-brand-mint p-3">
+            <p className="text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Delivery Area</p>
+            <p className="mt-1 text-sm text-brand-black/72">{area.trim() || "Check your Thimphu area above first."}</p>
+          </div>
+          <input name="area" type="hidden" value={area} readOnly />
+          <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="launch-email">Email for launch updates
+            <input className="min-h-11 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="launch-email" name="email" type="email" placeholder="you@example.com…" autoComplete="email" spellCheck={false} required />
+          </label>
+          <button className={btnPrimaryKit} type="submit" disabled={isSubmitting || basketQuantity === 0 || !area.trim()}>{isSubmitting ? "Saving…" : "Save My Picks"}</button>
+          <p className={`min-h-[1.25rem] text-sm ${submissionError ? "font-bold text-brand-black" : "font-bold text-brand-green-ink"}`} role="status" aria-live="polite">{submissionMessage}</p>
+          <p className="text-xs text-brand-black/56">By submitting, you agree to receive launch-related messages. You can ask Zama to remove your details at any time.</p>
+        </form>
+      </div>
+
+      <p className="text-sm text-brand-black/64">Need the practical details first? <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">Review delivery and support.</a></p>
     </section>
   );
 }

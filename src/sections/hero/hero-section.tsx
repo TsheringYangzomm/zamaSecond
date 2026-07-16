@@ -2,29 +2,47 @@ import { useCallback, useState, type FormEvent } from "react";
 import { PrimaryButton } from "../../components/ui/action-link";
 import { YellowTag } from "../../components/ui/tag";
 import { sectionShell } from "../../components/ui/styles";
+import { submitLaunchInterest } from "../../launch-interest";
 
 function WaitlistForm() {
   const [status, setStatus] = useState("");
-  const handleSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const email = new FormData(event.currentTarget).get("email");
+    const form = event.currentTarget;
+    const email = new FormData(form).get("email");
 
     if (typeof email !== "string" || email.trim() === "") {
       setStatus("Please enter your email address.");
+      setHasError(true);
       return;
     }
 
-    setStatus("You're on the list — we'll be in touch soon.");
-    event.currentTarget.reset();
+    setIsSubmitting(true);
+    setHasError(false);
+    setStatus("");
+
+    try {
+      const result = await submitLaunchInterest({ email: email.trim(), source: "hero-waitlist" });
+      setStatus(result.mode === "preview" ? "Preview saved for this browser session. Connect the launch endpoint before publishing." : "You're on the list — we'll be in touch soon.");
+      form.reset();
+    } catch (error) {
+      setHasError(true);
+      setStatus(error instanceof Error ? error.message : "We could not save your request. Please try again or email hello@zama.bt.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }, []);
 
   return (
     <form
-      className="waitlist-form waitlist-form-shell relative mt-[0.3rem] flex w-full max-w-125 flex-col flex-wrap gap-[0.65rem] sm:flex-row"
+      className="waitlist-form relative mt-1 flex w-full max-w-135 flex-col flex-wrap gap-2 rounded-[22px_30px_18px_26px/28px_18px_30px_20px] border-2 border-dashed border-brand-yellow/70 bg-brand-warm-white p-2.5 text-brand-black shadow-brand sm:flex-row"
       id="waitlist"
       aria-label="Join waitlist"
       onSubmit={handleSubmit}
     >
+      <p className="basis-full px-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Get first access · no payment today</p>
       <label className="sr-only" htmlFor="email">
         Email address
       </label>
@@ -34,12 +52,13 @@ function WaitlistForm() {
         type="email"
         placeholder="you@example.com…"
         autoComplete="email"
+        spellCheck={false}
         aria-describedby="waitlist-status"
         required
-        className="min-h-11.5 min-w-0 flex-1 rounded-[20px_28px_16px_24px/24px_16px_28px_20px] border-3 border-brand-black bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus:border-brand-green-ink focus:ring-4 focus:ring-brand-green/20"
+        className="min-h-11.5 min-w-0 flex-1 rounded-[20px_28px_16px_24px/24px_16px_28px_20px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus:border-brand-green-ink focus:ring-4 focus:ring-brand-leaf/20"
       />
-      <PrimaryButton className="w-full sm:w-auto">Join Waitlist</PrimaryButton>
-      <p id="waitlist-status" className="form-status min-h-[1.4em] basis-full text-[1.05rem] text-brand-green-ink" role="status" aria-live="polite">
+      <PrimaryButton className="w-full sm:w-auto" disabled={isSubmitting}>{isSubmitting ? "Joining…" : "Join Launch Updates"}</PrimaryButton>
+      <p id="waitlist-status" className={`form-status min-h-[1.4em] basis-full px-1 text-sm ${hasError ? "font-bold text-brand-black" : "font-medium text-brand-green-ink"}`} role="status" aria-live="polite">
         {status}
       </p>
     </form>
@@ -49,25 +68,30 @@ function WaitlistForm() {
 export function HeroSection() {
   return (
     <section
-      className={`hero hero-shell relative grid min-h-auto grid-cols-1 items-center gap-[clamp(1.5rem,5vw,3.6rem)] pt-6 pb-[clamp(1.6rem,3.5vw,2.4rem)] sm:pt-[clamp(1.6rem,3.5vw,2.6rem)] lg:min-h-[min(600px,calc(100vh-118px))] lg:grid-cols-[minmax(0,1.12fr)_minmax(320px,0.88fr)] ${sectionShell}`}
+      className={`hero hero-shell relative isolate mt-5 grid min-h-auto grid-cols-1 items-center gap-5 overflow-hidden rounded-[38px_24px_48px_28px/28px_48px_24px_38px] border-4 border-brand-forest bg-brand-forest px-5 py-7 text-brand-warm-white shadow-brand-big sm:px-7 sm:py-9 lg:min-h-[min(650px,calc(100vh-108px))] lg:grid-cols-[minmax(0,1.06fr)_minmax(380px,0.94fr)] lg:gap-2 lg:px-10 lg:py-11 ${sectionShell}`}
       aria-labelledby="hero-title"
     >
-      <div className="hero-content hero-content-shell relative z-1 flex min-w-0 flex-col items-start gap-[0.85rem]">
+      <div className="hero-content relative z-[2] flex min-w-0 flex-col items-start gap-4">
         <YellowTag>Thimphu launch preview</YellowTag>
-        <h1 id="hero-title" className="hero-h1 relative max-w-[11.5ch] font-primary text-[clamp(2rem,7.5vw,2.4rem)] font-bold leading-[1.02] text-brand-green-ink sm:max-w-172.5 sm:text-[clamp(3rem,6.5vw,5.6rem)] lg:max-w-[13ch] lg:text-[clamp(3rem,5.5vw,4.5rem)]">
-          Meal kits and fresh groceries for Thimphu.
+        <h1 id="hero-title" className="hero-h1 max-w-[12ch] text-balance font-primary text-[clamp(2.55rem,12vw,4rem)] font-bold leading-[0.92] tracking-[-0.035em] text-brand-warm-white sm:max-w-[11ch] sm:text-[clamp(4rem,8vw,5.6rem)] lg:text-[clamp(4.2rem,5.8vw,5.4rem)]">
+          <span className="block">Meal kits &</span>
+          <span className="hero-highlight relative inline-block text-brand-yellow">fresh groceries</span>
+          <span className="block">for Thimphu<span className="inline-block rotate-6 text-brand-orange">!</span></span>
         </h1>
-        <p className="hero-copy max-w-full text-[clamp(1rem,4vw,1.1rem)] text-brand-black/72 sm:max-w-142.5 sm:text-[clamp(1.15rem,1.6vw,1.32rem)]">
-          Plan dinner, choose a practical grocery top-up, and see what is in your basket before you order. Local produce is prioritized when it is in season.
+        <p className="hero-copy max-w-135 text-pretty text-[clamp(1rem,4vw,1.08rem)] leading-[1.55] text-brand-warm-white/76 sm:text-[1.12rem]">
+          Plan dinner, top up the kitchen, and see what is in your basket before you order. Local produce comes first when it is in season.
         </p>
         <WaitlistForm />
       </div>
 
-      <div className="hero-media hero-media-shell relative grid min-w-0 place-items-center rotate-[1.2deg]" aria-label="Fresh groceries and local produce">
-        <img className="relative z-1 w-[min(100%,560px)] -rotate-1 object-contain" src="assets/hero.png" alt="Fresh produce, grocery bags, and delivery boxes" width="560" height="500" fetchPriority="high" />
-        <div className="harvest-note harvest-note-shell absolute right-[clamp(0.2rem,2vw,1rem)] bottom-[clamp(0.5rem,4vw,2rem)] z-[2] grid w-32 gap-[0.2rem] rotate-[-4deg] rounded-[18px_28px_16px_24px/26px_18px_28px_16px] border-3 border-brand-black bg-brand-white p-[0.65rem] shadow-brand sm:w-39.5 sm:gap-1 sm:p-[0.85rem]">
-          <strong className="font-primary text-[1.5rem] leading-none text-brand-orange sm:text-[2rem]">Local-first</strong>
-          <span className="text-[0.85rem] leading-[1.08] sm:text-base">sourcing shown clearly</span>
+      <div className="hero-media hero-media-shell relative z-[1] grid min-h-80 min-w-0 place-items-center sm:min-h-105 lg:min-h-125" aria-label="Fresh groceries and local produce">
+        <span className="absolute top-5 right-1 z-[3] rotate-3 rounded-wobbly-tag border-2 border-dashed border-brand-yellow bg-brand-warm-white px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-brand-forest shadow-brand sm:right-4">Ready to cook</span>
+        <div className="relative z-[2] w-[126%] max-w-none -translate-x-7 -rotate-2 sm:w-[122%] sm:-translate-x-10 lg:w-[132%] lg:-translate-x-12">
+          <img className="hero-product h-auto w-full object-contain" src="assets/hero.png" alt="Fresh produce, grocery bags, and delivery boxes" width="612" height="408" fetchPriority="high" />
+        </div>
+        <div className="harvest-note absolute bottom-5 left-0 z-[3] grid rotate-[-3deg] gap-0.5 rounded-[20px_28px_18px_24px/26px_18px_28px_20px] border-3 border-brand-forest bg-brand-warm-white px-4 py-3 text-brand-black shadow-brand sm:left-2">
+          <strong className="font-primary text-xl leading-none text-brand-orange-ink">Local-first</strong>
+          <span className="text-xs leading-[1.15]">Seasonal sourcing, shown clearly.</span>
         </div>
       </div>
     </section>

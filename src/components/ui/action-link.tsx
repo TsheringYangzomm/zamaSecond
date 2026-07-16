@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { btnOutlineLg, btnOutlineSm, btnPrimaryLg, btnPrimarySm } from "./styles";
 
 export type ActionLinkProps = {
@@ -34,9 +34,11 @@ export function SmallOutlineLink(props: StyledLinkProps) {
   return <ActionLink {...props} className={`${btnOutlineSm} ${props.className ?? ""}`} />;
 }
 
-export function PrimaryButton({ children, className, type = "submit" }: { children: ReactNode; className?: string; type?: "button" | "submit" }) {
+type PrimaryButtonProps = ButtonHTMLAttributes<HTMLButtonElement>;
+
+export function PrimaryButton({ children, className, type = "submit", ...props }: PrimaryButtonProps) {
   return (
-    <button className={`${btnPrimaryLg} ${className ?? ""}`} type={type}>
+    <button className={`${btnPrimaryLg} ${className ?? ""}`} type={type} {...props}>
       {children}
     </button>
   );

@@ -7,27 +7,22 @@ import { FarmersSection } from "./sections/farmers/farmers-section";
 import { FeaturesSection } from "./sections/features/features-section";
 import { HeroSection } from "./sections/hero/hero-section";
 import { MealKitsSection } from "./sections/meal-kits/meal-kits-section";
-import { PlanBuilderSection } from "./sections/plan-builder/plan-builder-section";
-import { PricingSection } from "./sections/pricing/pricing-section";
 import { ProcessSection } from "./sections/process/process-section";
-import { SubscriptionsSection } from "./sections/subscriptions/subscriptions-section";
-import { TopPicksSection } from "./sections/top-picks/top-picks-section";
 
 function App() {
   return (
     <>
+      <a className="fixed left-4 top-3 z-50 -translate-y-24 rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow px-4 py-3 font-bold text-brand-black shadow-brand transition-transform focus:translate-y-0 focus:outline-none focus:ring-4 focus:ring-brand-leaf/30" href="#top">
+        Skip to Content
+      </a>
       <SiteHeader />
-      <main id="top">
+      <main id="top" tabIndex={-1}>
         <HeroSection />
         <FeaturesSection />
         <ShopSection />
-        <SubscriptionsSection />
         <MealKitsSection />
         <ProcessSection />
-        <TopPicksSection />
         <FarmersSection />
-        <PricingSection />
-        <PlanBuilderSection />
         <LaunchDetailsSection />
       </main>
       <SiteFooter />

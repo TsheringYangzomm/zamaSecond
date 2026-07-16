@@ -1,17 +1,32 @@
-@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
  
 @theme {
   --font-primary: "Bricolage Grotesque", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
   --font-secondary: "DM Sans", "Inter", "Helvetica Neue", Arial, sans-serif;
  
+  /* Official Zama colors: reserved for the logo and playful highlights. */
   --color-brand-green: #00b94f;
-  --color-brand-green-ink: #007a3d;
   --color-brand-yellow: #ffde00;
   --color-brand-orange: #ff7800;
-  --color-brand-black: #202020;
+
+  /* Hybrid UI palette: calmer surfaces, clearer hierarchy, same Zama energy. */
+  --color-brand-green-ink: #1b4d35;
+  --color-brand-forest: #1b4d35;
+  --color-brand-leaf: #2f7d59;
+  --color-brand-mint: #e8f5ee;
+  --color-brand-buff: #fff3e2;
+  --color-brand-warm-white: #fff8f0;
+  --color-brand-stone: #4a4640;
+  --color-brand-stone-muted: #7a756c;
+  --color-brand-stone-soft: #edeae5;
+  --color-brand-chilli: #e05c5c;
+  --color-brand-sky: #5b9bd5;
+  --color-brand-purple: #9b5ea2;
+  --color-brand-lime: #c8e6a0;
+  --color-brand-orange-ink: #923b00;
+  --color-brand-black: #2a2723;
   --color-brand-white: #ffffff;
-  --color-brand-cream: #fffdf5;
+  --color-brand-cream: #fff8f0;
  
   /* hand-drawn / wobbly border radii used across cards, buttons, tags */
   --radius-wobbly: 255px 18px 225px 18px / 18px 225px 18px 255px;
@@ -20,13 +35,13 @@
   --radius-wobbly-tag: 18px 12px 16px 10px / 12px 18px 10px 16px;
  
   /* sketch-style offset shadows */
-  --shadow-brand: 4px 4px 0 0 var(--color-brand-black);
-  --shadow-brand-big: 8px 8px 0 0 var(--color-brand-black);
-  --shadow-brand-soft: 3px 3px 0 0 color-mix(in srgb, var(--color-brand-black) 16%, transparent);
-  --shadow-brand-sm: 3px 3px 0 0 color-mix(in srgb, var(--color-brand-black) 16%, transparent);
-  --shadow-brand-button: 3px 3px 0 0 var(--color-brand-black);
-  --shadow-brand-hover: 6px 6px 0 0 var(--color-brand-black);
-  --shadow-brand-tight: 2px 2px 0 0 var(--color-brand-black);
+  --shadow-brand: 4px 4px 0 0 var(--color-brand-forest);
+  --shadow-brand-big: 8px 8px 0 0 var(--color-brand-forest);
+  --shadow-brand-soft: 3px 3px 0 0 color-mix(in srgb, var(--color-brand-forest) 16%, transparent);
+  --shadow-brand-sm: 3px 3px 0 0 color-mix(in srgb, var(--color-brand-forest) 16%, transparent);
+  --shadow-brand-button: 3px 3px 0 0 var(--color-brand-forest);
+  --shadow-brand-hover: 6px 6px 0 0 var(--color-brand-forest);
+  --shadow-brand-tight: 2px 2px 0 0 var(--color-brand-forest);
  
   /* custom breakpoints matched to the original desktop-first media queries
      (620px / 820px / 1060px), used mobile-first via sm:/md:/lg: */
@@ -42,15 +57,15 @@
 
 @utility deferred-section {
   content-visibility: auto;
-  contain-intrinsic-size: 0 720px;
+  contain-intrinsic-size: auto 720px;
 }
 
 @utility brand-pattern {
   background:
-    radial-gradient(circle at 16px 16px, color-mix(in srgb, var(--color-brand-green) 42%, transparent) 0 4px, transparent 4.5px),
-    radial-gradient(circle at 42px 36px, color-mix(in srgb, var(--color-brand-orange) 48%, transparent) 0 3px, transparent 3.5px),
-    radial-gradient(circle at 64px 12px, color-mix(in srgb, var(--color-brand-yellow) 76%, transparent) 0 3px, transparent 3.5px),
-    var(--color-brand-white);
+    radial-gradient(circle at 16px 16px, color-mix(in srgb, var(--color-brand-green) 28%, transparent) 0 4px, transparent 4.5px),
+    radial-gradient(circle at 42px 36px, color-mix(in srgb, var(--color-brand-orange) 30%, transparent) 0 3px, transparent 3.5px),
+    radial-gradient(circle at 64px 12px, color-mix(in srgb, var(--color-brand-yellow) 58%, transparent) 0 3px, transparent 3.5px),
+    var(--color-brand-mint);
   background-size: 78px 62px;
 }
 
@@ -69,11 +84,20 @@ html {
  
 body {
   background:
-    radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 20%, transparent) 1px, transparent 1px) 0 0 / 24px 24px,
-    linear-gradient(90deg, color-mix(in srgb, var(--color-brand-orange) 6%, transparent) 1px, transparent 1px) 74px 0 / 100% 100%,
+    radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 15%, transparent) 1px, transparent 1px) 0 0 / 24px 24px,
     var(--color-brand-cream);
-  overflow-x: hidden;
+  color: var(--color-brand-stone);
+  font-family: var(--font-secondary);
+  overflow-x: clip;
   -webkit-tap-highlight-color: color-mix(in srgb, var(--color-brand-yellow) 55%, transparent);
+}
+
+section[id],
+article[id],
+form[id],
+details[id],
+main[id] {
+  scroll-margin-top: 8.5rem;
 }
  
 body::before {
@@ -86,7 +110,7 @@ body::before {
     0deg,
     transparent 0,
     transparent 37px,
-    color-mix(in srgb, var(--color-brand-green) 8%, transparent) 38px,
+    color-mix(in srgb, var(--color-brand-leaf) 7%, transparent) 38px,
     transparent 39px
   );
 }
@@ -117,8 +141,9 @@ body::before {
 /* ---------- Header tape marks + gradient wash ---------- */
 .site-header {
   background:
-    linear-gradient(105deg, color-mix(in srgb, var(--color-brand-yellow) 36%, transparent), transparent 34%),
-    color-mix(in srgb, var(--color-brand-white) 96%, transparent);
+    linear-gradient(105deg, color-mix(in srgb, var(--color-brand-mint) 92%, transparent), transparent 42%),
+    color-mix(in srgb, var(--color-brand-warm-white) 97%, transparent);
+  backdrop-filter: blur(14px);
 }
 .site-header::before,
 .site-header::after {
@@ -166,96 +191,95 @@ body::before {
   transform: rotate(-1deg) scaleX(1);
 }
  
-/* ---------- Hero dashed doodles ---------- */
+/* ---------- Hero poster ---------- */
+.hero-shell {
+  background:
+    radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 12%, transparent) 1.2px, transparent 1.2px) 0 0 / 28px 28px,
+    linear-gradient(135deg, var(--color-brand-forest), color-mix(in srgb, var(--color-brand-forest) 84%, var(--color-brand-black)));
+}
 .hero-shell::before {
   position: absolute;
-  top: 9%;
-  left: 42%;
-  width: 118px;
-  height: 62px;
+  bottom: -150px;
+  left: -70px;
+  width: 290px;
+  height: 290px;
   content: "";
-  opacity: 0.75;
-  border: 3px dashed var(--color-brand-green);
-  border-radius: 54% 46% 58% 42% / 46% 56% 44% 54%;
-  transform: rotate(-12deg);
+  opacity: 0.26;
+  border: 3px dashed var(--color-brand-yellow);
+  border-radius: 46% 54% 44% 56% / 56% 46% 54% 44%;
+  transform: rotate(18deg);
 }
-.hero-shell::after {
+.hero-highlight::after {
   position: absolute;
-  top: 25%;
-  left: 44%;
-  width: 156px;
-  height: 58px;
+  right: 2%;
+  bottom: -0.06em;
+  left: 1%;
+  height: 0.1em;
   content: "";
-  opacity: 0.72;
-  border-top: 4px dashed var(--color-brand-black);
+  border-bottom: 4px dashed var(--color-brand-orange);
   border-radius: 50%;
-  transform: rotate(17deg);
+  opacity: 0.92;
+  transform: rotate(-1deg);
 }
-.hero-content-shell::before {
-  position: absolute;
-  top: -28px;
-  right: 14%;
-  width: 52px;
-  height: 52px;
-  content: "";
-  opacity: 0.85;
-  border: 3px solid var(--color-brand-orange);
-  border-radius: 48% 52% 44% 56% / 56% 44% 52% 48%;
-  transform: rotate(16deg);
+@keyframes hero-product-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-0.4deg);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0) rotate(0.7deg);
+  }
 }
-.hero-h1::after {
-  display: inline-block;
-  margin-left: 0.1em;
-  color: var(--color-brand-orange);
-  content: "!";
-  transform: rotate(11deg);
+@keyframes hero-halo-breathe {
+  0%,
+  100% {
+    transform: rotate(3deg) scale(1);
+  }
+  50% {
+    transform: rotate(4deg) scale(1.025);
+  }
 }
-.waitlist-form-shell::after {
-  position: absolute;
-  right: -82px;
-  bottom: -50px;
-  width: 100px;
-  height: 46px;
-  content: "";
-  opacity: 0.82;
-  border-bottom: 3px dashed var(--color-brand-black);
-  border-radius: 50%;
-  transform: rotate(-18deg);
+@keyframes hero-orbit-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(9deg);
+  }
+  50% {
+    transform: translate3d(-10px, -8px, 0) rotate(14deg);
+  }
+}
+.hero-product {
+  animation: hero-product-float 5.8s ease-in-out infinite;
+  transform-origin: 50% 72%;
+  will-change: transform;
 }
 .hero-media-shell::before {
   position: absolute;
-  inset: 8% 5% 7%;
+  inset: 8% -2% 5% 2%;
   content: "";
-  background: var(--color-brand-yellow);
+  background:
+    radial-gradient(color-mix(in srgb, var(--color-brand-forest) 20%, transparent) 1.2px, transparent 1.2px) 0 0 / 24px 24px,
+    var(--color-brand-yellow);
   border: 4px solid var(--color-brand-black);
-  border-radius: 42px 24px 52px 28px / 28px 54px 30px 46px;
-  box-shadow: var(--shadow-brand-big);
-  transform: rotate(-2.5deg);
+  border-radius: 48% 52% 45% 55% / 54% 43% 57% 46%;
+  box-shadow: 9px 9px 0 color-mix(in srgb, var(--color-brand-black) 35%, transparent);
+  animation: hero-halo-breathe 5.4s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
 }
 .hero-media-shell::after {
   position: absolute;
-  top: 7%;
-  left: 50%;
+  right: -4%;
+  bottom: 4%;
   width: 104px;
-  height: 28px;
-  content: "";
-  background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
-  border: 2px dashed color-mix(in srgb, var(--color-brand-black) 28%, transparent);
-  transform: translateX(-50%) rotate(-3deg);
-}
-.harvest-note-shell::before {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  width: 18px;
-  height: 18px;
+  height: 104px;
   content: "";
   background: var(--color-brand-orange);
-  border: 3px solid var(--color-brand-black);
-  border-radius: 50%;
-  transform: translateX(-50%);
+  border: 4px solid var(--color-brand-black);
+  border-radius: 48% 52% 45% 55% / 56% 42% 58% 44%;
+  animation: hero-orbit-drift 6.6s ease-in-out infinite -1.8s;
+  will-change: transform;
 }
- 
 /* ---------- Value card tape ---------- */
 .value-card-shell::before {
   position: absolute;
@@ -316,8 +340,14 @@ body::before {
   color: var(--color-brand-green-ink);
 }
  
-/* ---------- Kit card tape ---------- */
-.kit-card-shell::before {
+/* ---------- Meal-kit menu board ---------- */
+.meal-kit-feature {
+  background:
+    radial-gradient(color-mix(in srgb, var(--color-brand-forest) 18%, transparent) 1.2px, transparent 1.2px) 0 0 / 25px 25px,
+    var(--color-brand-yellow);
+}
+.meal-kit-feature::before,
+.meal-kit-note::before {
   position: absolute;
   top: -12px;
   right: 22%;
@@ -327,6 +357,22 @@ body::before {
   background: color-mix(in srgb, var(--color-brand-yellow) 38%, transparent);
   border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: rotate(4deg);
+}
+.meal-kit-feature::after {
+  position: absolute;
+  bottom: -58px;
+  left: -38px;
+  width: 160px;
+  height: 160px;
+  content: "";
+  border: 4px dashed color-mix(in srgb, var(--color-brand-orange) 68%, transparent);
+  border-radius: 50%;
+  transform: rotate(-14deg);
+}
+.meal-kit-note:nth-child(2)::before {
+  right: auto;
+  left: 18%;
+  transform: rotate(-3deg);
 }
  
 /* ---------- Dietician banner tape ---------- */
@@ -345,13 +391,28 @@ body::before {
 /* ---------- Process connector dashed line ---------- */
 .process-grid-shell::before {
   position: absolute;
-  top: 116px;
-  right: 8%;
-  left: 8%;
-  height: 20px;
+  top: 43%;
+  right: 3%;
+  left: 3%;
+  height: 112px;
   content: "";
-  border-top: 4px dashed color-mix(in srgb, var(--color-brand-black) 44%, transparent);
+  border-top: 4px dashed color-mix(in srgb, var(--color-brand-forest) 50%, transparent);
+  border-radius: 54% 46% 48% 52% / 60% 42% 58% 40%;
+  transform: rotate(-1.5deg);
+}
+.process-journey::before {
+  position: absolute;
+  top: -66px;
+  right: -42px;
+  width: 210px;
+  height: 150px;
+  content: "";
+  border: 3px dashed color-mix(in srgb, var(--color-brand-orange) 52%, transparent);
   border-radius: 50%;
+  transform: rotate(18deg);
+}
+.process-stop:hover .process-stop-image {
+  transform: translateY(-4px) rotate(2deg);
 }
 @media (max-width: 820px) {
   .process-grid-shell::before {
@@ -371,19 +432,163 @@ body::before {
   transform: rotate(-2deg);
 }
  
-/* ---------- Farmer card dot ---------- */
-.farmer-card-shell::before {
+/* ---------- Editorial shop + launch receipt ---------- */
+.shop-feature-card::before {
   position: absolute;
-  top: 10px;
-  left: 50%;
+  top: -13px;
+  left: 18%;
   z-index: 2;
-  width: 18px;
-  height: 18px;
+  width: 94px;
+  height: 26px;
+  content: "";
+  background: color-mix(in srgb, var(--color-brand-yellow) 42%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-forest) 35%, transparent);
+  transform: rotate(-3deg);
+}
+/* ---------- Shop market counter ---------- */
+.market-board {
+  background:
+    radial-gradient(color-mix(in srgb, var(--color-brand-forest) 18%, transparent) 1.2px, transparent 1.2px) 0 0 / 26px 26px,
+    var(--color-brand-yellow);
+}
+.market-board::before {
+  position: absolute;
+  right: -70px;
+  bottom: -86px;
+  width: 180px;
+  height: 180px;
   content: "";
   background: var(--color-brand-orange);
-  border: 3px solid var(--color-brand-black);
+  border: 4px solid var(--color-brand-forest);
+  border-radius: 46% 54% 44% 56% / 56% 46% 54% 44%;
+  transform: rotate(12deg);
+}
+.market-ticket::before,
+.basket-receipt::before {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 82px;
+  height: 24px;
+  content: "";
+  background: color-mix(in srgb, var(--color-brand-yellow) 48%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-forest) 38%, transparent);
+  transform: translateX(-50%) rotate(-3deg);
+}
+.launch-counter {
+  background:
+    radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 16%, transparent) 1.2px, transparent 1.2px) 0 0 / 28px 28px,
+    linear-gradient(135deg, var(--color-brand-forest), color-mix(in srgb, var(--color-brand-forest) 86%, var(--color-brand-black)));
+}
+
+/* ---------- Farmer field notebook ---------- */
+.farmer-portrait::before {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  z-index: 2;
+  width: 112px;
+  height: 28px;
+  content: "";
+  background: color-mix(in srgb, var(--color-brand-yellow) 48%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-forest) 36%, transparent);
+  transform: translateX(-50%) rotate(-2deg);
+}
+.farmer-portrait:hover > img {
+  transform: scale(1.025) rotate(0.25deg);
+}
+.source-map-shell::before {
+  position: absolute;
+  inset: 10% -5% 18% 8%;
+  content: "";
+  opacity: 0.32;
+  border: 3px dashed var(--color-brand-yellow);
+  border-radius: 52% 48% 44% 56% / 42% 58% 46% 54%;
+  transform: rotate(-7deg);
+}
+.source-map-shell::after {
+  position: absolute;
+  top: 23%;
+  right: 13%;
+  width: 14px;
+  height: 14px;
+  content: "";
+  background: var(--color-brand-orange);
+  border: 3px solid var(--color-brand-yellow);
   border-radius: 50%;
+  box-shadow: -116px 112px 0 -2px var(--color-brand-orange), -48px 244px 0 -2px var(--color-brand-orange);
+}
+
+/* ---------- Delivery ledger + final postcard ---------- */
+.delivery-ledger::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  opacity: 0.2;
+  background:
+    radial-gradient(circle at 12% 18%, var(--color-brand-yellow) 0 3px, transparent 3.5px),
+    repeating-linear-gradient(0deg, transparent 0 38px, color-mix(in srgb, var(--color-brand-mint) 26%, transparent) 39px, transparent 40px);
+  background-size: 72px 66px, 100% 40px;
+}
+.service-receipt {
+  background-image: linear-gradient(90deg, transparent 0 49%, color-mix(in srgb, var(--color-brand-forest) 4%, transparent) 50%, transparent 51%);
+}
+/* ---------- Open policy + about notebook ---------- */
+.field-notebook {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 35px, color-mix(in srgb, var(--color-brand-leaf) 8%, transparent) 36px, transparent 37px),
+    var(--color-brand-warm-white);
+}
+.field-notebook::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 1;
+  width: 16px;
+  content: "";
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-brand-forest) 12%, transparent), transparent);
   transform: translateX(-50%);
+}
+.field-notebook::after {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  z-index: 3;
+  width: 104px;
+  height: 28px;
+  content: "";
+  background: color-mix(in srgb, var(--color-brand-yellow) 44%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--color-brand-forest) 34%, transparent);
+  transform: translateX(-50%) rotate(-2deg);
+}
+.notebook-page {
+  background: color-mix(in srgb, var(--color-brand-warm-white) 84%, transparent);
+}
+@media (max-width: 1059px) {
+  .field-notebook::before {
+    display: none;
+  }
+}
+.postcard-shell::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  opacity: 0.18;
+  background: repeating-linear-gradient(-24deg, transparent 0 20px, var(--color-brand-orange) 21px 23px, transparent 24px 42px);
+  clip-path: polygon(58% 0, 100% 0, 100% 100%, 68% 100%);
+}
+.postcard-shell::after {
+  position: absolute;
+  top: 12%;
+  right: 24%;
+  width: 122px;
+  height: 122px;
+  content: "";
+  opacity: 0.28;
+  border: 4px double var(--color-brand-orange-ink);
+  border-radius: 50%;
+  transform: rotate(-12deg);
 }
  
 /* ---------- Featured plan dashed badge ---------- */
@@ -484,6 +689,13 @@ body::before {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+
+  .hero-product,
+  .hero-media-shell::before,
+  .hero-media-shell::after {
+    animation: none !important;
+    will-change: auto;
+  }
 }
 
 /* ---------- Footer watermark logo mask (keeps it inside the footer bounds) ---------- */
@@ -491,5 +703,5 @@ body::before {
   isolation: isolate;
 }
 .footer-watermark-logo {
-  filter: saturate(0.85);
+  filter: brightness(1.8) saturate(0.65);
 }
