@@ -7,6 +7,7 @@ import { FarmersSection } from "./sections/farmers/farmers-section";
 import { FeaturesSection } from "./sections/features/features-section";
 import { HeroSection } from "./sections/hero/hero-section";
 import { MealKitsSection } from "./sections/meal-kits/meal-kits-section";
+import { PricingSection } from "./sections/pricing/pricing-section";
 import { ProcessSection } from "./sections/process/process-section";
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
         <MealKitsSection />
         <ProcessSection />
         <FarmersSection />
+        <PricingSection />
         <LaunchDetailsSection />
       </main>
       <SiteFooter />

@@ -42,10 +42,10 @@ export function SiteHeader() {
   const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   return (
-    <header className="site-header sticky top-2.5 z-20 mx-auto mt-3 w-[calc(100%-28px)] max-w-280 rounded-[26px_18px_28px_14px/16px_30px_18px_28px] border-3 border-brand-forest px-[0.9rem] py-[0.7rem] shadow-brand sm:w-[min(1260px,calc(100%-40px))]">
-      <div className="grid grid-cols-[auto_1fr] items-center gap-[0.9rem] sm:grid-cols-[auto_1fr] sm:gap-[1.4rem] md:grid-cols-[auto_1fr_auto]">
+    <header className="site-header sticky top-2.5 z-20 mx-auto mt-3 w-[calc(100%-16px)] max-w-280 rounded-[26px_18px_28px_14px/16px_30px_18px_28px] border-3 border-brand-forest px-2 py-[0.6rem] shadow-brand sm:w-[min(1260px,calc(100%-40px))] sm:px-[0.9rem] sm:py-[0.7rem]">
+      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[auto_1fr] sm:gap-[1.4rem] md:grid-cols-[auto_1fr_auto]">
         <a className="brand inline-flex shrink-0 -rotate-2 items-center" href="#top" aria-label="Zama home">
-          <img className="w-20 sm:w-24" src="assets/zama_logo.png" alt="Zama" width="96" height="42" />
+          <img className="w-16 sm:w-24" src="assets/zama_logo.png" alt="Zama" width="96" height="42" />
         </a>
 
         <DesktopNav />
