@@ -80,30 +80,32 @@ function WaitlistForm() {
 export function HeroSection() {
   return (
     <section
-      className={`hero hero-shell relative isolate mt-5 grid min-h-auto grid-cols-1 items-center gap-5 overflow-hidden rounded-[38px_24px_48px_28px/28px_48px_24px_38px] border-4 border-brand-forest bg-brand-forest px-4 py-7 text-brand-warm-white shadow-brand-big sm:px-7 sm:py-9 lg:min-h-[min(650px,calc(100vh-108px))] lg:grid-cols-[minmax(0,1.06fr)_minmax(380px,0.94fr)] lg:gap-2 lg:px-10 lg:py-11 ${sectionShell}`}
+      className="hero hero-shell full-bleed-safe relative isolate overflow-hidden border-y-4 border-brand-forest bg-brand-forest text-brand-warm-white"
       aria-labelledby="hero-title"
     >
-      <div className="hero-content relative z-[2] flex min-w-0 flex-col items-start gap-4">
-        <YellowTag>Thimphu launch preview</YellowTag>
-        <h1 id="hero-title" className="hero-h1 max-w-full text-balance font-primary text-[clamp(2.2rem,11.5vw,3.35rem)] font-bold leading-[0.94] tracking-[-0.035em] text-brand-warm-white sm:max-w-[11ch] sm:text-[clamp(4rem,8vw,5.6rem)] lg:text-[clamp(4.2rem,5.8vw,5.4rem)]">
-          <span className="block">Meal kits &</span>
-          <span className="hero-highlight relative inline-block text-brand-yellow">fresh groceries</span>
-          <span className="block">for Thimphu<span className="inline-block rotate-6 text-brand-orange">!</span></span>
-        </h1>
-        <p className="hero-copy max-w-135 text-pretty text-[clamp(1rem,4vw,1.08rem)] leading-[1.55] text-brand-warm-white/76 sm:text-[1.12rem]">
-          Plan dinner, top up the kitchen, and see what is in your basket before you order. Local produce comes first when it is in season.
-        </p>
-        <WaitlistForm />
-      </div>
-
-      <div className="hero-media hero-media-shell relative z-[1] grid min-h-80 min-w-0 place-items-center sm:min-h-105 lg:min-h-125" aria-label="Fresh groceries and local produce">
-        <span className="absolute top-5 right-1 z-[3] rotate-3 rounded-wobbly-tag border-2 border-dashed border-brand-yellow bg-brand-warm-white px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-brand-forest shadow-brand sm:right-4">Ready to cook</span>
-        <div className="relative z-[2] w-[106%] max-w-none -translate-x-1 -rotate-1 sm:w-[122%] sm:-translate-x-10 sm:-rotate-2 lg:w-[132%] lg:-translate-x-12">
-          <img className="hero-product h-auto w-full object-contain" src="assets/hero.webp" alt="Fresh produce, grocery bags, and delivery boxes" width="612" height="408" fetchPriority="high" />
+      <div className={`hero-layout relative z-[1] grid min-h-auto grid-cols-1 items-center gap-5 py-7 sm:py-9 lg:min-h-[min(650px,calc(100vh-108px))] lg:grid-cols-[minmax(0,1.06fr)_minmax(380px,0.94fr)] lg:gap-2 lg:py-11 ${sectionShell}`}>
+        <div className="hero-content relative z-[2] flex min-w-0 flex-col items-start gap-4">
+          <YellowTag>Thimphu launch preview</YellowTag>
+          <h1 id="hero-title" className="hero-h1 max-w-full text-balance font-primary text-[clamp(2.2rem,11.5vw,3.35rem)] font-bold leading-[0.94] tracking-[-0.035em] text-brand-warm-white sm:max-w-[11ch] sm:text-[clamp(4rem,8vw,5.6rem)] lg:text-[clamp(4.2rem,5.8vw,5.4rem)]">
+            <span className="block">Meal kits &</span>
+            <span className="hero-highlight relative inline-block text-brand-yellow">fresh groceries</span>
+            <span className="block">for Thimphu<span className="inline-block rotate-6 text-brand-orange">!</span></span>
+          </h1>
+          <p className="hero-copy max-w-135 text-pretty text-[clamp(1rem,4vw,1.08rem)] leading-[1.55] text-brand-warm-white/76 sm:text-[1.12rem]">
+            Plan dinner, top up the kitchen, and see what is in your basket before you order. Local produce comes first when it is in season.
+          </p>
+          <WaitlistForm />
         </div>
-        <div className="harvest-note absolute bottom-5 left-0 z-[3] grid rotate-[-3deg] gap-0.5 rounded-[20px_28px_18px_24px/26px_18px_28px_20px] border-3 border-brand-forest bg-brand-warm-white px-4 py-3 text-brand-black shadow-brand sm:left-2">
-          <strong className="font-primary text-xl leading-none text-brand-orange-ink">Local-first</strong>
-          <span className="text-xs leading-[1.15]">Seasonal sourcing, shown clearly.</span>
+
+        <div className="hero-media hero-media-shell relative z-[1] grid min-h-80 min-w-0 place-items-center sm:min-h-105 lg:min-h-125" aria-label="Fresh groceries and local produce">
+          <span className="absolute top-5 right-1 z-[3] rotate-3 rounded-wobbly-tag border-2 border-dashed border-brand-yellow bg-brand-warm-white px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] text-brand-forest shadow-brand sm:right-4">Ready to cook</span>
+          <div className="relative z-[2] w-[106%] max-w-none -translate-x-1 -rotate-1 sm:w-[122%] sm:-translate-x-10 sm:-rotate-2 lg:w-[132%] lg:-translate-x-12">
+            <img className="hero-product h-auto w-full object-contain" src="assets/hero.webp" alt="Fresh produce, grocery bags, and delivery boxes" width="612" height="408" fetchPriority="high" />
+          </div>
+          <div className="harvest-note absolute bottom-5 left-0 z-[3] grid rotate-[-3deg] gap-0.5 rounded-[20px_28px_18px_24px/26px_18px_28px_20px] border-3 border-brand-forest bg-brand-warm-white px-4 py-3 text-brand-black shadow-brand sm:left-2">
+            <strong className="font-primary text-xl leading-none text-brand-orange-ink">Local-first</strong>
+            <span className="text-xs leading-[1.15]">Seasonal sourcing, shown clearly.</span>
+          </div>
         </div>
       </div>
     </section>

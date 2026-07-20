@@ -68,6 +68,14 @@ test("updates the URL when a shop category is selected", async ({ page }) => {
   await expect(page).toHaveURL(/category=meal-kits/);
 });
 
+test("moves through the farmer story carousel", async ({ page }) => {
+  await page.goto("/#farmers");
+  await expect(page.getByRole("heading", { name: "Who grew it?", level: 4 })).toBeVisible();
+
+  await page.getByRole("button", { name: "Next →" }).click();
+  await expect(page.getByRole("heading", { name: "What is in season?", level: 4 })).toBeVisible();
+});
+
 test("has no serious or critical automated accessibility violations", async ({ page }) => {
   await page.goto("/");
   const results = await new AxeBuilder({ page }).analyze();

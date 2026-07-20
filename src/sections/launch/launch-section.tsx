@@ -4,21 +4,21 @@ import { OutlineTag, StatusBadge, YellowTag } from "../../components/ui/tag";
 import { sectionShell, sectionTitle, sectionTitleCompact } from "../../components/ui/styles";
 
 const trustStampClasses = [
-  "bg-brand-white/10",
-  "bg-brand-yellow/14",
-  "bg-brand-mint/10",
-  "bg-brand-orange/12",
+  "bg-brand-white",
+  "bg-brand-yellow/28",
+  "bg-brand-mint",
+  "bg-brand-orange/10",
 ] as const;
 
 function TrustStamp({ title, body, index }: (typeof trustItems)[number] & { index: number }) {
   return (
-    <article className={`trust-stamp grid gap-2 rounded-wobbly-card border-2 border-dashed border-brand-yellow/58 ${trustStampClasses[index]} p-4 text-brand-warm-white`}>
+    <article className={`trust-stamp grid gap-2 rounded-wobbly-card border-2 border-dashed border-brand-forest/42 ${trustStampClasses[index]} p-4 text-brand-black shadow-brand-soft`}>
       <div className="flex items-center justify-between gap-3">
-        <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-brand-yellow bg-brand-yellow font-primary text-sm font-bold text-brand-black">0{index + 1}</span>
-        <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-brand-yellow">Trust mark</span>
+        <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-brand-forest bg-brand-yellow font-primary text-sm font-bold text-brand-black">0{index + 1}</span>
+        <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-brand-green-ink">Trust mark</span>
       </div>
       <h3 className="font-primary text-[1.35rem] font-bold leading-[1.05]">{title}</h3>
-      <p className="text-sm leading-[1.45] text-brand-warm-white/78">{body}</p>
+      <p className="text-sm leading-[1.45] text-brand-black/72">{body}</p>
     </article>
   );
 }
@@ -26,8 +26,8 @@ function TrustStamp({ title, body, index }: (typeof trustItems)[number] & { inde
 export function LaunchDetailsSection() {
   return (
     <>
-      <section className={`py-[clamp(3rem,6vw,5rem)] ${sectionShell}`} id="delivery" aria-labelledby="delivery-title">
-        <div className="delivery-ledger relative grid gap-7 overflow-hidden rounded-[38px_24px_46px_28px/28px_46px_24px_38px] border-4 border-brand-forest bg-brand-forest p-5 text-brand-warm-white shadow-brand-big sm:p-7">
+      <section className="delivery-ledger full-bleed-band border-brand-yellow/55 bg-brand-forest text-brand-warm-white" id="delivery" aria-labelledby="delivery-title">
+        <div className={`relative z-[1] grid gap-7 ${sectionShell}`}>
           <div className="relative z-[1] grid gap-6 lg:grid-cols-[minmax(0,0.72fr)_minmax(480px,1.28fr)] lg:items-start">
             <div className="grid content-start gap-4 lg:sticky lg:top-32">
               <OutlineTag>Delivery and support</OutlineTag>
@@ -66,13 +66,13 @@ export function LaunchDetailsSection() {
             </div>
           </div>
 
-          <section className="relative z-[1] grid gap-4 border-t-2 border-dashed border-brand-warm-white/24 pt-6" id="trust" aria-labelledby="trust-title">
+          <section className="relative z-[1] grid gap-4 rounded-wobbly-card border-3 border-dashed border-brand-yellow/72 bg-brand-warm-white p-4 text-brand-black shadow-brand sm:p-6 lg:p-7" id="trust" aria-labelledby="trust-title">
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(260px,0.55fr)] sm:items-end sm:gap-8">
               <div className="grid gap-2">
                 <YellowTag>Trust, made visible</YellowTag>
-                <h2 id="trust-title" className={`${sectionTitleCompact} text-brand-warm-white`}>Proof belongs beside the promise.</h2>
+                <h2 id="trust-title" className={`${sectionTitleCompact} text-brand-forest`}>Proof belongs beside the promise.</h2>
               </div>
-              <p className="text-sm text-brand-warm-white/68">These become verified records—not decorative claims—before checkout goes live.</p>
+              <p className="text-sm text-brand-black/68">These become verified records—not decorative claims—before checkout goes live.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {trustItems.map((item, index) => <TrustStamp key={item.title} {...item} index={index} />)}
@@ -157,20 +157,22 @@ export function LaunchDetailsSection() {
         </div>
       </section>
 
-      <section className={`postcard-shell relative grid gap-6 overflow-hidden rounded-[42px_26px_48px_30px/30px_48px_26px_42px] border-4 border-brand-forest bg-brand-yellow p-5 shadow-brand-big sm:p-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.55fr)] lg:items-center ${sectionShell}`} id="b2b" aria-labelledby="b2b-title">
-        <div className="relative z-[1] grid gap-4">
-          <span className="w-fit -rotate-2 rounded-wobbly-tag border-2 border-dashed border-brand-forest bg-brand-warm-white px-3 py-2 text-sm font-bold text-brand-forest shadow-brand-soft">A note for partners</span>
-          <h2 id="b2b-title" className={`${sectionTitle} max-w-190 text-brand-forest`}>Bring better food closer to your people.</h2>
-          <p className="max-w-170 text-[1.05rem] text-brand-black/72">Gyms, offices, hotels, universities, and farms can join the early partnership list while the Thimphu operating model is finalized.</p>
-          <div>
-            <PrimaryLink href="mailto:hello@zama.bt?subject=Zama%20partnership%20enquiry">Start a partnership conversation</PrimaryLink>
+      <section className="postcard-shell full-bleed-band border-brand-forest border-b-0 bg-brand-yellow" id="b2b" aria-labelledby="b2b-title">
+        <div className={`relative z-[1] grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.55fr)] lg:items-center ${sectionShell}`}>
+          <div className="relative z-[1] grid gap-4">
+            <span className="w-fit -rotate-2 rounded-wobbly-tag border-2 border-dashed border-brand-forest bg-brand-warm-white px-3 py-2 text-sm font-bold text-brand-forest shadow-brand-soft">A note for partners</span>
+            <h2 id="b2b-title" className={`${sectionTitle} max-w-190 text-brand-forest`}>Bring better food closer to your people.</h2>
+            <p className="max-w-170 text-[1.05rem] text-brand-black/72">Gyms, offices, hotels, universities, and farms can join the early partnership list while the Thimphu operating model is finalized.</p>
+            <div>
+              <PrimaryLink href="mailto:hello@zama.bt?subject=Zama%20partnership%20enquiry">Start a partnership conversation</PrimaryLink>
+            </div>
           </div>
+          <aside className="postcard-stamp relative z-[1] grid justify-items-center gap-3 rotate-[2deg] rounded-wobbly-card border-3 border-dashed border-brand-forest bg-brand-warm-white p-5 text-center shadow-brand">
+            <img className="w-28" src="assets/zama_logo.png" alt="Zama" width="112" height="48" loading="lazy" decoding="async" />
+            <p className="font-primary text-2xl font-bold leading-[1.02] text-brand-forest">Ready to cook, built for Thimphu.</p>
+            <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="#waitlist">Join customer launch updates</a>
+          </aside>
         </div>
-        <aside className="postcard-stamp relative z-[1] grid justify-items-center gap-3 rotate-[2deg] rounded-wobbly-card border-3 border-dashed border-brand-forest bg-brand-warm-white p-5 text-center shadow-brand">
-          <img className="w-28" src="assets/zama_logo.png" alt="Zama" width="112" height="48" loading="lazy" decoding="async" />
-          <p className="font-primary text-2xl font-bold leading-[1.02] text-brand-forest">Ready to cook, built for Thimphu.</p>
-          <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="#waitlist">Join customer launch updates</a>
-        </aside>
       </section>
     </>
   );

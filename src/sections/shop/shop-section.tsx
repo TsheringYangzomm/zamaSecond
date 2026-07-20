@@ -267,81 +267,89 @@ export function ShopSection() {
   }
 
   return (
-    <section className={`shop-section grid gap-7 py-[clamp(2.5rem,5vw,4.5rem)] ${sectionShell}`} id="shop" aria-labelledby="shop-title">
-      <div className="market-board relative grid min-w-0 gap-6 overflow-hidden rounded-[38px_24px_46px_28px/28px_46px_24px_38px] border-4 border-brand-forest bg-brand-yellow p-4 shadow-brand-big sm:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.7fr)] sm:items-center sm:p-7 lg:p-9">
-        <div className="relative z-[1] grid min-w-0 gap-3">
-          <OutlineTag>Today’s Market Board</OutlineTag>
-          <h2 id="shop-title" className="max-w-170 break-words text-balance font-primary text-[clamp(2.25rem,11vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.035em] text-brand-forest">Build a better <span className="inline-block max-w-full -rotate-1 rounded-wobbly-tag border-3 border-brand-forest bg-brand-warm-white px-2.5 py-1 shadow-brand sm:-rotate-2">basket.</span></h2>
-          <p className="max-w-155 text-pretty text-[1.05rem] leading-[1.5] text-brand-black/72">Compare the planned range, check what is inside, and save the boxes you want Zama to prioritize for launch.</p>
-        </div>
-        <form className="market-ticket relative z-[1] grid min-w-0 gap-3 rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:rotate-[0.8deg] sm:p-5" onSubmit={checkArea} aria-label="Check launch delivery area" noValidate>
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-ink">Thimphu Delivery Ticket</p>
-            <p className="mt-1 text-sm text-brand-black/72">Check whether your neighborhood is in the launch plan.</p>
+    <section className="shop-section" id="shop" aria-labelledby="shop-title">
+      <div className="shop-catalog-surface full-bleed-safe relative overflow-hidden py-[clamp(2.5rem,5vw,4.5rem)]">
+        <div className={`relative z-[1] grid gap-7 ${sectionShell}`}>
+          <div className="market-board relative grid min-w-0 gap-6 overflow-hidden rounded-[38px_24px_46px_28px/28px_46px_24px_38px] border-4 border-brand-forest bg-brand-yellow p-4 shadow-brand-big sm:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.7fr)] sm:items-center sm:p-7 lg:p-9">
+            <div className="relative z-[1] grid min-w-0 gap-3">
+              <OutlineTag>Today’s Market Board</OutlineTag>
+              <h2 id="shop-title" className="max-w-170 break-words text-balance font-primary text-[clamp(2.25rem,11vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.035em] text-brand-forest">Build a better <span className="inline-block max-w-full -rotate-1 rounded-wobbly-tag border-3 border-brand-forest bg-brand-warm-white px-2.5 py-1 shadow-brand sm:-rotate-2">basket.</span></h2>
+              <p className="max-w-155 text-pretty text-[1.05rem] leading-[1.5] text-brand-black/72">Compare the planned range, check what is inside, and save the boxes you want Zama to prioritize for launch.</p>
+            </div>
+            <form className="market-ticket relative z-[1] grid min-w-0 gap-3 rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:rotate-[0.8deg] sm:p-5" onSubmit={checkArea} aria-label="Check launch delivery area" noValidate>
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.12em] text-brand-orange-ink">Thimphu Delivery Ticket</p>
+                <p className="mt-1 text-sm text-brand-black/72">Check whether your neighborhood is in the launch plan.</p>
+              </div>
+              <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="service-area">Neighborhood or landmark
+                <input className="min-h-11 min-w-0 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="service-area" ref={areaInputRef} name="service-area" value={area} onChange={(event) => { setArea(event.target.value); setAreaMessage(""); setAreaHasError(false); }} placeholder="Example: Changzamtok…" autoComplete="address-line1" aria-describedby="service-area-status" aria-invalid={areaHasError} required />
+              </label>
+              <button className={btnPrimaryKit} type="submit">Check Launch Area</button>
+              <p className="min-h-[1.25rem] text-sm font-medium text-brand-black" id="service-area-status" role="status" aria-live="polite">{areaMessage}</p>
+            </form>
           </div>
-          <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="service-area">Neighborhood or landmark
-            <input className="min-h-11 min-w-0 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="service-area" ref={areaInputRef} name="service-area" value={area} onChange={(event) => { setArea(event.target.value); setAreaMessage(""); setAreaHasError(false); }} placeholder="Example: Changzamtok…" autoComplete="address-line1" aria-describedby="service-area-status" aria-invalid={areaHasError} required />
-          </label>
-          <button className={btnPrimaryKit} type="submit">Check Launch Area</button>
-          <p className="min-h-[1.25rem] text-sm font-medium text-brand-black" id="service-area-status" role="status" aria-live="polite">{areaMessage}</p>
-        </form>
-      </div>
 
-      <div className="market-filter-bar grid gap-3 rounded-[24px_18px_28px_16px/18px_28px_16px_24px] border-3 border-brand-forest bg-brand-warm-white p-3 shadow-brand sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-4">
-        <div className="flex flex-wrap gap-2" aria-label="Shop categories">
-          {categories.map((item) => (
-            <button className={`min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 ${category === item ? "bg-brand-forest text-brand-white" : "bg-brand-white text-brand-forest hover:bg-brand-yellow"}`} key={item} type="button" onClick={() => selectCategory(item)} aria-pressed={category === item} aria-controls="product-grid">
-              {item}
-            </button>
-          ))}
-        </div>
-        <p className="text-sm font-bold text-brand-green-ink" aria-live="polite">{visibleProducts.length} launch product{visibleProducts.length === 1 ? "" : "s"} on the shelf</p>
-      </div>
-
-      <div className="grid gap-5" id="product-grid">
-        {featuredProduct ? <FeaturedShopCard product={featuredProduct} onAdd={addToBasket} /> : null}
-        {supportingProducts.length > 0 ? (
-          <div className={`grid content-start items-start gap-4 ${supportingProducts.length >= 2 ? "md:grid-cols-2" : ""} ${supportingProducts.length >= 3 ? "lg:grid-cols-3" : ""}`}>
-            {supportingProducts.map((product) => <SupportingShopCard key={product.id} product={product} onAdd={addToBasket} />)}
+          <div className="market-filter-bar grid gap-3 rounded-[24px_18px_28px_16px/18px_28px_16px_24px] border-3 border-brand-forest bg-brand-warm-white p-3 shadow-brand sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-4">
+            <div className="flex flex-wrap gap-2" aria-label="Shop categories">
+              {categories.map((item) => (
+                <button className={`min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 ${category === item ? "bg-brand-forest text-brand-white" : "bg-brand-white text-brand-forest hover:bg-brand-yellow"}`} key={item} type="button" onClick={() => selectCategory(item)} aria-pressed={category === item} aria-controls="product-grid">
+                  {item}
+                </button>
+              ))}
+            </div>
+            <p className="text-sm font-bold text-brand-green-ink" aria-live="polite">{visibleProducts.length} launch product{visibleProducts.length === 1 ? "" : "s"} on the shelf</p>
           </div>
-        ) : null}
-      </div>
 
-      <div className="launch-counter relative grid min-w-0 gap-6 overflow-hidden rounded-[36px_22px_42px_26px/26px_42px_22px_36px] border-4 border-brand-forest bg-brand-forest p-4 text-brand-warm-white shadow-brand-big sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.62fr)] lg:items-start">
-        <div className="relative z-[1] grid gap-3">
-          <OutlineTag>Launch Basket</OutlineTag>
-          <h3 className="max-w-155 text-balance font-primary text-[clamp(2.2rem,4vw,4rem)] font-bold leading-[0.98] text-brand-warm-white">Take your picks to the counter.</h3>
-          <p className="text-brand-warm-white/72">Save product interest only. No payment or order is created.</p>
-          {basketItems.length > 0 ? (
-            <ul className="grid gap-2">
-              {basketItems.map((product) => <BasketLine key={product.id} product={product} quantity={basket[product.id]} onChange={changeQuantity} onRemove={removeFromBasket} />)}
-            </ul>
-          ) : (
-            <div className="rounded-wobbly-md border-2 border-dashed border-brand-yellow/46 bg-brand-warm-white/10 p-4 text-brand-warm-white/68">Your basket is empty. Add a launch product above to begin.</div>
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-brand-warm-white/24 pt-3">
-            <p className="font-bold text-brand-warm-white" aria-live="polite"><span className="tabular-nums">{basketQuantity}</span> item{basketQuantity === 1 ? "" : "s"} saved</p>
-            <p className="font-bold text-brand-yellow">{hasCompletePricing ? `Estimated subtotal: Nu. ${numberFormatter.format(subtotal)}` : "Final total shown before payment"}</p>
+          <div className="grid gap-5" id="product-grid">
+            {featuredProduct ? <FeaturedShopCard product={featuredProduct} onAdd={addToBasket} /> : null}
+            {supportingProducts.length > 0 ? (
+              <div className={`grid content-start items-start gap-4 ${supportingProducts.length >= 2 ? "md:grid-cols-2" : ""} ${supportingProducts.length >= 3 ? "lg:grid-cols-3" : ""}`}>
+                {supportingProducts.map((product) => <SupportingShopCard key={product.id} product={product} onAdd={addToBasket} />)}
+              </div>
+            ) : null}
           </div>
         </div>
-
-        <form className="basket-receipt relative z-[1] grid min-w-0 gap-3 rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:rotate-[0.6deg]" onSubmit={handleLaunchRequest} aria-label="Save launch basket interest" noValidate>
-          <p className="font-primary text-xl font-bold text-brand-black">Save Your Market Picks</p>
-          <div className="rounded-wobbly-md border-2 border-dashed border-brand-forest/36 bg-brand-mint p-3">
-            <p className="text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Delivery Area</p>
-            <p className="mt-1 text-sm text-brand-black/72">{area.trim() || "Check your Thimphu area above first."}</p>
-          </div>
-          <input name="area" type="hidden" value={area} readOnly />
-          <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="launch-email">Email for launch updates
-            <input className="min-h-11 min-w-0 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="launch-email" ref={emailInputRef} name="email" type="email" placeholder="you@example.com…" autoComplete="email" spellCheck={false} aria-describedby="launch-submission-status" aria-invalid={submissionError} onChange={() => { if (submissionError) setSubmissionError(false); if (submissionMessage) setSubmissionMessage(""); }} required />
-          </label>
-          <button className={btnPrimaryKit} type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save My Launch Picks"}</button>
-          <p className={`min-h-[1.25rem] text-sm ${submissionError ? "font-bold text-brand-black" : "font-bold text-brand-green-ink"}`} id="launch-submission-status" role="status" aria-live="polite">{submissionMessage}</p>
-          <p className="text-xs text-brand-black/72">By submitting, you agree to receive launch-related messages under the <a className="font-bold underline decoration-dashed underline-offset-2" href="#privacy-policy">privacy notice</a>. You can ask Zama to remove your details at any time.</p>
-        </form>
       </div>
 
-      <p className="text-sm text-brand-black/64">Need the practical details first? <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">Review delivery and support.</a></p>
+      <div className="shop-counter-surface full-bleed-safe relative overflow-hidden py-[clamp(2.25rem,4.5vw,4rem)]">
+        <div className={`relative z-[1] grid gap-4 ${sectionShell}`}>
+          <div className="launch-counter relative grid min-w-0 gap-6 overflow-hidden rounded-[36px_22px_42px_26px/26px_42px_22px_36px] border-4 border-brand-forest bg-brand-forest p-4 text-brand-warm-white shadow-brand-big sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.62fr)] lg:items-start">
+            <div className="relative z-[1] grid gap-3">
+              <OutlineTag>Launch Basket</OutlineTag>
+              <h3 className="max-w-155 text-balance font-primary text-[clamp(2.2rem,4vw,4rem)] font-bold leading-[0.98] text-brand-warm-white">Take your picks to the counter.</h3>
+              <p className="text-brand-warm-white/72">Save product interest only. No payment or order is created.</p>
+              {basketItems.length > 0 ? (
+                <ul className="grid gap-2">
+                  {basketItems.map((product) => <BasketLine key={product.id} product={product} quantity={basket[product.id]} onChange={changeQuantity} onRemove={removeFromBasket} />)}
+                </ul>
+              ) : (
+                <div className="rounded-wobbly-md border-2 border-dashed border-brand-yellow/46 bg-brand-warm-white/10 p-4 text-brand-warm-white/68">Your basket is empty. Add a launch product above to begin.</div>
+              )}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-brand-warm-white/24 pt-3">
+                <p className="font-bold text-brand-warm-white" aria-live="polite"><span className="tabular-nums">{basketQuantity}</span> item{basketQuantity === 1 ? "" : "s"} saved</p>
+                <p className="font-bold text-brand-yellow">{hasCompletePricing ? `Estimated subtotal: Nu. ${numberFormatter.format(subtotal)}` : "Final total shown before payment"}</p>
+              </div>
+            </div>
+
+            <form className="basket-receipt relative z-[1] grid min-w-0 gap-3 rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:rotate-[0.6deg]" onSubmit={handleLaunchRequest} aria-label="Save launch basket interest" noValidate>
+              <p className="font-primary text-xl font-bold text-brand-black">Save Your Market Picks</p>
+              <div className="rounded-wobbly-md border-2 border-dashed border-brand-forest/36 bg-brand-mint p-3">
+                <p className="text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Delivery Area</p>
+                <p className="mt-1 text-sm text-brand-black/72">{area.trim() || "Check your Thimphu area above first."}</p>
+              </div>
+              <input name="area" type="hidden" value={area} readOnly />
+              <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="launch-email">Email for launch updates
+                <input className="min-h-11 min-w-0 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="launch-email" ref={emailInputRef} name="email" type="email" placeholder="you@example.com…" autoComplete="email" spellCheck={false} aria-describedby="launch-submission-status" aria-invalid={submissionError} onChange={() => { if (submissionError) setSubmissionError(false); if (submissionMessage) setSubmissionMessage(""); }} required />
+              </label>
+              <button className={btnPrimaryKit} type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save My Launch Picks"}</button>
+              <p className={`min-h-[1.25rem] text-sm ${submissionError ? "font-bold text-brand-black" : "font-bold text-brand-green-ink"}`} id="launch-submission-status" role="status" aria-live="polite">{submissionMessage}</p>
+              <p className="text-xs text-brand-black/72">By submitting, you agree to receive launch-related messages under the <a className="font-bold underline decoration-dashed underline-offset-2" href="#privacy-policy">privacy notice</a>. You can ask Zama to remove your details at any time.</p>
+            </form>
+          </div>
+
+          <p className="text-sm text-brand-black/64">Need the practical details first? <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">Review delivery and support.</a></p>
+        </div>
+      </div>
     </section>
   );
 }

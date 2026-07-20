@@ -3,7 +3,7 @@ import { sectionShell } from "../ui/styles";
 
 export function SiteFooter() {
   return (
-    <footer className="site-footer footer-watermark relative mt-[clamp(2.5rem,6vw,5rem)] overflow-hidden border-t-4 border-dashed border-brand-yellow/70 bg-brand-forest py-8 text-brand-warm-white">
+    <footer className="site-footer footer-watermark full-bleed-safe relative overflow-hidden bg-brand-forest py-8 text-brand-warm-white">
       <img className="footer-watermark-logo pointer-events-none absolute bottom-[-8%] left-1/2 z-0 w-[min(1200px,150%)] max-w-none -translate-x-1/2 opacity-[0.04]" src="assets/jaggle_logo.png" alt="" aria-hidden="true" loading="lazy" decoding="async" width="1200" height="300" />
       <div className={`relative z-[1] grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-[1.2fr_1fr_1fr] ${sectionShell}`}>
         <div className="sm:col-span-2 lg:col-span-1">

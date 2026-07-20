@@ -55,6 +55,25 @@
   margin-inline: auto;
 }
 
+@utility full-bleed-safe {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+@utility full-bleed-band {
+  position: relative;
+  overflow: hidden;
+  padding-top: clamp(3rem, 6vw, 5rem);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: clamp(3rem, 6vw, 5rem);
+  padding-left: env(safe-area-inset-left);
+  border-top-width: 3px;
+  border-right-width: 0;
+  border-bottom-width: 3px;
+  border-left-width: 0;
+  border-style: dashed;
+}
+
 @utility deferred-section {
   content-visibility: auto;
   contain-intrinsic-size: auto 720px;
@@ -83,13 +102,22 @@ html {
 }
  
 body {
-  background:
-    radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 15%, transparent) 1px, transparent 1px) 0 0 / 24px 24px,
-    var(--color-brand-cream);
+  background: linear-gradient(
+    180deg,
+    var(--color-brand-cream) 0%,
+    color-mix(in srgb, var(--color-brand-buff) 36%, var(--color-brand-cream)) 48%,
+    var(--color-brand-cream) 100%
+  );
   color: var(--color-brand-stone);
   font-family: var(--font-secondary);
   overflow-x: clip;
   -webkit-tap-highlight-color: color-mix(in srgb, var(--color-brand-yellow) 55%, transparent);
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
 }
 
 @media (min-width: 620px) {
@@ -109,16 +137,16 @@ main[id] {
 body::before {
   position: fixed;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
   content: "";
-  background: repeating-linear-gradient(
-    0deg,
-    transparent 0,
-    transparent 37px,
-    color-mix(in srgb, var(--color-brand-leaf) 7%, transparent) 38px,
-    transparent 39px
-  );
+  opacity: 0.72;
+  background:
+    radial-gradient(ellipse at -8% 18%, color-mix(in srgb, var(--color-brand-mint) 78%, transparent), transparent 44%),
+    radial-gradient(ellipse at 108% 72%, color-mix(in srgb, var(--color-brand-yellow) 15%, transparent), transparent 42%),
+    radial-gradient(color-mix(in srgb, var(--color-brand-leaf) 10%, transparent) 1px, transparent 1.4px) 0 0 / 48px 48px;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 82%) 18%, transparent 37%, transparent 63%, rgb(0 0 0 / 82%) 82%, #000 100%);
+  mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 82%) 18%, transparent 37%, transparent 63%, rgb(0 0 0 / 82%) 82%, #000 100%);
 }
  
 ::selection {
@@ -202,6 +230,7 @@ body::before {
   background:
     radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 12%, transparent) 1.2px, transparent 1.2px) 0 0 / 28px 28px,
     linear-gradient(135deg, var(--color-brand-forest), color-mix(in srgb, var(--color-brand-forest) 84%, var(--color-brand-black)));
+  box-shadow: 0 -32rem 0 32rem var(--color-brand-forest);
 }
 .hero-shell::before {
   position: absolute;
@@ -394,7 +423,15 @@ body::before {
   transform: rotate(-3deg);
 }
  
-/* ---------- Process connector dashed line ---------- */
+/* ---------- Process field map + connector line ---------- */
+.process-journey {
+  isolation: isolate;
+  border-color: color-mix(in srgb, var(--color-brand-forest) 30%, transparent);
+  border-style: solid;
+  background:
+    radial-gradient(circle at 50% 12%, color-mix(in srgb, var(--color-brand-warm-white) 72%, transparent), transparent 38%),
+    linear-gradient(112deg, color-mix(in srgb, var(--color-brand-warm-white) 68%, var(--color-brand-mint)), var(--color-brand-mint) 54%, color-mix(in srgb, var(--color-brand-buff) 44%, var(--color-brand-mint)));
+}
 .process-grid-shell::before {
   position: absolute;
   top: 43%;
@@ -408,14 +445,41 @@ body::before {
 }
 .process-journey::before {
   position: absolute;
-  top: -66px;
-  right: -42px;
-  width: 210px;
-  height: 150px;
+  top: -18%;
+  bottom: -18%;
+  left: -14rem;
+  z-index: 0;
+  width: clamp(28rem, 42vw, 46rem);
   content: "";
-  border: 3px dashed color-mix(in srgb, var(--color-brand-orange) 52%, transparent);
+  pointer-events: none;
+  opacity: 0.58;
+  background: repeating-radial-gradient(
+    ellipse at center,
+    transparent 0 34px,
+    color-mix(in srgb, var(--color-brand-leaf) 19%, transparent) 35px 37px,
+    transparent 38px 64px
+  );
   border-radius: 50%;
-  transform: rotate(18deg);
+  transform: rotate(-9deg);
+}
+.process-journey::after {
+  position: absolute;
+  top: -24%;
+  right: -16rem;
+  bottom: -14%;
+  z-index: 0;
+  width: clamp(29rem, 44vw, 48rem);
+  content: "";
+  pointer-events: none;
+  opacity: 0.46;
+  background: repeating-radial-gradient(
+    ellipse at center,
+    transparent 0 42px,
+    color-mix(in srgb, var(--color-brand-orange) 16%, transparent) 43px 45px,
+    transparent 46px 76px
+  );
+  border-radius: 50%;
+  transform: rotate(11deg);
 }
 .process-stop:hover .process-stop-image {
   transform: translateY(-4px) rotate(2deg);
@@ -423,6 +487,16 @@ body::before {
 @media (max-width: 820px) {
   .process-grid-shell::before {
     display: none;
+  }
+
+  .process-journey::before {
+    left: -21rem;
+    opacity: 0.42;
+  }
+
+  .process-journey::after {
+    right: -23rem;
+    opacity: 0.34;
   }
 }
  
@@ -452,6 +526,30 @@ body::before {
   transform: rotate(-3deg);
 }
 /* ---------- Shop market counter ---------- */
+.shop-catalog-surface {
+  border-block: 1px solid color-mix(in srgb, var(--color-brand-forest) 16%, transparent);
+  background:
+    radial-gradient(ellipse at -8% 18%, color-mix(in srgb, var(--color-brand-yellow) 18%, transparent), transparent 38%),
+    radial-gradient(ellipse at 108% 78%, color-mix(in srgb, var(--color-brand-leaf) 10%, transparent), transparent 36%),
+    linear-gradient(112deg, color-mix(in srgb, var(--color-brand-warm-white) 52%, var(--color-brand-mint)), var(--color-brand-mint) 58%, color-mix(in srgb, var(--color-brand-buff) 28%, var(--color-brand-mint)));
+}
+.shop-catalog-surface::before {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  opacity: 0.46;
+  background: radial-gradient(color-mix(in srgb, var(--color-brand-forest) 10%, transparent) 1px, transparent 1.4px) 0 0 / 52px 52px;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, transparent 28%, transparent 72%, #000 100%);
+  mask-image: linear-gradient(90deg, #000 0%, transparent 28%, transparent 72%, #000 100%);
+}
+.shop-counter-surface {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-brand-forest) 16%, transparent);
+  background:
+    radial-gradient(ellipse at 2% 44%, color-mix(in srgb, var(--color-brand-yellow) 15%, transparent), transparent 34%),
+    radial-gradient(ellipse at 98% 80%, color-mix(in srgb, var(--color-brand-mint) 58%, transparent), transparent 38%),
+    linear-gradient(118deg, var(--color-brand-buff), color-mix(in srgb, var(--color-brand-warm-white) 88%, var(--color-brand-buff)) 58%, var(--color-brand-warm-white));
+}
 .market-board {
   background:
     radial-gradient(color-mix(in srgb, var(--color-brand-forest) 18%, transparent) 1.2px, transparent 1.2px) 0 0 / 26px 26px,
@@ -488,6 +586,45 @@ body::before {
 }
 
 /* ---------- Farmer field notebook ---------- */
+.farm-story-surface {
+  border-bottom: 1px solid color-mix(in srgb, var(--color-brand-forest) 16%, transparent);
+  background:
+    radial-gradient(ellipse at -6% 22%, color-mix(in srgb, var(--color-brand-orange) 7%, transparent), transparent 36%),
+    radial-gradient(ellipse at 106% 72%, color-mix(in srgb, var(--color-brand-mint) 76%, transparent), transparent 42%),
+    linear-gradient(112deg, var(--color-brand-buff), color-mix(in srgb, var(--color-brand-warm-white) 82%, var(--color-brand-buff)) 54%, color-mix(in srgb, var(--color-brand-mint) 34%, var(--color-brand-warm-white)));
+}
+.farm-story-surface::before {
+  position: absolute;
+  top: -22%;
+  bottom: -22%;
+  left: -16rem;
+  width: clamp(28rem, 42vw, 46rem);
+  content: "";
+  pointer-events: none;
+  opacity: 0.34;
+  background: repeating-radial-gradient(
+    ellipse at center,
+    transparent 0 42px,
+    color-mix(in srgb, var(--color-brand-orange) 15%, transparent) 43px 45px,
+    transparent 46px 76px
+  );
+  border-radius: 50%;
+  transform: rotate(8deg);
+}
+@keyframes farmer-story-enter {
+  from {
+    opacity: 0.2;
+    transform: translate3d(12px, 0, 0) rotate(0.35deg);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) rotate(0);
+  }
+}
+.farmer-story-active {
+  animation: farmer-story-enter 220ms ease-out both;
+  transform-origin: center;
+}
 .farmer-portrait::before {
   position: absolute;
   top: -12px;
@@ -712,7 +849,42 @@ body::before {
   filter: brightness(1.8) saturate(0.65);
 }
 
+@media (min-width: 1600px) {
+  body::before {
+    opacity: 0.82;
+    background-size: auto, auto, 56px 56px;
+  }
+
+  .process-journey::before {
+    left: -11rem;
+    width: min(46vw, 52rem);
+  }
+
+  .process-journey::after {
+    right: -12rem;
+    width: min(48vw, 54rem);
+  }
+}
+
 @media (max-width: 619px) {
+  body::before {
+    opacity: 0.46;
+    background-size: auto, auto, 56px 56px;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, transparent 30%, transparent 70%, #000 100%);
+    mask-image: linear-gradient(90deg, #000 0%, transparent 30%, transparent 70%, #000 100%);
+  }
+
+  .shop-catalog-surface::before {
+    opacity: 0.26;
+    -webkit-mask-image: linear-gradient(90deg, #000 0%, transparent 34%, transparent 66%, #000 100%);
+    mask-image: linear-gradient(90deg, #000 0%, transparent 34%, transparent 66%, #000 100%);
+  }
+
+  .farm-story-surface::before {
+    left: -23rem;
+    opacity: 0.22;
+  }
+
   .site-header::before,
   .site-header::after {
     width: 52px;

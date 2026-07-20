@@ -34,16 +34,18 @@ function ProcessStep({ title, number, image, alt, tone, rotation, index }: (type
 
 export function ProcessSection() {
   return (
-    <section className={`process-journey deferred-section process relative grid gap-[2.1rem] overflow-hidden rounded-[38px_24px_44px_28px/28px_44px_24px_38px] border-3 border-brand-forest bg-brand-buff px-4 py-[clamp(2.8rem,6vw,5rem)] shadow-brand sm:px-6 ${sectionShell}`} id="how-it-works" aria-labelledby="process-title">
-      <div className="section-heading grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(240px,0.45fr)] sm:items-end sm:gap-8">
-        <div className="grid gap-2">
-          <OutlineTag>How it works</OutlineTag>
-          <h2 id="process-title" className={`${sectionTitle} text-brand-green-ink`}>Follow the box from field to fork.</h2>
+    <section className="process-journey full-bleed-band deferred-section process border-brand-forest" id="how-it-works" aria-labelledby="process-title">
+      <div className={`relative z-[1] grid gap-[2.1rem] ${sectionShell}`}>
+        <div className="section-heading grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(240px,0.45fr)] sm:items-end sm:gap-8">
+          <div className="grid gap-2">
+            <OutlineTag>How it works</OutlineTag>
+            <h2 id="process-title" className={`${sectionTitle} text-brand-green-ink`}>Follow the box from field to fork.</h2>
+          </div>
+          <p className="max-w-105 text-[1.05rem] text-brand-black/72">A simple route, with clear checkpoints instead of hidden steps.</p>
         </div>
-        <p className="max-w-105 text-[1.05rem] text-brand-black/72">A simple route, with clear checkpoints instead of hidden steps.</p>
-      </div>
-      <div className="process-grid process-grid-shell relative grid grid-cols-1 items-start gap-4 sm:grid-cols-2 sm:gap-4 md:grid-cols-5 md:pt-5">
-        {processSteps.map((step, index) => <ProcessStep key={step.number} {...step} index={index} />)}
+        <div className="process-grid process-grid-shell relative grid grid-cols-1 items-start gap-4 sm:grid-cols-2 sm:gap-4 md:grid-cols-5 md:pt-5">
+          {processSteps.map((step, index) => <ProcessStep key={step.number} {...step} index={index} />)}
+        </div>
       </div>
     </section>
   );

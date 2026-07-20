@@ -148,10 +148,10 @@ export const topPicks = [
   { name: "Cabbage Fry Kit", duration: "~25 mins", tone: "white" },
 ] as const;
 
-export const farmers = [
-  { name: "Farm identity and consent", place: "Verification step", produce: "Partner name, location, and consented photography", certification: "Verification pending", profileNote: "Zama will publish a farm profile only after confirming the partner identity, location, sourcing relationship, and permission to use its story and images.", rotation: "sm:-rotate-[1.1deg]" },
-  { name: "Season and harvest record", place: "Verification step", produce: "Crop, harvest window, and available quantities", certification: "Verification pending", profileNote: "Seasonal availability and expected quantities will be checked with the farm before they appear on a product record.", rotation: "sm:rotate-[1.2deg]" },
-  { name: "Product traceability record", place: "Verification step", produce: "Source, batch, handling, and delivery notes", certification: "Verification pending", profileNote: "Source and handling notes will be connected to the product record before Zama describes an ingredient as locally sourced.", rotation: "sm:-rotate-[1.1deg]" },
+export const farmerStories = [
+  { title: "Who grew it?", eyebrow: "Identity and consent", summary: "Partner name, location, and consented photography", status: "Verification pending", body: "Zama will publish a farm profile only after confirming the partner identity, location, sourcing relationship, and permission to use its story and images." },
+  { title: "What is in season?", eyebrow: "Harvest record", summary: "Crop, harvest window, and available quantities", status: "Verification pending", body: "Seasonal availability and expected quantities will be checked with the farm before they appear on a product record." },
+  { title: "How did it reach the box?", eyebrow: "Traceability record", summary: "Source, batch, handling, and delivery notes", status: "Verification pending", body: "Source and handling notes will be connected to the product record before Zama describes an ingredient as locally sourced." },
 ] as const;
 
 export const pricingPlans = [
