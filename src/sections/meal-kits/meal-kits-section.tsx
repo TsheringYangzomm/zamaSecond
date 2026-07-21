@@ -65,7 +65,7 @@ export function MealKitsSection() {
       <div className="section-heading grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:gap-8">
         <div className="grid gap-2">
           <OutlineTag>Meal kits</OutlineTag>
-          <h2 id="meal-title" className={`${sectionTitle} max-w-190 text-brand-green-ink`}>Dinner decisions, already sketched out.</h2>
+          <h2 id="meal-title" className={`${sectionTitle} max-w-190 text-brand-green-ink`}>Meal decisions, already sketched out.</h2>
           <p className="max-w-150 text-[1.05rem] leading-[1.5] text-brand-black/72">Choose a useful starting point, then see the final recipe, portions, price, nutrition, and allergens together before ordering.</p>
         </div>
         <OutlineLink href="?category=meal-kits#shop">Browse meal kits</OutlineLink>
