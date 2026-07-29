@@ -1,11 +1,11 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useCart } from "../../cart-context";
 import { shopProducts } from "../../data/landing";
-import { OutlineTag, YellowTag } from "../../components/ui/tag";
+import { YellowTag } from "../../components/ui/tag";
 import { btnPrimaryKit, sectionShell } from "../../components/ui/styles";
 import { submitLaunchInterest } from "../../launch-interest";
 
 type ShopProduct = (typeof shopProducts)[number];
-type Basket = Record<string, number>;
 
 const categories = ["All", "Fresh boxes", "Meal kits", "Groceries"] as const;
 type Category = (typeof categories)[number];
@@ -36,6 +36,24 @@ function getInitialCategory(): Category {
 
 function productPrice(product: ShopProduct) {
   return product.priceAmount === null ? product.priceLabel : `Nu. ${numberFormatter.format(product.priceAmount)} ${product.priceUnit}`;
+}
+
+function AddToCartIcon() {
+  return (
+    <svg className="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 4h2.2l1.55 10.05a2 2 0 0 0 1.98 1.7h8.84a2 2 0 0 0 1.94-1.5L21 8H6.05" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15.5 3.5v5M13 6h5" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" />
+      <path d="M9 20h.01M18 20h.01" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M4 4l12 12M16 4 4 16" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function ProductDetail({ product, compact = false }: { product: ShopProduct; compact?: boolean }) {
@@ -101,8 +119,9 @@ function FeaturedShopCard({ product, onAdd }: { product: ShopProduct; onAdd: (pr
         <strong className="text-brand-orange-ink">{productPrice(product)}</strong>
         <p className="text-xs text-brand-black/64">{product.deliveryEstimate}</p>
         <ProductDetail product={product} />
-        <button className={`${btnPrimaryKit} mt-auto w-full`} type="button" onClick={() => onAdd(product)} aria-label={`Save ${product.name} for launch`}>
-          Save for Launch
+        <button className={`${btnPrimaryKit} mt-auto w-full gap-2`} type="button" onClick={() => onAdd(product)} aria-label={`Add ${product.name} to cart`}>
+          <AddToCartIcon />
+          Add to Cart
         </button>
       </div>
     </article>
@@ -126,25 +145,33 @@ function SupportingShopCard({ product, onAdd }: { product: ShopProduct; onAdd: (
       </div>
       <div className="col-span-full"><ProductFacts product={product} compact /></div>
       <div className="col-span-full"><ProductDetail product={product} compact /></div>
-      <button className={`${btnPrimaryKit} col-span-full w-full`} type="button" onClick={() => onAdd(product)} aria-label={`Save ${product.name} for launch`}>
-        Save for Launch
+      <button className={`${btnPrimaryKit} col-span-full w-full gap-2`} type="button" onClick={() => onAdd(product)} aria-label={`Add ${product.name} to cart`}>
+        <AddToCartIcon />
+        Add to Cart
       </button>
     </article>
   );
 }
 
-function BasketLine({ product, quantity, onChange, onRemove }: { product: ShopProduct; quantity: number; onChange: (productId: string, difference: number) => void; onRemove: (productId: string) => void }) {
+function CartLine({ product, quantity, onChange, onRemove }: { product: ShopProduct; quantity: number; onChange: (productId: string, difference: number) => void; onRemove: (productId: string) => void }) {
   return (
-    <li className="grid gap-3 rounded-wobbly-md border-2 border-brand-forest bg-brand-white p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-      <div className="min-w-0">
-        <p className="font-bold text-brand-black">{product.name}</p>
-        <p className="text-sm text-brand-black/64">{productPrice(product)}</p>
+    <li className="grid grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-wobbly-md border-2 border-brand-forest bg-brand-white p-3 shadow-brand-soft">
+      <div className="brand-pattern grid h-18 w-18 place-items-center overflow-hidden rounded-wobbly-md border-2 border-dashed border-brand-forest/28 p-1.5">
+        <img className="h-full w-full object-contain" src={product.image} alt="" width="72" height="72" />
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <button className="grid h-11 w-11 touch-manipulation place-items-center rounded-wobbly-md border-2 border-brand-forest bg-brand-white font-bold text-brand-forest shadow-brand-tight hover:bg-brand-mint focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onChange(product.id, -1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
-        <span className="min-w-8 text-center font-bold tabular-nums" aria-label={`${quantity} selected`}>{quantity}</span>
-        <button className="grid h-11 w-11 touch-manipulation place-items-center rounded-wobbly-md border-2 border-brand-forest bg-brand-leaf font-bold text-brand-white shadow-brand-tight hover:bg-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onChange(product.id, 1)} aria-label={`Increase ${product.name} quantity`}>+</button>
-        <button className="min-h-11 touch-manipulation rounded-wobbly-md px-2 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onRemove(product.id)}>Remove</button>
+      <div className="grid min-w-0 gap-2">
+        <div className="min-w-0">
+          <p className="font-bold leading-tight text-brand-black">{product.name}</p>
+          <p className="mt-1 text-xs leading-snug text-brand-black/64">{productPrice(product)}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center rounded-wobbly-md border-2 border-brand-forest bg-brand-mint">
+            <button className="grid h-10 w-10 touch-manipulation place-items-center rounded-wobbly-md font-bold text-brand-forest hover:bg-brand-white focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onChange(product.id, -1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
+            <span className="min-w-7 text-center font-bold tabular-nums text-brand-black" aria-label={`${quantity} in cart`}>{quantity}</span>
+            <button className="grid h-10 w-10 touch-manipulation place-items-center rounded-wobbly-md font-bold text-brand-forest hover:bg-brand-white focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onChange(product.id, 1)} aria-label={`Increase ${product.name} quantity`}>+</button>
+          </div>
+          <button className="min-h-10 touch-manipulation rounded-wobbly-md px-2 text-xs font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => onRemove(product.id)}>Remove</button>
+        </div>
       </div>
     </li>
   );
@@ -153,20 +180,70 @@ function BasketLine({ product, quantity, onChange, onRemove }: { product: ShopPr
 export function ShopSection() {
   const areaInputRef = useRef<HTMLInputElement>(null);
   const emailInputRef = useRef<HTMLInputElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const {
+    cart,
+    cartQuantity,
+    isCartOpen,
+    addToCart,
+    changeCartQuantity,
+    removeFromCart,
+    closeCart,
+  } = useCart();
   const [category, setCategory] = useState<Category>(getInitialCategory);
-  const [basket, setBasket] = useState<Basket>({});
   const [area, setArea] = useState("");
-  const [areaMessage, setAreaMessage] = useState("");
   const [areaHasError, setAreaHasError] = useState(false);
+  const [cartAnnouncement, setCartAnnouncement] = useState("");
   const [submissionMessage, setSubmissionMessage] = useState("");
   const [submissionError, setSubmissionError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const visibleProducts = category === "All" ? shopProducts : shopProducts.filter((product) => product.category === category);
   const [featuredProduct, ...supportingProducts] = visibleProducts;
-  const basketItems = shopProducts.filter((product) => (basket[product.id] ?? 0) > 0);
-  const basketQuantity = basketItems.reduce((total, product) => total + basket[product.id], 0);
-  const hasCompletePricing = basketItems.length > 0 && basketItems.every((product) => product.priceAmount !== null);
-  const subtotal = basketItems.reduce((total, product) => total + (product.priceAmount ?? 0) * basket[product.id], 0);
+  const cartItems = shopProducts.filter((product) => (cart[product.id] ?? 0) > 0);
+  const hasCompletePricing = cartItems.length > 0 && cartItems.every((product) => product.priceAmount !== null);
+  const subtotal = cartItems.reduce((total, product) => total + (product.priceAmount ?? 0) * cart[product.id], 0);
+
+  useEffect(() => {
+    if (!isCartOpen) return;
+
+    const returnFocusTarget = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusTimer = window.setTimeout(() => closeButtonRef.current?.focus(), 0);
+
+    function handleDrawerKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeCart();
+        return;
+      }
+      if (event.key !== "Tab" || !drawerRef.current) return;
+
+      const focusableElements = [...drawerRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )].filter((element) => !element.hasAttribute("inert"));
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements.at(-1);
+      if (!firstElement || !lastElement) return;
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleDrawerKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.removeEventListener("keydown", handleDrawerKeyDown);
+      document.body.style.overflow = previousOverflow;
+      returnFocusTarget?.focus();
+    };
+  }, [closeCart, isCartOpen]);
 
   function selectCategory(nextCategory: Category) {
     setCategory(nextCategory);
@@ -176,45 +253,29 @@ export function ShopSection() {
     window.history.replaceState(window.history.state, "", url);
   }
 
-  function addToBasket(product: ShopProduct) {
-    setBasket((current) => ({ ...current, [product.id]: (current[product.id] ?? 0) + 1 }));
+  function handleAddToCart(product: ShopProduct) {
+    addToCart(product.id);
+    const nextQuantity = cartQuantity + 1;
+    setCartAnnouncement(`${product.name} added to cart. ${nextQuantity} item${nextQuantity === 1 ? "" : "s"} in cart.`);
     setSubmissionMessage("");
   }
 
   function changeQuantity(productId: string, difference: number) {
-    setBasket((current) => {
-      const nextQuantity = Math.max(0, (current[productId] ?? 0) + difference);
-      if (nextQuantity === 0) {
-        const remaining = { ...current };
-        delete remaining[productId];
-        return remaining;
-      }
-      return { ...current, [productId]: nextQuantity };
-    });
+    changeCartQuantity(productId, difference);
     setSubmissionMessage("");
   }
 
-  function removeFromBasket(productId: string) {
-    setBasket((current) => {
-      const remaining = { ...current };
-      delete remaining[productId];
-      return remaining;
-    });
+  function handleRemoveFromCart(productId: string) {
+    removeFromCart(productId);
     setSubmissionMessage("");
   }
 
-  function checkArea(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmedArea = area.trim();
-    if (!trimmedArea) {
-      setAreaMessage("Enter your neighborhood or a nearby landmark so Zama can review it.");
-      setAreaHasError(true);
-      areaInputRef.current?.focus();
-      return;
-    }
-    setArea(trimmedArea);
-    setAreaHasError(false);
-    setAreaMessage(`Coverage for ${trimmedArea} is being reviewed. Final serviceability, fee, and delivery window will be confirmed before ordering.`);
+  function browseProducts() {
+    closeCart();
+    window.setTimeout(() => {
+      document.getElementById("product-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.querySelector<HTMLButtonElement>("#product-grid button")?.focus();
+    }, 0);
   }
 
   async function handleLaunchRequest(event: FormEvent<HTMLFormElement>) {
@@ -223,16 +284,16 @@ export function ShopSection() {
     const formData = new FormData(form);
     const email = formData.get("email");
 
-    if (basketQuantity === 0) {
+    if (cartQuantity === 0) {
       setSubmissionError(true);
-      setSubmissionMessage("Save at least 1 product for launch, then submit your picks again.");
-      document.querySelector<HTMLButtonElement>("#product-grid button")?.focus();
+      setSubmissionMessage("Add at least 1 product to your cart, then submit your picks again.");
+      browseProducts();
       return;
     }
 
     if (!area.trim()) {
       setSubmissionError(true);
-      setSubmissionMessage("Enter and check your delivery area before saving your picks.");
+      setSubmissionMessage("Enter your neighborhood or a nearby landmark before saving your cart.");
       setAreaHasError(true);
       areaInputRef.current?.focus();
       return;
@@ -254,9 +315,9 @@ export function ShopSection() {
         email: email.trim(),
         area: area.trim(),
         source: "launch-basket",
-        items: basketItems.map((product) => ({ sku: product.sku, quantity: basket[product.id] })),
+        items: cartItems.map((product) => ({ sku: product.sku, quantity: cart[product.id] })),
       });
-      setSubmissionMessage(result.mode === "preview" ? "Preview saved for this browser session. Connect the launch endpoint before publishing." : "Your product and delivery-area interest has been saved. Zama will contact you before orders open.");
+      setSubmissionMessage(result.mode === "preview" ? "Cart saved for this browser session. Connect the launch endpoint before publishing." : "Your cart and delivery-area interest have been saved. Zama will contact you before orders open.");
       form.reset();
     } catch (error) {
       setSubmissionError(true);
@@ -270,11 +331,11 @@ export function ShopSection() {
     <section className="shop-section" id="shop" aria-labelledby="shop-title">
       <div className="shop-catalog-surface full-bleed-safe relative overflow-hidden py-[clamp(2.5rem,5vw,4.5rem)]">
         <div className={`relative z-[1] grid gap-7 ${sectionShell}`}>
-          <div className="market-board relative grid min-w-0 gap-6 overflow-hidden rounded-[38px_24px_46px_28px/28px_46px_24px_38px] border-4 border-brand-forest bg-brand-yellow p-4 shadow-brand-big sm:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.7fr)] sm:items-center sm:p-7 lg:p-9">
+          {/* <div className="market-board relative grid min-w-0 gap-6 overflow-hidden rounded-[38px_24px_46px_28px/28px_46px_24px_38px] border-4 border-brand-forest bg-brand-yellow p-4 shadow-brand-big sm:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.7fr)] sm:items-center sm:p-7 lg:p-9">
             <div className="relative z-[1] grid min-w-0 gap-3">
               <OutlineTag>Today’s Market Board</OutlineTag>
               <h2 id="shop-title" className="max-w-170 break-words text-balance font-primary text-[clamp(2.25rem,11vw,5.4rem)] font-bold leading-[0.95] tracking-[-0.035em] text-brand-forest">Build a better <span className="inline-block max-w-full -rotate-1 rounded-wobbly-tag border-3 border-brand-forest bg-brand-warm-white px-2.5 py-1 shadow-brand sm:-rotate-2">basket.</span></h2>
-              <p className="max-w-155 text-pretty text-[1.05rem] leading-[1.5] text-brand-black/72">Compare the planned range, check what is inside, and save the boxes you want Zama to prioritize for launch.</p>
+              <p className="max-w-155 text-pretty text-[1.05rem] leading-[1.5] text-brand-black/72">Compare the planned range, check what is inside, and add the boxes you want Zama to prioritize for launch.</p>
             </div>
             <form className="market-ticket relative z-[1] grid min-w-0 gap-3 rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:rotate-[0.8deg] sm:p-5" onSubmit={checkArea} aria-label="Check launch delivery area" noValidate>
               <div>
@@ -287,7 +348,7 @@ export function ShopSection() {
               <button className={btnPrimaryKit} type="submit">Check Launch Area</button>
               <p className="min-h-[1.25rem] text-sm font-medium text-brand-black" id="service-area-status" role="status" aria-live="polite">{areaMessage}</p>
             </form>
-          </div>
+          </div> */}
 
           <div className="market-filter-bar grid gap-3 rounded-[24px_18px_28px_16px/18px_28px_16px_24px] border-3 border-brand-forest bg-brand-warm-white p-3 shadow-brand sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:px-4">
             <div className="flex flex-wrap gap-2" aria-label="Shop categories">
@@ -301,54 +362,115 @@ export function ShopSection() {
           </div>
 
           <div className="grid gap-5" id="product-grid">
-            {featuredProduct ? <FeaturedShopCard product={featuredProduct} onAdd={addToBasket} /> : null}
+            {featuredProduct ? <FeaturedShopCard product={featuredProduct} onAdd={handleAddToCart} /> : null}
             {supportingProducts.length > 0 ? (
               <div className={`grid content-start items-start gap-4 ${supportingProducts.length >= 2 ? "md:grid-cols-2" : ""} ${supportingProducts.length >= 3 ? "lg:grid-cols-3" : ""}`}>
-                {supportingProducts.map((product) => <SupportingShopCard key={product.id} product={product} onAdd={addToBasket} />)}
+                {supportingProducts.map((product) => <SupportingShopCard key={product.id} product={product} onAdd={handleAddToCart} />)}
               </div>
             ) : null}
           </div>
+          <p className="sr-only" role="status" aria-live="polite">{cartAnnouncement}</p>
+          <p className="text-sm text-brand-black/64">Need the practical details first? <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">Review delivery and support.</a></p>
         </div>
       </div>
 
-      <div className="shop-counter-surface full-bleed-safe relative overflow-hidden py-[clamp(2.25rem,4.5vw,4rem)]">
-        <div className={`relative z-[1] grid gap-4 ${sectionShell}`}>
-          <div className="launch-counter relative grid min-w-0 gap-6 overflow-hidden rounded-[36px_22px_42px_26px/26px_42px_22px_36px] border-4 border-brand-forest bg-brand-forest p-4 text-brand-warm-white shadow-brand-big sm:p-7 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.62fr)] lg:items-start">
-            <div className="relative z-[1] grid gap-3">
-              <OutlineTag>Launch Basket</OutlineTag>
-              <h3 className="max-w-155 text-balance font-primary text-[clamp(2.2rem,4vw,4rem)] font-bold leading-[0.98] text-brand-warm-white">Take your picks to the counter.</h3>
-              <p className="text-brand-warm-white/72">Save product interest only. No payment or order is created.</p>
-              {basketItems.length > 0 ? (
-                <ul className="grid gap-2">
-                  {basketItems.map((product) => <BasketLine key={product.id} product={product} quantity={basket[product.id]} onChange={changeQuantity} onRemove={removeFromBasket} />)}
-                </ul>
-              ) : (
-                <div className="rounded-wobbly-md border-2 border-dashed border-brand-yellow/46 bg-brand-warm-white/10 p-4 text-brand-warm-white/68">Your basket is empty. Add a launch product above to begin.</div>
-              )}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-brand-warm-white/24 pt-3">
-                <p className="font-bold text-brand-warm-white" aria-live="polite"><span className="tabular-nums">{basketQuantity}</span> item{basketQuantity === 1 ? "" : "s"} saved</p>
-                <p className="font-bold text-brand-yellow">{hasCompletePricing ? `Estimated subtotal: Nu. ${numberFormatter.format(subtotal)}` : "Final total shown before payment"}</p>
-              </div>
+      <div
+        className={`fixed inset-0 z-50 transition-[visibility] duration-300 ${isCartOpen ? "visible" : "invisible"}`}
+        aria-hidden={!isCartOpen}
+      >
+        <button
+          className={`absolute inset-0 h-full w-full cursor-default border-0 bg-brand-black/52 transition-opacity duration-300 ${isCartOpen ? "opacity-100" : "opacity-0"}`}
+          type="button"
+          aria-label="Close cart"
+          tabIndex={-1}
+          onClick={closeCart}
+        />
+        <aside
+          className={`cart-drawer absolute inset-y-0 right-0 grid w-[min(100%,440px)] grid-rows-[auto_minmax(0,1fr)_auto] border-l-4 border-brand-forest bg-brand-warm-white shadow-[-10px_0_0_color-mix(in_srgb,var(--color-brand-forest)_18%,transparent)] transition-transform duration-300 ease-out ${isCartOpen ? "translate-x-0" : "translate-x-full"}`}
+          id="cart-drawer"
+          ref={drawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="cart-drawer-title"
+          aria-describedby="cart-drawer-description"
+          inert={!isCartOpen}
+        >
+          <div className="relative flex items-start justify-between gap-4 border-b-3 border-dashed border-brand-forest bg-brand-yellow px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-5">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-brand-orange-ink">Your launch cart</p>
+              <h2 className="mt-1 font-primary text-[clamp(1.8rem,7vw,2.5rem)] font-bold leading-none text-brand-forest" id="cart-drawer-title">
+                Market picks
+                <span className="ml-2 inline-grid min-h-7 min-w-7 translate-y-[-0.15em] place-items-center rounded-full border-2 border-brand-forest bg-brand-orange px-1.5 font-secondary text-sm text-brand-white" aria-hidden="true">{cartQuantity}</span>
+              </h2>
+              <p className="mt-2 max-w-80 text-sm leading-snug text-brand-black/68" id="cart-drawer-description">Review quantities and save your interest. No payment or order is created.</p>
             </div>
-
-            <form className="basket-receipt relative z-[1] grid min-w-0 gap-3 rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:rotate-[0.6deg]" onSubmit={handleLaunchRequest} aria-label="Save launch basket interest" noValidate>
-              <p className="font-primary text-xl font-bold text-brand-black">Save Your Market Picks</p>
-              <div className="rounded-wobbly-md border-2 border-dashed border-brand-forest/36 bg-brand-mint p-3">
-                <p className="text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Delivery Area</p>
-                <p className="mt-1 text-sm text-brand-black/72">{area.trim() || "Check your Thimphu area above first."}</p>
-              </div>
-              <input name="area" type="hidden" value={area} readOnly />
-              <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="launch-email">Email for launch updates
-                <input className="min-h-11 min-w-0 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="launch-email" ref={emailInputRef} name="email" type="email" placeholder="you@example.com…" autoComplete="email" spellCheck={false} aria-describedby="launch-submission-status" aria-invalid={submissionError} onChange={() => { if (submissionError) setSubmissionError(false); if (submissionMessage) setSubmissionMessage(""); }} required />
-              </label>
-              <button className={btnPrimaryKit} type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save My Launch Picks"}</button>
-              <p className={`min-h-[1.25rem] text-sm ${submissionError ? "font-bold text-brand-black" : "font-bold text-brand-green-ink"}`} id="launch-submission-status" role="status" aria-live="polite">{submissionMessage}</p>
-              <p className="text-xs text-brand-black/72">By submitting, you agree to receive launch-related messages under the <a className="font-bold underline decoration-dashed underline-offset-2" href="#privacy-policy">privacy notice</a>. You can ask Zama to remove your details at any time.</p>
-            </form>
+            <button
+              className="grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-wobbly-md border-3 border-brand-forest bg-brand-white text-brand-forest shadow-brand-tight hover:bg-brand-mint focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3"
+              type="button"
+              ref={closeButtonRef}
+              aria-label="Close cart"
+              onClick={closeCart}
+            >
+              <CloseIcon />
+            </button>
           </div>
 
-          <p className="text-sm text-brand-black/64">Need the practical details first? <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">Review delivery and support.</a></p>
-        </div>
+          <div className="overscroll-contain overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4 sm:px-5">
+            {cartItems.length > 0 ? (
+              <div className="grid gap-4">
+                <ul className="grid gap-3">
+                  {cartItems.map((product) => (
+                    <CartLine
+                      key={product.id}
+                      product={product}
+                      quantity={cart[product.id]}
+                      onChange={changeQuantity}
+                      onRemove={handleRemoveFromCart}
+                    />
+                  ))}
+                </ul>
+
+                {/* <form className="basket-receipt relative grid min-w-0 gap-3 rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-white p-4 text-brand-black shadow-brand" onSubmit={handleLaunchRequest} aria-label="Save launch cart interest" noValidate>
+                  <p className="font-primary text-xl font-bold text-brand-black">Save Your Cart</p>
+                  <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="cart-service-area">Neighborhood or landmark
+                    <input className="min-h-11 min-w-0 rounded-wobbly-md border-2 border-brand-forest bg-brand-mint px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="cart-service-area" ref={areaInputRef} name="area" value={area} onChange={(event) => { setArea(event.target.value); setAreaHasError(false); if (submissionError) setSubmissionError(false); if (submissionMessage) setSubmissionMessage(""); }} placeholder="Example: Changzamtok…" autoComplete="address-line1" aria-describedby="launch-submission-status" aria-invalid={areaHasError} required />
+                  </label>
+                  <label className="grid gap-1 text-sm font-bold text-brand-black" htmlFor="launch-email">Email for launch updates
+                    <input className="min-h-11 min-w-0 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 font-normal outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" id="launch-email" ref={emailInputRef} name="email" type="email" placeholder="you@example.com…" autoComplete="email" spellCheck={false} aria-describedby="launch-submission-status" aria-invalid={submissionError} onChange={() => { if (submissionError) setSubmissionError(false); if (submissionMessage) setSubmissionMessage(""); }} required />
+                  </label>
+                  <button className={`${btnPrimaryKit} gap-2`} type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : "Save My Cart"}</button>
+                  <p className={`min-h-[1.25rem] text-sm ${submissionError ? "font-bold text-brand-black" : "font-bold text-brand-green-ink"}`} id="launch-submission-status" role="status" aria-live="polite">{submissionMessage}</p>
+                  <p className="text-xs text-brand-black/72">By submitting, you agree to receive launch-related messages under the <a className="font-bold underline decoration-dashed underline-offset-2" href="#privacy-policy" onClick={closeCart}>privacy notice</a>. You can ask Zama to remove your details at any time.</p>
+                </form> */}
+              </div>
+            ) : (
+              <div className="grid min-h-full place-content-center justify-items-center gap-4 py-12 text-center">
+                <div className="brand-pattern grid h-24 w-24 place-items-center rounded-full border-3 border-dashed border-brand-forest text-brand-forest">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3 4h2.2l1.55 10.05a2 2 0 0 0 1.98 1.7h8.84a2 2 0 0 0 1.94-1.5L21 8H6.05" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M9 20h.01M18 20h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-primary text-2xl font-bold text-brand-black">Your cart is empty</h3>
+                  <p className="mt-1 max-w-70 text-sm text-brand-black/64">Add a fresh box, meal kit, or grocery top-up to get started.</p>
+                </div>
+                <button className={`${btnPrimaryKit} gap-2`} type="button" onClick={browseProducts}>
+                  Browse Products
+                </button>
+              </div>
+            )}
+          </div>
+          {cartItems.length > 0 ? (
+            <div className="cart-summary-bar relative z-[2] grid gap-1 border-t-2 border-dashed border-brand-forest/32 bg-brand-warm-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_18px_color-mix(in_srgb,var(--color-brand-forest)_12%,transparent)] sm:px-5">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-bold text-brand-black"><span className="tabular-nums">{cartQuantity}</span> item{cartQuantity === 1 ? "" : "s"}</p>
+                <p className="text-right font-bold text-brand-orange-ink">{hasCompletePricing ? `Nu. ${numberFormatter.format(subtotal)}` : "Pricing pending"}</p>
+              </div>
+              <p className="text-xs text-brand-black/58">{hasCompletePricing ? "Estimated subtotal" : "Final total shown before payment"}</p>
+            </div>
+          ) : null}
+        </aside>
       </div>
     </section>
   );
