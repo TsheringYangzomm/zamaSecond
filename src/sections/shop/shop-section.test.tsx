@@ -1,12 +1,23 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
+import { CartProvider } from "../../cart-provider";
+import { SiteHeader } from "../../components/layout/site-header";
 import { ShopSection } from "./shop-section";
+
+function renderShop({ withHeader = false } = {}) {
+  return render(
+    <CartProvider>
+      {withHeader ? <SiteHeader /> : null}
+      <ShopSection />
+    </CartProvider>,
+  );
+}
 
 describe("ShopSection", () => {
   it("keeps product details independently expandable", async () => {
     const user = userEvent.setup();
-    render(<ShopSection />);
+    renderShop();
     const groceryCard = screen.getByRole("article", { name: "Grocery Top-Up" });
     const details = groceryCard.querySelector("details");
 
@@ -16,25 +27,32 @@ describe("ShopSection", () => {
     expect(within(groceryCard).getByText(/Product code:/)).toBeVisible();
   });
 
-  it("adds a product to the launch picks and announces the count", async () => {
+  it("updates the header count and opens the selected items in a cart drawer", async () => {
     const user = userEvent.setup();
-    render(<ShopSection />);
+    renderShop({ withHeader: true });
 
-    await user.click(screen.getByRole("button", { name: "Save Recipe Meal Kit for launch" }));
+    await user.click(screen.getByRole("button", { name: "Add Recipe Meal Kit to cart" }));
 
-    expect(screen.getByText((_, element) => element?.tagName === "P" && element.textContent === "1 item saved")).toBeVisible();
-    expect(screen.getByText("Recipe Meal Kit", { selector: "p" })).toBeVisible();
+    const cartButtons = screen.getAllByRole("button", { name: "Open cart, 1 item" });
+    expect(cartButtons.length).toBeGreaterThan(0);
+    await user.click(cartButtons[0]);
+
+    const drawer = screen.getByRole("dialog", { name: "Market picks" });
+    expect(drawer).toBeVisible();
+    expect(within(drawer).getByText("Recipe Meal Kit")).toBeVisible();
+    expect(within(drawer).getByLabelText("1 in cart")).toBeVisible();
   });
 
-  it("keeps submit enabled and focuses the first missing requirement", async () => {
+  it("keeps the cart summary outside the scrollable product list", async () => {
     const user = userEvent.setup();
-    render(<ShopSection />);
-    const submit = screen.getByRole("button", { name: "Save My Launch Picks" });
+    renderShop({ withHeader: true });
 
-    expect(submit).toBeEnabled();
-    await user.click(submit);
+    await user.click(screen.getByRole("button", { name: "Add Seasonal Vegetable Box to cart" }));
+    await user.click(screen.getAllByRole("button", { name: "Open cart, 1 item" })[0]);
+    const drawer = screen.getByRole("dialog", { name: "Market picks" });
+    const summary = within(drawer).getByText("Pricing pending").closest(".cart-summary-bar");
 
-    expect(screen.getByText("Save at least 1 product for launch, then submit your picks again.")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Save Seasonal Vegetable Box for launch" })).toHaveFocus();
+    expect(summary).toBeVisible();
+    expect(summary?.parentElement).toBe(drawer);
   });
 });

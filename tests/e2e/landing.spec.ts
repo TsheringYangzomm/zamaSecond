@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-const responsiveWidths = [320, 390, 768, 1440] as const;
+const responsiveWidths = [320, 366, 390, 768, 1440] as const;
 
 for (const width of responsiveWidths) {
   test(`keeps meaningful content inside a ${width}px viewport`, async ({ page }) => {
@@ -17,6 +17,11 @@ for (const width of responsiveWidths) {
         ".shop-note-card",
         ".source-map-shell",
         ".price-card",
+        ".delivery-ledger",
+        "#trust",
+        "#trust-title",
+        ".trust-stamp",
+        ".field-notebook",
         ".site-footer nav",
       ];
 
@@ -46,6 +51,14 @@ test("opens mobile navigation with an accessible state", async ({ page }) => {
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
 });
 
+test("keeps the desktop navigation on one compact row", async ({ page }) => {
+  await page.setViewportSize({ width: 1157, height: 700 });
+  await page.goto("/");
+
+  const linkTops = await page.locator(".site-nav a").evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().top)));
+  expect(Math.max(...linkTops) - Math.min(...linkTops)).toBeLessThanOrEqual(1);
+});
+
 test("expanding one supporting product does not stretch its neighbors", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/#shop");
@@ -66,6 +79,26 @@ test("updates the URL when a shop category is selected", async ({ page }) => {
   await page.goto("/#shop");
   await page.getByRole("button", { name: "Meal kits", exact: true }).click();
   await expect(page).toHaveURL(/category=meal-kits/);
+});
+
+test("adds a product to the header cart and opens the drawer", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/#shop");
+
+  await page.getByRole("button", { name: "Add Recipe Meal Kit to cart" }).click();
+  const cartButton = page.getByRole("button", { name: "Open cart, 1 item" });
+  await expect(cartButton).toBeVisible();
+  await cartButton.click();
+
+  const drawer = page.getByRole("dialog", { name: "Market picks" });
+  await expect(drawer).toBeVisible();
+  await expect(drawer.getByText("Recipe Meal Kit")).toBeVisible();
+  await expect(drawer.getByLabel("1 in cart")).toBeVisible();
+
+  const summary = drawer.locator(".cart-summary-bar");
+  const [drawerBox, summaryBox] = await Promise.all([drawer.boundingBox(), summary.boundingBox()]);
+  expect(summaryBox?.y).toBeGreaterThan(drawerBox?.y ?? 0);
+  expect((summaryBox?.y ?? 0) + (summaryBox?.height ?? 0)).toBeCloseTo((drawerBox?.y ?? 0) + (drawerBox?.height ?? 0), 0);
 });
 
 test("moves through the farmer story carousel", async ({ page }) => {

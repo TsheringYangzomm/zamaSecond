@@ -12,13 +12,13 @@ const trustStampClasses = [
 
 function TrustStamp({ title, body, index }: (typeof trustItems)[number] & { index: number }) {
   return (
-    <article className={`trust-stamp grid gap-2 rounded-wobbly-card border-2 border-dashed border-brand-forest/42 ${trustStampClasses[index]} p-4 text-brand-black shadow-brand-soft`}>
+    <article className={`trust-stamp grid min-w-0 gap-2 overflow-hidden rounded-wobbly-card border-2 border-dashed border-brand-forest/42 ${trustStampClasses[index]} p-4 text-brand-black shadow-brand-soft`}>
       <div className="flex items-center justify-between gap-3">
         <span className="grid h-9 w-9 place-items-center rounded-full border-2 border-brand-forest bg-brand-yellow font-primary text-sm font-bold text-brand-black">0{index + 1}</span>
         <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-brand-green-ink">Trust mark</span>
       </div>
-      <h3 className="font-primary text-[1.35rem] font-bold leading-[1.05]">{title}</h3>
-      <p className="text-sm leading-[1.45] text-brand-black/72">{body}</p>
+      <h3 className="break-words font-primary text-[1.35rem] font-bold leading-[1.05]">{title}</h3>
+      <p className="break-words text-sm leading-[1.45] text-brand-black/72">{body}</p>
     </article>
   );
 }
@@ -28,11 +28,11 @@ export function LaunchDetailsSection() {
     <>
       <section className="delivery-ledger full-bleed-band border-brand-yellow/55 bg-brand-forest text-brand-warm-white" id="delivery" aria-labelledby="delivery-title">
         <div className={`relative z-[1] grid gap-7 ${sectionShell}`}>
-          <div className="relative z-[1] grid gap-6 lg:grid-cols-[minmax(0,0.72fr)_minmax(480px,1.28fr)] lg:items-start">
+          <div className="relative z-[1]  gap-6 lg:grid-cols-[minmax(0,0.72fr)_minmax(480px,1.28fr)] lg:items-start">
             <div className="grid content-start gap-4 lg:sticky lg:top-32">
               <OutlineTag>Delivery and support</OutlineTag>
               <h2 id="delivery-title" className={`${sectionTitle} text-brand-warm-white`}>The practical details, written like a receipt.</h2>
-              <p className="max-w-120 text-[1.05rem] text-brand-warm-white/72">Zama is starting in Thimphu. Exact coverage, hours, fees, and delivery windows will be visible before paid orders open.</p>
+              <p className="min-w-0 max-w-120 break-words text-[1.05rem] text-brand-warm-white/72">Zama is starting in Thimphu. Exact coverage, hours, fees, and delivery windows will be visible before paid orders open.</p>
               <div className="grid gap-1 border-l-4 border-brand-yellow pl-4">
                 <span className="text-xs font-bold uppercase tracking-[0.12em] text-brand-yellow">Need a human?</span>
                 <a className="w-fit font-bold text-brand-warm-white underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-yellow focus-visible:outline-offset-3" href="mailto:hello@zama.bt">hello@zama.bt</a>
@@ -40,7 +40,7 @@ export function LaunchDetailsSection() {
               </div>
             </div>
 
-            <div className="service-receipt relative rotate-[0.4deg] rounded-[20px_34px_18px_30px/30px_18px_34px_20px] border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:p-5">
+            {/* <div className="service-receipt relative rotate-[0.4deg] rounded-[20px_34px_18px_30px/30px_18px_34px_20px] border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 text-brand-black shadow-brand sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b-2 border-dashed border-brand-forest/32 pb-4">
                 <div>
                   <span className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-brand-orange-ink">Zama service note</span>
@@ -63,14 +63,14 @@ export function LaunchDetailsSection() {
                 </div>
                 <PrimaryLink href="#shop">Check launch area</PrimaryLink>
               </div>
-            </div>
+            </div> */}
           </div>
 
-          <section className="relative z-[1] grid gap-4 rounded-wobbly-card border-3 border-dashed border-brand-yellow/72 bg-brand-warm-white p-4 text-brand-black shadow-brand sm:p-6 lg:p-7" id="trust" aria-labelledby="trust-title">
-            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(260px,0.55fr)] sm:items-end sm:gap-8">
-              <div className="grid gap-2">
+          <section className="relative z-[1] grid min-w-0 gap-4 overflow-hidden rounded-wobbly-card border-3 border-dashed border-brand-yellow/72 bg-brand-warm-white p-4 text-brand-black shadow-brand sm:p-6 lg:p-7" id="trust" aria-labelledby="trust-title">
+            <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(260px,0.55fr)] sm:items-end sm:gap-8">
+              <div className="grid min-w-0 gap-2">
                 <YellowTag>Trust, made visible</YellowTag>
-                <h2 id="trust-title" className={`${sectionTitleCompact} text-brand-forest`}>Proof belongs beside the promise.</h2>
+                <h2 id="trust-title" className={`${sectionTitleCompact} break-words text-brand-forest`}>Proof belongs beside the promise.</h2>
               </div>
               <p className="text-sm text-brand-black/68">These become verified records—not decorative claims—before checkout goes live.</p>
             </div>
@@ -90,7 +90,7 @@ export function LaunchDetailsSection() {
           <p className="text-[1.05rem] text-brand-black/72">Plain-language policies, quick answers, and the reason Zama is being built—kept together like an open field notebook.</p>
         </div>
 
-        <div className="field-notebook relative grid overflow-hidden rounded-[38px_24px_44px_28px/28px_44px_24px_38px] border-4 border-brand-forest bg-brand-warm-white shadow-brand-big lg:grid-cols-2">
+        <div className="field-notebook relative  overflow-hidden rounded-[38px_24px_44px_28px/28px_44px_24px_38px] border-4 border-brand-forest bg-brand-warm-white shadow-brand-big lg:grid-cols-2">
           <div className="notebook-page relative z-[1] grid content-start gap-4 border-b-3 border-dashed border-brand-forest/28 p-5 sm:p-7 lg:border-r-3 lg:border-b-0">
             <div className="grid gap-1">
               <span className="text-xs font-bold uppercase tracking-[0.12em] text-brand-orange-ink">01 · Practical promises</span>
@@ -110,7 +110,7 @@ export function LaunchDetailsSection() {
             <a className="inline-flex min-h-11 w-fit items-center font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="mailto:hello@zama.bt">Ask Zama a question</a>
           </div>
 
-          <article className="notebook-page relative z-[1] grid content-start gap-5 p-5 sm:p-7" id="about" aria-labelledby="about-title">
+          {/* <article className="notebook-page relative z-[1] grid content-start gap-5 p-5 sm:p-7" id="about" aria-labelledby="about-title">
             <div className="grid gap-2">
               <YellowTag>02 · About Zama</YellowTag>
               <h3 id="about-title" className={`${sectionTitleCompact} text-brand-green-ink`}>A field notebook for better everyday food.</h3>
@@ -135,7 +135,7 @@ export function LaunchDetailsSection() {
               <PrimaryLink href="#shop">Browse the market</PrimaryLink>
               <a className="inline-flex min-h-11 items-center font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#farmers">Read sourcing notes</a>
             </div>
-          </article>
+          </article> */}
 
           <div className="relative z-[1] col-span-full grid gap-3 border-t-3 border-dashed border-brand-forest/28 bg-brand-mint/72 p-5 sm:p-7">
             <div className="flex flex-wrap items-end justify-between gap-2">

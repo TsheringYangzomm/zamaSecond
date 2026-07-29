@@ -85,11 +85,11 @@ export function HeroSection() {
     >
       <div className={`hero-layout relative z-[1] grid min-h-auto grid-cols-1 items-center gap-5 py-7 sm:py-9 lg:min-h-[min(650px,calc(100vh-108px))] lg:grid-cols-[minmax(0,1.06fr)_minmax(380px,0.94fr)] lg:gap-2 lg:py-11 ${sectionShell}`}>
         <div className="hero-content relative z-[2] flex min-w-0 flex-col items-start gap-4">
-          <YellowTag>Thimphu launch preview</YellowTag>
+          {/* <YellowTag>Thimphu launch preview</YellowTag> */}
           <h1 id="hero-title" className="hero-h1 max-w-full text-balance font-primary text-[clamp(2.2rem,11.5vw,3.35rem)] font-bold leading-[0.94] tracking-[-0.035em] text-brand-warm-white sm:max-w-[11ch] sm:text-[clamp(4rem,8vw,5.6rem)] lg:text-[clamp(4.2rem,5.8vw,5.4rem)]">
             <span className="block">Meal kits &</span>
             <span className="hero-highlight relative inline-block text-brand-yellow">fresh groceries</span>
-            <span className="block">for Thimphu<span className="inline-block rotate-6 text-brand-orange">!</span></span>
+            <span className="block">for Bhutan<span className="inline-block rotate-6 text-brand-orange">!</span></span>
           </h1>
           <p className="hero-copy max-w-135 text-pretty text-[clamp(1rem,4vw,1.08rem)] leading-[1.55] text-brand-warm-white/76 sm:text-[1.12rem]">
             Plan dinner, top up the kitchen, and see what is in your basket before you order. Local produce comes first when it is in season.

@@ -525,6 +525,25 @@ body::before {
   border: 2px dashed color-mix(in srgb, var(--color-brand-forest) 35%, transparent);
   transform: rotate(-3deg);
 }
+@keyframes cart-count-pop {
+  0% {
+    transform: scale(0.72) rotate(-8deg);
+  }
+  62% {
+    transform: scale(1.16) rotate(3deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+.cart-count-badge {
+  animation: cart-count-pop 220ms ease-out;
+}
+.cart-drawer {
+  background:
+    radial-gradient(color-mix(in srgb, var(--color-brand-leaf) 9%, transparent) 1px, transparent 1.4px) 0 0 / 34px 34px,
+    var(--color-brand-warm-white);
+}
 /* ---------- Shop market counter ---------- */
 .shop-catalog-surface {
   border-block: 1px solid color-mix(in srgb, var(--color-brand-forest) 16%, transparent);
