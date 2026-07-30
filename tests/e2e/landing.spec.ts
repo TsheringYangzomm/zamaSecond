@@ -101,6 +101,21 @@ test("adds a product to the header cart and opens the drawer", async ({ page }) 
   expect((summaryBox?.y ?? 0) + (summaryBox?.height ?? 0)).toBeCloseTo((drawerBox?.y ?? 0) + (drawerBox?.height ?? 0), 0);
 });
 
+test("fills the full phone viewport with the cart drawer", async ({ page }) => {
+  const phoneViewport = { width: 390, height: 844 };
+  await page.setViewportSize(phoneViewport);
+  await page.goto("/#shop");
+
+  await page.getByRole("button", { name: "Add Seasonal Vegetable Box to cart" }).click();
+  await page.getByRole("button", { name: "Open cart, 1 item" }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Market picks" });
+  const drawerBox = await drawer.boundingBox();
+  expect(drawerBox?.y).toBeCloseTo(0, 0);
+  expect(drawerBox?.height).toBeCloseTo(phoneViewport.height, 0);
+  expect(drawerBox?.width).toBeCloseTo(phoneViewport.width, 0);
+});
+
 test("moves through the farmer story carousel", async ({ page }) => {
   await page.goto("/#farmers");
   await expect(page.getByRole("heading", { name: "Who grew it?", level: 4 })).toBeVisible();

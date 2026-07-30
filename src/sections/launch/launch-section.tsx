@@ -1,4 +1,4 @@
-import { deliveryDetails, faqItems, policyItems, trustItems } from "../../data/landing";
+import { faqItems, policyItems, trustItems } from "../../data/landing";
 import { PrimaryLink } from "../../components/ui/action-link";
 import { OutlineTag, StatusBadge, YellowTag } from "../../components/ui/tag";
 import { sectionShell, sectionTitle, sectionTitleCompact } from "../../components/ui/styles";
