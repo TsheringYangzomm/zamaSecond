@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "../../cart-context";
 import { shopProducts } from "../../data/landing";
 import { YellowTag } from "../../components/ui/tag";
 import { btnPrimaryKit, sectionShell } from "../../components/ui/styles";
-import { submitLaunchInterest } from "../../launch-interest";
 
 type ShopProduct = (typeof shopProducts)[number];
 
@@ -178,8 +177,6 @@ function CartLine({ product, quantity, onChange, onRemove }: { product: ShopProd
 }
 
 export function ShopSection() {
-  const areaInputRef = useRef<HTMLInputElement>(null);
-  const emailInputRef = useRef<HTMLInputElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const {
@@ -192,12 +189,7 @@ export function ShopSection() {
     closeCart,
   } = useCart();
   const [category, setCategory] = useState<Category>(getInitialCategory);
-  const [area, setArea] = useState("");
-  const [areaHasError, setAreaHasError] = useState(false);
   const [cartAnnouncement, setCartAnnouncement] = useState("");
-  const [submissionMessage, setSubmissionMessage] = useState("");
-  const [submissionError, setSubmissionError] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const visibleProducts = category === "All" ? shopProducts : shopProducts.filter((product) => product.category === category);
   const [featuredProduct, ...supportingProducts] = visibleProducts;
   const cartItems = shopProducts.filter((product) => (cart[product.id] ?? 0) > 0);
@@ -257,17 +249,14 @@ export function ShopSection() {
     addToCart(product.id);
     const nextQuantity = cartQuantity + 1;
     setCartAnnouncement(`${product.name} added to cart. ${nextQuantity} item${nextQuantity === 1 ? "" : "s"} in cart.`);
-    setSubmissionMessage("");
   }
 
   function changeQuantity(productId: string, difference: number) {
     changeCartQuantity(productId, difference);
-    setSubmissionMessage("");
   }
 
   function handleRemoveFromCart(productId: string) {
     removeFromCart(productId);
-    setSubmissionMessage("");
   }
 
   function browseProducts() {
@@ -276,55 +265,6 @@ export function ShopSection() {
       document.getElementById("product-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
       document.querySelector<HTMLButtonElement>("#product-grid button")?.focus();
     }, 0);
-  }
-
-  async function handleLaunchRequest(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const email = formData.get("email");
-
-    if (cartQuantity === 0) {
-      setSubmissionError(true);
-      setSubmissionMessage("Add at least 1 product to your cart, then submit your picks again.");
-      browseProducts();
-      return;
-    }
-
-    if (!area.trim()) {
-      setSubmissionError(true);
-      setSubmissionMessage("Enter your neighborhood or a nearby landmark before saving your cart.");
-      setAreaHasError(true);
-      areaInputRef.current?.focus();
-      return;
-    }
-
-    if (typeof email !== "string" || !emailInputRef.current?.validity.valid) {
-      setSubmissionError(true);
-      setSubmissionMessage(emailInputRef.current?.validity.typeMismatch ? "Enter a complete email address, such as name@example.com." : "Enter your email address so Zama can follow up about your launch picks.");
-      emailInputRef.current?.focus();
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmissionError(false);
-    setSubmissionMessage("");
-
-    try {
-      const result = await submitLaunchInterest({
-        email: email.trim(),
-        area: area.trim(),
-        source: "launch-basket",
-        items: cartItems.map((product) => ({ sku: product.sku, quantity: cart[product.id] })),
-      });
-      setSubmissionMessage(result.mode === "preview" ? "Cart saved for this browser session. Connect the launch endpoint before publishing." : "Your cart and delivery-area interest have been saved. Zama will contact you before orders open.");
-      form.reset();
-    } catch (error) {
-      setSubmissionError(true);
-      setSubmissionMessage(error instanceof Error ? error.message : "We could not save your request. Please try again or email hello@zama.bt.");
-    } finally {
-      setIsSubmitting(false);
-    }
   }
 
   return (
@@ -375,7 +315,7 @@ export function ShopSection() {
       </div>
 
       <div
-        className={`fixed inset-0 z-50 transition-[visibility] duration-300 ${isCartOpen ? "visible" : "invisible"}`}
+        className={`cart-drawer-layer fixed inset-x-0 top-0 z-50 overflow-hidden transition-[visibility] duration-300 ${isCartOpen ? "visible" : "invisible"}`}
         aria-hidden={!isCartOpen}
       >
         <button
@@ -386,7 +326,7 @@ export function ShopSection() {
           onClick={closeCart}
         />
         <aside
-          className={`cart-drawer absolute inset-y-0 right-0 grid w-[min(100%,440px)] grid-rows-[auto_minmax(0,1fr)_auto] border-l-4 border-brand-forest bg-brand-warm-white shadow-[-10px_0_0_color-mix(in_srgb,var(--color-brand-forest)_18%,transparent)] transition-transform duration-300 ease-out ${isCartOpen ? "translate-x-0" : "translate-x-full"}`}
+          className={`cart-drawer absolute right-0 top-0 grid w-[min(100%,440px)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-l-4 border-brand-forest bg-brand-warm-white shadow-[-10px_0_0_color-mix(in_srgb,var(--color-brand-forest)_18%,transparent)] transition-transform duration-300 ease-out ${isCartOpen ? "translate-x-0" : "translate-x-full"}`}
           id="cart-drawer"
           ref={drawerRef}
           role="dialog"

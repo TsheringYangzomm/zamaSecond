@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState, type FormEvent } from "react";
 import { PrimaryButton } from "../../components/ui/action-link";
-import { YellowTag } from "../../components/ui/tag";
 import { sectionShell } from "../../components/ui/styles";
 import { submitLaunchInterest } from "../../launch-interest";
 

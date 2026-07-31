@@ -539,6 +539,20 @@ body::before {
 .cart-count-badge {
   animation: cart-count-pop 220ms ease-out;
 }
+.cart-drawer-layer,
+.cart-drawer {
+  height: 100vh;
+  min-height: 100vh;
+  max-height: 100vh;
+}
+@supports (height: 100dvh) {
+  .cart-drawer-layer,
+  .cart-drawer {
+    height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+  }
+}
 .cart-drawer {
   background:
     radial-gradient(color-mix(in srgb, var(--color-brand-leaf) 9%, transparent) 1px, transparent 1.4px) 0 0 / 34px 34px,
