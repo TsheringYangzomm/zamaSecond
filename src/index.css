@@ -230,7 +230,6 @@ body::before {
   background:
     radial-gradient(color-mix(in srgb, var(--color-brand-yellow) 12%, transparent) 1.2px, transparent 1.2px) 0 0 / 28px 28px,
     linear-gradient(135deg, var(--color-brand-forest), color-mix(in srgb, var(--color-brand-forest) 84%, var(--color-brand-black)));
-  box-shadow: 0 -32rem 0 32rem var(--color-brand-forest);
 }
 .hero-shell::before {
   position: absolute;
@@ -286,7 +285,6 @@ body::before {
 .hero-product {
   animation: hero-product-float 5.8s ease-in-out infinite;
   transform-origin: 50% 72%;
-  will-change: transform;
 }
 .hero-media-shell::before {
   position: absolute;
@@ -300,7 +298,6 @@ body::before {
   box-shadow: 9px 9px 0 color-mix(in srgb, var(--color-brand-black) 35%, transparent);
   animation: hero-halo-breathe 5.4s ease-in-out infinite;
   transform-origin: center;
-  will-change: transform;
 }
 .hero-media-shell::after {
   position: absolute;
@@ -313,7 +310,6 @@ body::before {
   border: 4px solid var(--color-brand-black);
   border-radius: 48% 52% 45% 55% / 56% 42% 58% 44%;
   animation: hero-orbit-drift 6.6s ease-in-out infinite -1.8s;
-  will-change: transform;
 }
 /* ---------- Value card tape ---------- */
 .value-card-shell::before {
@@ -538,6 +534,47 @@ body::before {
 }
 .cart-count-badge {
   animation: cart-count-pop 220ms ease-out;
+}
+/* ---------- Shop filter grid entrance ---------- */
+@keyframes shop-grid-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.shop-grid-item {
+  animation: shop-grid-item-in 360ms ease-out both;
+}
+.shop-count-pop {
+  display: inline-block;
+  animation: cart-count-pop 260ms ease-out;
+}
+/* ---------- Shop filter bar marquee ---------- */
+.filter-marquee {
+  display: flex;
+  align-items: center;
+  width: max-content;
+  animation: filter-marquee-scroll 30s linear infinite;
+}
+.filter-marquee:active {
+  animation-play-state: paused;
+}
+@keyframes filter-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .filter-marquee {
+    animation: none !important;
+  }
 }
 .cart-drawer-layer,
 .cart-drawer {

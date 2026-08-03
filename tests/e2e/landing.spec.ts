@@ -59,24 +59,23 @@ test("keeps the desktop navigation on one compact row", async ({ page }) => {
   expect(Math.max(...linkTops) - Math.min(...linkTops)).toBeLessThanOrEqual(1);
 });
 
-test("expanding one supporting product does not stretch its neighbors", async ({ page }) => {
+test("keeps the home shop cards simple and opens the full product page", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/#shop");
-  const mealKit = page.getByRole("article", { name: "Recipe Meal Kit" });
   const grocery = page.getByRole("article", { name: "Grocery Top-Up" });
-  const fruit = page.getByRole("article", { name: "Seasonal Fruit Box" });
-  const before = await Promise.all([mealKit.boundingBox(), fruit.boundingBox()]);
 
-  await grocery.getByText("Product Details").click();
+  await expect(grocery.locator("details")).toHaveCount(0);
+  await expect(grocery.getByRole("link", { name: "View details" })).toHaveAttribute("href", "#/shop/grocery-top-up");
 
-  const after = await Promise.all([mealKit.boundingBox(), fruit.boundingBox()]);
-  expect(after[0]?.height).toBeCloseTo(before[0]?.height ?? 0, 0);
-  expect(after[1]?.height).toBeCloseTo(before[1]?.height ?? 0, 0);
-  await expect(grocery.getByText(/Product code:/)).toBeVisible();
+  await grocery.getByRole("link", { name: "View details" }).click();
+  await expect(page).toHaveURL(/#\/shop\/grocery-top-up/);
+  await expect(page.getByRole("heading", { name: "Grocery Top-Up", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What previous buyers say" })).toBeVisible();
 });
 
 test("updates the URL when a shop category is selected", async ({ page }) => {
-  await page.goto("/#shop");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/#/shop");
   await page.getByRole("button", { name: "Meal kits", exact: true }).click();
   await expect(page).toHaveURL(/category=meal-kits/);
 });

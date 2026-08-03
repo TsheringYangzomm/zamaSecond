@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { CartProvider } from "../../cart-provider";
+import { CartDrawer } from "../../components/shop/cart-drawer";
 import { SiteHeader } from "../../components/layout/site-header";
 import { ShopSection } from "./shop-section";
 
@@ -10,21 +11,24 @@ function renderShop({ withHeader = false } = {}) {
     <CartProvider>
       {withHeader ? <SiteHeader /> : null}
       <ShopSection />
+      <CartDrawer />
     </CartProvider>,
   );
 }
 
 describe("ShopSection", () => {
-  it("keeps product details independently expandable", async () => {
-    const user = userEvent.setup();
+  it("keeps the home cards simple and links to the full shop", () => {
     renderShop();
-    const groceryCard = screen.getByRole("article", { name: "Grocery Top-Up" });
-    const details = groceryCard.querySelector("details");
 
-    expect(details).not.toHaveAttribute("open");
-    await user.click(within(groceryCard).getByText("Product Details"));
-    expect(details).toHaveAttribute("open");
-    expect(within(groceryCard).getByText(/Product code:/)).toBeVisible();
+    const groceryCard = screen.getByRole("article", { name: "Grocery Top-Up" });
+    expect(groceryCard.querySelector("details")).toBeNull();
+    expect(within(groceryCard).getByRole("link", { name: "View details →" })).toHaveAttribute("href", "#/shop/grocery-top-up");
+
+    const featuredCard = screen.getByRole("article", { name: "Seasonal Vegetable Box" });
+    expect(featuredCard.querySelector("details")).toBeNull();
+    expect(within(featuredCard).getByRole("link", { name: /view full details/i })).toHaveAttribute("href", "#/shop/seasonal-vegetable-box");
+
+    expect(screen.getByRole("link", { name: "View full shop" })).toHaveAttribute("href", "#/shop");
   });
 
   it("updates the header count and opens the selected items in a cart drawer", async () => {
@@ -50,7 +54,7 @@ describe("ShopSection", () => {
     await user.click(screen.getByRole("button", { name: "Add Seasonal Vegetable Box to cart" }));
     await user.click(screen.getAllByRole("button", { name: "Open cart, 1 item" })[0]);
     const drawer = screen.getByRole("dialog", { name: "Market picks" });
-    const summary = within(drawer).getByText("Pricing pending").closest(".cart-summary-bar");
+    const summary = within(drawer).getByText("Nu. 500").closest(".cart-summary-bar");
 
     expect(summary).toBeVisible();
     expect(summary?.parentElement).toBe(drawer);

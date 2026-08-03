@@ -79,7 +79,7 @@ function WaitlistForm() {
 export function HeroSection() {
   return (
     <section
-      className="hero hero-shell full-bleed-safe relative isolate overflow-hidden border-y-4 border-brand-forest bg-brand-forest text-brand-warm-white"
+      className="hero hero-shell full-bleed-safe relative isolate mt-6 overflow-clip border-y-4 border-brand-forest bg-brand-forest text-brand-warm-white sm:mt-8"
       aria-labelledby="hero-title"
     >
       <div className={`hero-layout relative z-[1] grid min-h-auto grid-cols-1 items-center gap-5 py-7 sm:py-9 lg:min-h-[min(650px,calc(100vh-108px))] lg:grid-cols-[minmax(0,1.06fr)_minmax(380px,0.94fr)] lg:gap-2 lg:py-11 ${sectionShell}`}>

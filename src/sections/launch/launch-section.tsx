@@ -107,7 +107,7 @@ export function LaunchDetailsSection() {
                 </details>
               ))}
             </div>
-            <a className="inline-flex min-h-11 w-fit items-center font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="mailto:hello@zama.bt">Ask Zama a question</a>
+            <a className="inline-flex min-h-11 w-fit items-center font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#/contact">Ask Zama a question</a>
           </div>
 
           {/* <article className="notebook-page relative z-[1] grid content-start gap-5 p-5 sm:p-7" id="about" aria-labelledby="about-title">
