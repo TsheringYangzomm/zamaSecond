@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useCart } from "../cart-context";
+import { useContent } from "../cms/content-context";
 import { OutlineLink } from "../components/ui/action-link";
 import { OutlineTag, YellowTag } from "../components/ui/tag";
 import { btnPrimaryKit, sectionShell, sectionTitleCompact } from "../components/ui/styles";
@@ -7,7 +8,7 @@ import { AddToCartIcon, SupportingShopCard } from "../components/shop/product-ca
 import { ProductDetail } from "../components/shop/product-detail";
 import { ProductFacts } from "../components/shop/product-facts";
 import { ReviewsSection } from "../components/shop/reviews-section";
-import { findProduct, productPrice, shopProducts, type ShopProduct } from "../components/shop/shop-utils";
+import { findProduct, productPrice, type ShopProduct } from "../components/shop/shop-utils";
 
 const stepperButtonClasses =
   "grid h-11 w-11 touch-manipulation place-items-center rounded-wobbly-md font-bold text-brand-forest hover:bg-brand-white focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
@@ -69,9 +70,11 @@ function PurchasePanel({ product }: { product: ShopProduct }) {
 
 function ProductDetails({ product }: { product: ShopProduct }) {
   const { cartQuantity, addToCart } = useCart();
+  const { products, blocks } = useContent();
+  const page = blocks.productPage;
   const [relatedAnnouncement, setRelatedAnnouncement] = useState("");
-  const related = shopProducts.filter((candidate) => candidate.id !== product.id && candidate.category === product.category).slice(0, 3);
-  const suggestions = shopProducts.filter((candidate) => candidate.id !== product.id && candidate.category !== product.category).slice(0, 3);
+  const related = products.filter((candidate) => candidate.id !== product.id && candidate.category === product.category).slice(0, 3);
+  const suggestions = products.filter((candidate) => candidate.id !== product.id && candidate.category !== product.category).slice(0, 3);
 
   function handleAddRelated(candidate: ShopProduct) {
     addToCart(candidate.id);
@@ -82,7 +85,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
   return (
     <section className={`grid gap-6 py-[clamp(3rem,6vw,5rem)] ${sectionShell}`} aria-labelledby="product-title">
       <div className="grid gap-2">
-        <a className="inline-flex w-fit items-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href="#/shop">← Back to shop</a>
+        <a className="inline-flex w-fit items-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href="#/shop">{page.backLabel}</a>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
             <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
@@ -98,7 +101,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
         <div className="brand-pattern relative grid min-h-105 place-items-center overflow-hidden rounded-[34px_20px_40px_24px/24px_40px_20px_34px] border-3 border-dashed border-brand-forest bg-brand-warm-white p-5 shadow-brand-big sm:p-7">
           <img className="h-92 w-full object-contain sm:h-110" src={product.image} alt={product.alt} decoding="async" width="620" height="520" />
           <span className="absolute left-4 top-4 rounded-full border-2 border-brand-forest bg-brand-yellow px-3 py-1 text-xs font-bold text-brand-black">{product.category}</span>
-          <span className="absolute bottom-4 right-4 -rotate-2 rounded-wobbly-tag border-2 border-brand-forest bg-brand-white px-3 py-2 text-xs font-bold text-brand-black shadow-brand-soft">Contents shown before ordering</span>
+          <span className="absolute bottom-4 right-4 -rotate-2 rounded-wobbly-tag border-2 border-brand-forest bg-brand-white px-3 py-2 text-xs font-bold text-brand-black shadow-brand-soft">{page.contentsShownLabel}</span>
         </div>
 
         <div className="grid min-w-0 content-start gap-4">
@@ -110,7 +113,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
           <p className="text-[1.05rem] leading-[1.55] text-brand-black/72">{product.description}</p>
 
           <div className="grid gap-1 border-l-4 border-brand-orange pl-3">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Price</span>
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">{page.priceLabel}</span>
             <strong className="font-primary text-[clamp(2rem,4vw,2.8rem)] font-bold leading-none text-brand-orange-ink">{productPrice(product)}</strong>
             <p className="text-xs text-brand-black/64">{product.deliveryEstimate}</p>
           </div>
@@ -131,7 +134,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
       {related.length > 0 ? (
         <aside className="grid content-start gap-4 border-t-2 border-dashed border-brand-forest/26 pt-6" aria-labelledby="related-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="related-title" className="font-primary text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none text-brand-black">More {product.category.toLowerCase()}</h2>
+            <h2 id="related-title" className="font-primary text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none text-brand-black">{page.relatedHeading} {product.category.toLowerCase()}</h2>
             <OutlineLink href="#/shop">Browse the full shop</OutlineLink>
           </div>
           <div className="grid content-start items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -143,7 +146,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
       {suggestions.length > 0 ? (
         <aside className="grid content-start gap-4 border-t-2 border-dashed border-brand-forest/26 pt-6" aria-labelledby="suggestions-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 id="suggestions-title" className="font-primary text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none text-brand-black">You may also like</h2>
+            <h2 id="suggestions-title" className="font-primary text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none text-brand-black">{page.suggestionsHeading}</h2>
             <OutlineLink href="#/shop">Browse the full shop</OutlineLink>
           </div>
           <div className="grid content-start items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -158,14 +161,16 @@ function ProductDetails({ product }: { product: ShopProduct }) {
 }
 
 function ProductNotFound() {
+  const { blocks } = useContent();
+  const page = blocks.productPage;
   return (
     <section className={`grid gap-6 py-[clamp(3rem,6vw,5rem)] ${sectionShell}`} aria-labelledby="not-found-title">
       <div className="section-heading grid gap-4">
-        <OutlineTag>Product not found</OutlineTag>
-        <h1 id="not-found-title" className={`${sectionTitleCompact} max-w-180 text-brand-green-ink`}>That product is not on the shelf.</h1>
-        <p className="max-w-140 text-[1.05rem] leading-[1.5] text-brand-black/72">The link may be out of date or the product may have been renamed. Browse the full launch range instead.</p>
+        <OutlineTag>{page.notFoundTag}</OutlineTag>
+        <h1 id="not-found-title" className={`${sectionTitleCompact} max-w-180 text-brand-green-ink`}>{page.notFoundTitle}</h1>
+        <p className="max-w-140 text-[1.05rem] leading-[1.5] text-brand-black/72">{page.notFoundCopy}</p>
         <div>
-          <OutlineLink href="#/shop">Browse all products</OutlineLink>
+          <OutlineLink href="#/shop">{page.notFoundCtaLabel}</OutlineLink>
         </div>
       </div>
     </section>
@@ -173,6 +178,7 @@ function ProductNotFound() {
 }
 
 export function ProductPage({ productId }: { productId: string | null }) {
-  const product = productId ? findProduct(productId) : undefined;
+  const { products } = useContent();
+  const product = productId ? findProduct(products, productId) : undefined;
   return product ? <ProductDetails product={product} /> : <ProductNotFound />;
 }

@@ -2,21 +2,43 @@ import { shopProducts } from "../../data/landing";
 
 export { shopProducts };
 
-export type ShopProduct = Omit<(typeof shopProducts)[number], "priceAmount" | "collections"> & {
+export type ProductCategory = "Fresh boxes" | "Meal kits" | "Groceries";
+
+export type ShopProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  eyebrow: string;
+  description: string;
+  image: string;
+  alt: string;
+  category: ProductCategory;
   priceAmount: number | null;
+  priceLabel: string;
+  priceUnit: string;
+  servings: string;
+  availability: string;
+  deliveryEstimate: string;
+  cookingTime: string;
+  ingredients: string;
+  allergenNotice: string;
+  storage: string;
+  source: string;
+  nutrition: string;
+  tags: readonly string[];
   collections: readonly string[];
 };
 
 export const categories = ["All", "Fresh boxes", "Meal kits", "Groceries"] as const;
 export type Category = (typeof categories)[number];
 
-export const categoryBadgeClasses: Record<ShopProduct["category"], string> = {
+export const categoryBadgeClasses: Record<ProductCategory, string> = {
   "Fresh boxes": "bg-brand-lime text-brand-forest",
   "Meal kits": "bg-brand-purple text-brand-white",
   Groceries: "bg-brand-orange/18 text-brand-orange-ink",
 };
 
-export const categoryRailClasses: Record<ShopProduct["category"], string> = {
+export const categoryRailClasses: Record<ProductCategory, string> = {
   "Fresh boxes": "border-t-brand-leaf",
   "Meal kits": "border-t-brand-purple",
   Groceries: "border-t-brand-orange",
@@ -83,8 +105,8 @@ export function productPrice(product: ShopProduct) {
   return product.priceAmount === null ? product.priceLabel : `Nu. ${numberFormatter.format(product.priceAmount)} ${product.priceUnit}`;
 }
 
-export function findProduct(productId: string): ShopProduct | undefined {
-  return shopProducts.find((product) => product.id === productId);
+export function findProduct(products: readonly ShopProduct[], productId: string): ShopProduct | undefined {
+  return products.find((product) => product.id === productId);
 }
 
 export function productDetailHref(product: ShopProduct) {

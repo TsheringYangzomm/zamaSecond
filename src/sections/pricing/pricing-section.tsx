@@ -1,4 +1,4 @@
-import { pricingPlans } from "../../data/landing";
+import { useContent } from "../../cms/content-context";
 import { ActionLink } from "../../components/ui/action-link";
 import { OutlineTag } from "../../components/ui/tag";
 import { btnOutlineLg, btnPrimaryLg, sectionShell } from "../../components/ui/styles";
@@ -8,7 +8,18 @@ const planToneClasses = {
   yellow: "featured-plan featured-plan-shell bg-brand-yellow shadow-brand-big",
 } as const;
 
-function PlanCard({ name, price, cadence, eyebrow, features, action, tone, rotation }: (typeof pricingPlans)[number]) {
+type PricingPlan = {
+  name: string;
+  price: string;
+  cadence: string;
+  eyebrow: string;
+  features: readonly string[];
+  action: string;
+  tone: "white" | "yellow";
+  rotation: string;
+};
+
+function PlanCard({ name, price, cadence, eyebrow, features, action, tone, rotation }: PricingPlan) {
   const actionClass = tone === "yellow" ? btnPrimaryLg : btnOutlineLg;
 
   return (
@@ -29,15 +40,18 @@ function PlanCard({ name, price, cadence, eyebrow, features, action, tone, rotat
 }
 
 export function PricingSection() {
+  const { blocks } = useContent();
+  const pricing = blocks.pricing;
+
   return (
     <section className={`deferred-section pricing grid gap-[1.45rem] pb-[clamp(4rem,8vw,6rem)] ${sectionShell}`} id="pricing" aria-labelledby="pricing-title">
       <div className="section-heading grid gap-[0.55rem]">
-        <OutlineTag>Launch access and future membership</OutlineTag>
-        <h2 id="pricing-title" className="text-balance font-primary text-[clamp(2.35rem,5vw,5rem)] font-bold leading-[1.02] text-brand-green-ink">Start with the preview. Decide on membership later.</h2>
-        <p className="max-w-160 text-pretty text-[1.05rem] text-brand-black/72">There is no billing today. Zama will publish final benefits, price, renewal, pause, and cancellation terms before membership enrollment opens.</p>
+        <OutlineTag>{pricing.tag}</OutlineTag>
+        <h2 id="pricing-title" className="text-balance font-primary text-[clamp(2.35rem,5vw,5rem)] font-bold leading-[1.02] text-brand-green-ink">{pricing.heading}</h2>
+        <p className="max-w-160 text-pretty text-[1.05rem] text-brand-black/72">{pricing.copy}</p>
       </div>
       <div className="pricing-grid grid grid-cols-1 gap-[1.15rem] sm:grid-cols-2">
-        {pricingPlans.map((plan) => <PlanCard key={plan.name} {...plan} />)}
+        {pricing.plans.map((plan) => <PlanCard key={plan.name} {...plan} />)}
       </div>
     </section>
   );

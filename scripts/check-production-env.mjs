@@ -34,7 +34,13 @@ function requireValue(name) {
   console.log(`Production value configured: ${name}.`);
 }
 
-requireEndpoint("VITE_LAUNCH_INTEREST_ENDPOINT");
+requireEndpoint("VITE_SUPABASE_URL");
+requireValue("VITE_SUPABASE_ANON_KEY");
+
+if (process.env["VITE_LAUNCH_INTEREST_ENDPOINT"]?.trim()) {
+  requireEndpoint("VITE_LAUNCH_INTEREST_ENDPOINT");
+}
+
 requireValue("VITE_EMAILJS_PUBLIC_KEY");
 requireValue("VITE_EMAILJS_SERVICE_ID");
 requireValue("VITE_EMAILJS_TEMPLATE_ID");

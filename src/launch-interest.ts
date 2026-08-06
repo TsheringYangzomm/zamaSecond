@@ -1,3 +1,6 @@
+import { getSupabaseClient } from "./supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 export type LaunchInterestSource = "hero-waitlist" | "launch-basket";
 
 export type LaunchInterestItem = {
@@ -12,10 +15,10 @@ export type LaunchInterestPayload = {
   items?: LaunchInterestItem[];
 };
 
-export type LaunchInterestResult = {
-  mode: "remote" | "preview";
-  submissionId?: string;
-};
+export type LaunchInterestResult =
+  | { mode: "remote"; submissionId?: string }
+  | { mode: "preview" }
+  | { mode: "duplicate" };
 
 const previewStorageKey = "zama-launch-interest-preview";
 const requestTimeoutMs = 10_000;
@@ -23,6 +26,11 @@ const requestTimeoutMs = 10_000;
 type LaunchInterestResponse = {
   submissionId?: unknown;
 };
+
+type CreateLaunchInterestResponse =
+  | { status: "ok"; submissionId?: unknown }
+  | { status: "duplicate" }
+  | { status: "invalid_email" };
 
 function savePreviewSubmission(payload: LaunchInterestPayload) {
   sessionStorage.setItem(
@@ -34,7 +42,38 @@ function savePreviewSubmission(payload: LaunchInterestPayload) {
   );
 }
 
+async function submitViaSupabase(supabase: SupabaseClient, payload: LaunchInterestPayload): Promise<LaunchInterestResult> {
+  const { data, error } = await supabase.rpc("create_launch_interest", {
+    p_email: payload.email,
+    p_source: payload.source,
+    p_area: payload.area ?? null,
+    p_items: payload.items ?? null,
+  });
+
+  if (error) {
+    throw new Error("We could not save your launch request. Please try again or email hello@zama.bt.");
+  }
+
+  const result = data as CreateLaunchInterestResponse | null;
+
+  if (result?.status === "duplicate") {
+    return { mode: "duplicate" };
+  }
+
+  if (result?.status !== "ok") {
+    throw new Error("We could not save your launch request. Please try again or email hello@zama.bt.");
+  }
+
+  return { mode: "remote", submissionId: typeof result.submissionId === "string" ? result.submissionId : undefined };
+}
+
 export async function submitLaunchInterest(payload: LaunchInterestPayload): Promise<LaunchInterestResult> {
+  const supabase = getSupabaseClient();
+
+  if (supabase) {
+    return submitViaSupabase(supabase, payload);
+  }
+
   const endpoint = import.meta.env.VITE_LAUNCH_INTEREST_ENDPOINT?.trim();
 
   if (!endpoint) {

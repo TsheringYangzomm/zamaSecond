@@ -10,6 +10,7 @@ const mockSend = vi.mocked(emailjs.send);
 
 describe("submitContactMessage", () => {
   afterEach(() => {
+    mockSend.mockReset();
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
   });

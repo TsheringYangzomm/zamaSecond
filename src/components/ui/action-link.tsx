@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { btnOutlineLg, btnOutlineSm, btnPrimaryLg, btnPrimarySm } from "./styles";
+import { ArrowIcon } from "./icons";
 
 export type ActionLinkProps = {
   children: ReactNode;
@@ -11,7 +12,10 @@ export type ActionLinkProps = {
 export function ActionLink({ children, href, className, onClick }: ActionLinkProps) {
   return (
     <a className={className} href={href} onClick={onClick}>
-      {children}
+      <span className="inline-flex items-center gap-2">
+        {children}
+        <ArrowIcon />
+      </span>
     </a>
   );
 }

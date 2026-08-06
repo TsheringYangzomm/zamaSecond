@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useCart } from "../../cart-context";
-import { shopProducts } from "../../data/landing";
+import { useContent } from "../../cms/content-context";
 import { OutlineTag } from "../../components/ui/tag";
 import { PrimaryLink } from "../../components/ui/action-link";
 import { sectionShell, sectionTitleCompact } from "../../components/ui/styles";
@@ -13,7 +13,9 @@ export function ShopSection() {
     addToCart,
   } = useCart();
   const [cartAnnouncement, setCartAnnouncement] = useState("");
-  const [featuredProduct, ...supportingProducts] = shopProducts;
+  const { products, blocks } = useContent();
+  const shop = blocks.shopSection;
+  const [featuredProduct, ...supportingProducts] = products;
 
   function handleAddToCart(product: ShopProduct) {
     addToCart(product.id);
@@ -27,11 +29,11 @@ export function ShopSection() {
         <div className={`relative z-[1] grid gap-7 ${sectionShell}`}>
           <div className="section-heading flex flex-wrap items-end justify-between gap-4">
             <div className="grid max-w-150 gap-2">
-              <OutlineTag>Launch shop</OutlineTag>
-              <h2 id="shop-title" className={`${sectionTitleCompact} max-w-170 text-brand-green-ink`}>Shop the launch range.</h2>
-              <p className="text-[1.05rem] leading-[1.5] text-brand-black/72">A first look at every fresh box, meal kit, and grocery top-up. Open the full shop for portions, ingredients, and reviews.</p>
+              <OutlineTag>{shop.tag}</OutlineTag>
+              <h2 id="shop-title" className={`${sectionTitleCompact} max-w-170 text-brand-green-ink`}>{shop.heading}</h2>
+              <p className="text-[1.05rem] leading-[1.5] text-brand-black/72">{shop.copy}</p>
             </div>
-            <PrimaryLink href="#/shop">View full shop</PrimaryLink>
+            <PrimaryLink href="#/shop">{shop.ctaLabel}</PrimaryLink>
           </div>
 
           <div className="grid gap-5" id="product-grid">
@@ -43,7 +45,7 @@ export function ShopSection() {
             ) : null}
           </div>
           <p className="sr-only" role="status" aria-live="polite">{cartAnnouncement}</p>
-          <p className="text-sm text-brand-black/64">Want the full range, portions, and buyer reviews? <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#/shop">Browse the full shop →</a> or review <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">delivery details.</a></p>
+          <p className="text-sm text-brand-black/64">{shop.footerPrefix} <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#/shop">{shop.footerBrowseLabel}</a> or review <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">{shop.footerDeliveryLabel}</a></p>
         </div>
       </div>
     </section>

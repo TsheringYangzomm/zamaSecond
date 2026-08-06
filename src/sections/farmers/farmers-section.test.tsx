@@ -1,19 +1,22 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { FarmersSection } from "./farmers-section";
 
 describe("FarmersSection", () => {
-  it("lets people move between farmer story chapters", async () => {
-    const user = userEvent.setup();
+  it("renders the section heading", () => {
     render(<FarmersSection />);
+    expect(screen.getByRole("heading", { name: /Real people behind every ingredient/ })).toBeVisible();
+  });
 
-    expect(screen.getByRole("heading", { name: "Who grew it?", level: 4 })).toBeVisible();
+  it("renders three farmer cards", () => {
+    render(<FarmersSection />);
+    expect(screen.getByText("Pema Dorji")).toBeVisible();
+    expect(screen.getByText("Yeshey Wangmo")).toBeVisible();
+    expect(screen.getByText("Tashi Phuntsho")).toBeVisible();
+  });
 
-    await user.click(screen.getByRole("button", { name: "Next →" }));
-    expect(screen.getByRole("heading", { name: "What is in season?", level: 4 })).toBeVisible();
-
-    await user.click(screen.getByRole("button", { name: /How did it reach the box\?/ }));
-    expect(screen.getByRole("heading", { name: "How did it reach the box?", level: 4 })).toBeVisible();
+  it("includes a link to the farmers page", () => {
+    render(<FarmersSection />);
+    expect(screen.getByRole("link", { name: /View all farmers/ })).toHaveAttribute("href", "#/farmers");
   });
 });

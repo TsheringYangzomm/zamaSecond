@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
-import { products } from "../../data/landing";
+import { useContent } from "../../cms/content-context";
 import { OutlineLink, PrimaryLink } from "../../components/ui/action-link";
 import { OutlineTag } from "../../components/ui/tag";
 import { sectionShell } from "../../components/ui/styles";
 
-type ProductLayout = (typeof products)[number]["layout"];
-type ProductTone = (typeof products)[number]["tone"];
+type ProductLayout = "standard" | "reverse";
+type ProductTone = "white" | "yellow";
 
 function ProductFrame({ children, layout }: { children: ReactNode; layout: ProductLayout }) {
   const layoutClass = layout === "reverse" ? "product-row-reverse product-row-reverse-shell sm:grid-cols-[minmax(0,1fr)_minmax(250px,0.88fr)]" : "sm:grid-cols-[minmax(250px,0.88fr)_minmax(0,1fr)]";
@@ -28,7 +28,7 @@ function ProductArtwork({ image, alt, layout, tone }: { image: string; alt: stri
   );
 }
 
-function ProductCopy({ name, eyebrow, description, secondaryLabel, secondaryHref }: Omit<(typeof products)[number], "image" | "alt" | "layout" | "tone">) {
+function ProductCopy({ name, eyebrow, description, secondaryLabel, secondaryHref, primaryLabel }: { name: string; eyebrow: string; description: string; secondaryLabel: string; secondaryHref: string; primaryLabel: string }) {
   return (
     <div className="product-copy grid max-w-130 content-center gap-4">
       <OutlineTag>{eyebrow}</OutlineTag>
@@ -36,7 +36,7 @@ function ProductCopy({ name, eyebrow, description, secondaryLabel, secondaryHref
       <p className="text-[1.25rem] text-brand-black/72">{description}</p>
       <div className="editorial-rule" aria-hidden="true" />
       <div className="button-row flex flex-wrap gap-[0.8rem]">
-        <PrimaryLink href="#waitlist">Get this box</PrimaryLink>
+        <PrimaryLink href="#waitlist">{primaryLabel}</PrimaryLink>
         <OutlineLink href={secondaryHref}>{secondaryLabel}</OutlineLink>
       </div>
     </div>
@@ -46,16 +46,19 @@ function ProductCopy({ name, eyebrow, description, secondaryLabel, secondaryHref
 const Product = { Frame: ProductFrame, Artwork: ProductArtwork, Copy: ProductCopy };
 
 export function SubscriptionsSection() {
+  const { blocks } = useContent();
+  const { tag, heading, primaryLabel, items: products } = blocks.subscriptions;
+
   return (
     <section className={`deferred-section products grid gap-[clamp(2.6rem,6vw,5rem)] pb-[clamp(4rem,7vw,6rem)] ${sectionShell}`} id="subscriptions" aria-labelledby="products-title">
       <div className="section-heading grid justify-items-center gap-[0.55rem] text-center">
-        <OutlineTag>Shop categories</OutlineTag>
-        <h2 id="products-title" className="font-primary text-[clamp(2.35rem,5vw,5rem)] font-bold leading-[1.02] text-brand-green-ink">Explore the range</h2>
+        <OutlineTag>{tag}</OutlineTag>
+        <h2 id="products-title" className="font-primary text-[clamp(2.35rem,5vw,5rem)] font-bold leading-[1.02] text-brand-green-ink">{heading}</h2>
       </div>
       {products.map((product) => (
         <Product.Frame key={product.name} layout={product.layout}>
           <Product.Artwork image={product.image} alt={product.alt} layout={product.layout} tone={product.tone} />
-          <Product.Copy name={product.name} eyebrow={product.eyebrow} description={product.description} secondaryLabel={product.secondaryLabel} secondaryHref={product.secondaryHref} />
+          <Product.Copy name={product.name} eyebrow={product.eyebrow} description={product.description} secondaryLabel={product.secondaryLabel} secondaryHref={product.secondaryHref} primaryLabel={primaryLabel} />
         </Product.Frame>
       ))}
     </section>

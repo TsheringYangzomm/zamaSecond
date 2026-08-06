@@ -1,5 +1,5 @@
 import { OutlineTag } from "../ui/tag";
-import { reviewsForProduct } from "./reviews";
+import { useContent } from "../../cms/content-context";
 import type { ShopProduct } from "./shop-utils";
 
 function Stars({ rating }: { rating: number }) {
@@ -17,7 +17,8 @@ function initials(name: string) {
 }
 
 export function ReviewsSection({ product }: { product: ShopProduct }) {
-  const reviews = reviewsForProduct(product.id);
+  const { reviews: reviewsByProduct } = useContent();
+  const reviews = reviewsByProduct[product.id] ?? [];
   if (reviews.length === 0) return null;
 
   const average = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;

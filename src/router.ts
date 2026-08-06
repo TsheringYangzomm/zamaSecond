@@ -1,9 +1,11 @@
-export type Route = "home" | "contact" | "shop" | "product";
+export type Route = "home" | "contact" | "shop" | "product" | "farmers" | "admin";
 
 export function getRoute(hash: string): Route {
+  if (hash.startsWith("#/admin")) return "admin";
   if (hash.startsWith("#/contact")) return "contact";
   if (hash.startsWith("#/shop/")) return "product";
   if (hash.startsWith("#/shop")) return "shop";
+  if (hash.startsWith("#/farmers")) return "farmers";
   return "home";
 }
 

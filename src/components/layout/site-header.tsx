@@ -1,8 +1,13 @@
 import { useCallback, useState } from "react";
 import { useCart } from "../../cart-context";
-import { navItems } from "../../data/landing";
+import { useContent } from "../../cms/content-context";
 import { SmallOutlineLink, SmallPrimaryLink } from "../ui/action-link";
+import { ArrowIcon } from "../ui/icons";
 import { navLinkClass } from "../ui/styles";
+
+function navArrow(itemHref: string) {
+  return itemHref.startsWith("#/") ? <ArrowIcon className="ml-1.5" /> : null;
+}
 
 function CartIcon() {
   return (
@@ -19,7 +24,7 @@ function CartButton({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
-      className="relative grid h-12 w-12 shrink-0 -translate-y-1 -rotate-1 touch-manipulation place-items-center rounded-[46%_54%_45%_55%/54%_44%_56%_46%] border-3 border-brand-forest bg-brand-yellow text-brand-forest shadow-brand-hover transition-[background-color,box-shadow,transform] duration-120 ease-in-out hover:-translate-y-1.5 hover:rotate-1 hover:bg-brand-white active:translate-y-0 active:rotate-0 active:shadow-brand-tight focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4"
+      className="relative grid h-12 w-12 shrink-0 -translate-y-1 -rotate-1 touch-manipulation place-items-center rounded-[46%_54%_45%_55%/54%_44%_56%_46%] border-3 border-brand-forest bg-brand-yellow text-brand-forest shadow-brand-hover transition-[background-color,box-shadow,transform] duration-120 ease-in-out hover:bg-brand-white active:translate-y-0 active:rotate-0 active:shadow-brand-tight focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4"
       aria-label={`Open cart, ${cartQuantity} item${cartQuantity === 1 ? "" : "s"}`}
       aria-controls="cart-drawer"
       aria-expanded={isCartOpen}
@@ -39,6 +44,9 @@ function CartButton({ onOpen }: { onOpen: () => void }) {
 }
 
 function DesktopNav() {
+  const { blocks } = useContent();
+  const { items: navItems, partnerLabel } = blocks.nav;
+
   return (
     <nav
       className="site-nav hidden sm:order-3 sm:col-span-2 sm:flex sm:flex-wrap sm:justify-start sm:gap-[clamp(0.7rem,1.35vw,1.15rem)] sm:text-[1.03rem] md:order-none md:col-span-1 lg:flex-nowrap"
@@ -47,13 +55,21 @@ function DesktopNav() {
       {navItems.map((item) => (
         <a className={navLinkClass} href={item.href} key={item.href}>
           {item.label}
+          {navArrow(item.href)}
         </a>
       ))}
+      <a className={navLinkClass} href="#b2b">
+        {partnerLabel}
+        {navArrow("#b2b")}
+      </a>
     </nav>
   );
 }
 
 function MobileNav({ onSelect, isOpen }: { onSelect: () => void; isOpen: boolean }) {
+  const { blocks } = useContent();
+  const { items: navItems, partnerLabel } = blocks.nav;
+
   return (
     <nav
       className={`grid min-h-0 gap-[0.4rem] overflow-hidden rounded-wobbly-md bg-brand-warm-white shadow-brand transition-[border-width,padding] duration-300 ${isOpen ? "border-3 border-brand-forest p-[0.9rem]" : "border-0 p-0"}`}
@@ -62,10 +78,11 @@ function MobileNav({ onSelect, isOpen }: { onSelect: () => void; isOpen: boolean
       {navItems.map((item) => (
         <a className={`${navLinkClass} text-[1.05rem]`} href={item.href} key={item.href} onClick={onSelect}>
           {item.label}
+          {navArrow(item.href)}
         </a>
       ))}
       <SmallOutlineLink className="mt-1 w-full" href="#b2b" onClick={onSelect}>
-        Partner with us
+        {partnerLabel}
       </SmallOutlineLink>
     </nav>
   );
@@ -74,6 +91,8 @@ function MobileNav({ onSelect, isOpen }: { onSelect: () => void; isOpen: boolean
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { cartQuantity, openCart } = useCart();
+  const { blocks } = useContent();
+  const { partnerLabel, joinLabel, joinShortLabel } = blocks.nav;
   const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const handleOpenCart = useCallback(() => {
@@ -85,20 +104,20 @@ export function SiteHeader() {
     <header className="site-header sticky top-2.5 z-20 mx-auto mt-3 w-[calc(100%-16px)] max-w-280 rounded-[26px_18px_28px_14px/16px_30px_18px_28px] border-3 border-brand-forest px-2 py-[0.6rem] shadow-brand sm:w-[min(1260px,calc(100%-40px))] sm:px-[0.9rem] sm:py-[0.7rem]">
       <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[auto_1fr] sm:gap-3 md:grid-cols-[auto_1fr_auto]">
         <a className="brand inline-flex shrink-0 -rotate-2 items-center" href="#top" aria-label="Zama home">
-          <img className="w-16 sm:w-24" src="assets/zama_logo.png" alt="Zama" width="96" height="42" />
+          <img className="h-14 w-auto sm:h-16" src="assets/zama_logo.png" alt="Zama" width="144" height="94" />
         </a>
 
         <DesktopNav />
 
         <div className="header-actions hidden items-center gap-2 sm:flex sm:justify-end" aria-label="Primary actions">
-          <SmallOutlineLink href="#b2b">Partner with us</SmallOutlineLink>
-          <SmallPrimaryLink href="#waitlist">Join launch updates</SmallPrimaryLink>
+          <SmallOutlineLink href="#b2b">{partnerLabel}</SmallOutlineLink>
+          <SmallPrimaryLink href="#waitlist">{joinLabel}</SmallPrimaryLink>
           <CartButton onOpen={handleOpenCart} />
         </div>
 
         <div className="flex items-center justify-end gap-[0.55rem] sm:hidden">
           <SmallPrimaryLink className="px-3 text-[0.92rem]" href="#waitlist">
-            Join
+            {joinShortLabel}
           </SmallPrimaryLink>
           <CartButton onOpen={handleOpenCart} />
           <button

@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "check:production-env": "node scripts/check-production-env.mjs",
+    "db:add-admin": "node scripts/add-admin.mjs",
+    "db:seed": "tsx scripts/seed-content.ts",
     "lint": "oxlint",
     "optimize:assets": "node scripts/optimize-assets.mjs",
     "preview": "vite preview",
@@ -16,6 +18,7 @@
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@supabase/supabase-js": "^2.112.0",
     "@tailwindcss/vite": "^4.3.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -31,9 +34,11 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
+    "dotenv": "^17.4.2",
     "jsdom": "^29.1.1",
     "oxlint": "^1.71.0",
     "sharp": "^0.35.3",
+    "tsx": "^4.23.5",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
     "vitest": "^4.1.10"

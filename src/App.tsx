@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { CartProvider } from "./cart-provider";
+import { ContentProvider } from "./cms/content-context";
 import { CartDrawer } from "./components/shop/cart-drawer";
 import { SiteFooter } from "./components/layout/site-footer";
 import { SiteHeader } from "./components/layout/site-header";
@@ -15,6 +16,9 @@ import { ProcessSection } from "./sections/process/process-section";
 import { ContactPage } from "./pages/contact-page";
 import { ShopPage } from "./pages/shop-page";
 import { ProductPage } from "./pages/product-page";
+import { FarmersPage } from "./pages/farmers-page";
+import { AdminPage } from "./pages/admin/admin-page";
+import { AdminAuthProvider } from "./admin/admin-auth";
 import { getProductId, getRoute, setPendingSection, takePendingSection, type Route } from "./router";
 
 function App() {
@@ -64,15 +68,28 @@ function App() {
     return () => document.removeEventListener("click", onClick);
   }, [route]);
 
+  if (route === "admin") {
+    return (
+      <AdminAuthProvider>
+        <AdminPage />
+      </AdminAuthProvider>
+    );
+  }
+
   return (
-    <CartProvider>
-      <a className="fixed left-4 top-3 z-50 -translate-y-24 rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow px-4 py-3 font-bold text-brand-black shadow-brand transition-transform focus:translate-y-0 focus:outline-none focus:ring-4 focus:ring-brand-leaf/30" href="#top">
-        Skip to Content
-      </a>
+    <ContentProvider>
+      <CartProvider>
+        <a className="fixed left-4 top-3 z-50 -translate-y-24 rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow px-4 py-3 font-bold text-brand-black shadow-brand transition-transform focus:translate-y-0 focus:outline-none focus:ring-4 focus:ring-brand-leaf/30" href="#top">
+          Skip to Content
+        </a>
       <SiteHeader />
       {route === "contact" ? (
         <main id="top" tabIndex={-1}>
           <ContactPage />
+        </main>
+      ) : route === "farmers" ? (
+        <main id="top" tabIndex={-1}>
+          <FarmersPage />
         </main>
       ) : route === "shop" ? (
         <main id="top" tabIndex={-1}>
@@ -96,7 +113,8 @@ function App() {
       )}
       <SiteFooter />
       <CartDrawer />
-    </CartProvider>
+      </CartProvider>
+    </ContentProvider>
   );
 }
 

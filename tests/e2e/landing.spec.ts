@@ -115,12 +115,30 @@ test("fills the full phone viewport with the cart drawer", async ({ page }) => {
   expect(drawerBox?.width).toBeCloseTo(phoneViewport.width, 0);
 });
 
-test("moves through the farmer story carousel", async ({ page }) => {
+test("renders the farmer carousel on the home page", async ({ page }) => {
   await page.goto("/#farmers");
-  await expect(page.getByRole("heading", { name: "Who grew it?", level: 4 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Real people behind every ingredient/ })).toBeVisible();
+  await expect(page.getByText("Pema Dorji")).toBeVisible();
+  await expect(page.getByRole("link", { name: /View all farmers/i })).toHaveAttribute("href", "#/farmers");
+});
 
-  await page.getByRole("button", { name: "Next →" }).click();
-  await expect(page.getByRole("heading", { name: "What is in season?", level: 4 })).toBeVisible();
+test("farmers page search filters by name and location", async ({ page }) => {
+  await page.goto("/#/farmers");
+  await expect(page.getByRole("heading", { name: /Meet the people growing your food/ })).toBeVisible();
+  await expect(page.getByText("Pema Dorji")).toBeVisible();
+
+  const search = page.getByPlaceholder("Search by name, location, or product...");
+  await search.fill("Paro");
+  await expect(page.getByText("Pema Dorji")).toBeVisible();
+  await expect(page.getByText("Yeshey Wangmo")).not.toBeVisible();
+
+  await search.fill("Tashi");
+  await expect(page.getByText("Tashi Phuntsho")).toBeVisible();
+  await expect(page.getByText("Pema Dorji")).not.toBeVisible();
+
+  await search.fill("");
+  await expect(page.getByText("Pema Dorji")).toBeVisible();
+  await expect(page.getByText("Yeshey Wangmo")).toBeVisible();
 });
 
 test("has no serious or critical automated accessibility violations", async ({ page }) => {

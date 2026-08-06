@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "../cart-context";
-import { shopProducts } from "../data/landing";
+import { useContent } from "../cms/content-context";
 import { OutlineLink } from "../components/ui/action-link";
 import { OutlineTag } from "../components/ui/tag";
 import { sectionShell, sectionTitle } from "../components/ui/styles";
@@ -17,8 +17,8 @@ import {
 } from "../components/shop/shop-utils";
 
 const filterButtonClasses =
-  "min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 hover:-translate-y-0.5 hover:shadow-brand-soft";
-const activeFilterButtonClasses = "bg-brand-forest text-brand-white hover:-rotate-1";
+  "min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 hover:shadow-brand-soft";
+const activeFilterButtonClasses = "bg-brand-forest text-brand-white";
 const inactiveFilterButtonClasses = "bg-brand-white text-brand-forest hover:bg-brand-yellow";
 
 type FilterChipsProps = {
@@ -80,6 +80,8 @@ export function ShopPage() {
     cartQuantity,
     addToCart,
   } = useCart();
+  const { products, blocks } = useContent();
+  const shop = blocks.shopPage;
   const [category, setCategory] = useState<Category>(getInitialCategory);
   const [filter, setFilter] = useState<string>(getInitialFilter);
   const [cartAnnouncement, setCartAnnouncement] = useState("");
@@ -111,7 +113,7 @@ export function ShopPage() {
   }, []);
 
   const activeFilter = shopFilters.find((item) => item.slug === filter);
-  const visibleProducts = shopProducts.filter((product) =>
+  const visibleProducts = products.filter((product) =>
     (category === "All" || product.category === category) &&
     (activeFilter ? activeFilter.matches(product) : true),
   );
@@ -159,9 +161,9 @@ export function ShopPage() {
 
         <div className="section-heading grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(280px,0.6fr)] sm:items-end sm:gap-10">
           <div className="grid gap-2">
-            <OutlineTag>Zama Shop</OutlineTag>
-            <h1 id="shop-page-title" className={`${sectionTitle} max-w-170 text-brand-green-ink`}>All products, one basket.</h1>
-            <p className="max-w-150 text-[1.05rem] leading-[1.5] text-brand-black/72">Every fresh box, meal kit, and grocery top-up in the launch range — with price, portions, and contents shown before you add them to one shared basket.</p>
+            <OutlineTag>{shop.tag}</OutlineTag>
+            <h1 id="shop-page-title" className={`${sectionTitle} max-w-170 text-brand-green-ink`}>{shop.heading}</h1>
+            <p className="max-w-150 text-[1.05rem] leading-[1.5] text-brand-black/72">{shop.copy}</p>
           </div>
           <p className="text-sm font-bold text-brand-green-ink" aria-live="polite">
             <span className="shop-count-pop" key={visibleProducts.length}>{visibleProducts.length} product{visibleProducts.length === 1 ? "" : "s"} on the shelf</span>
@@ -221,10 +223,10 @@ export function ShopPage() {
 
         {visibleProducts.length === 0 ? (
           <div className="grid gap-3 rounded-[26px_38px_22px_34px/34px_24px_38px_22px] border-3 border-dashed border-brand-forest/30 bg-brand-warm-white p-6 text-center shadow-brand-soft">
-            <p className="font-primary text-[clamp(1.4rem,2.4vw,1.9rem)] font-bold text-brand-black">Nothing on the shelf for that combination.</p>
-            <p className="text-sm text-brand-black/64">Try a different filter, or clear everything and browse the whole range.</p>
+            <p className="font-primary text-[clamp(1.4rem,2.4vw,1.9rem)] font-bold text-brand-black">{shop.emptyTitle}</p>
+            <p className="text-sm text-brand-black/64">{shop.emptyCopy}</p>
             <div className="flex justify-center">
-              <button className={`${filterButtonClasses} ${inactiveFilterButtonClasses}`} type="button" onClick={clearFilters}>Clear filters</button>
+              <button className={`${filterButtonClasses} ${inactiveFilterButtonClasses}`} type="button" onClick={clearFilters}>{shop.emptyCtaLabel}</button>
             </div>
           </div>
         ) : (
@@ -248,10 +250,10 @@ export function ShopPage() {
 
         <aside className="grid gap-4 rounded-[26px_38px_22px_34px/34px_24px_38px_22px] border-3 border-brand-forest bg-brand-mint p-5 shadow-brand sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" aria-label="Delivery information">
           <div>
-            <h2 className="font-primary text-[clamp(1.4rem,2.4vw,1.9rem)] font-bold text-brand-black">Preparing for Thimphu deliveries.</h2>
-            <p className="mt-1 max-w-140 text-brand-black/72">Coverage, hours, and delivery fees will be published before orders open. No payment or order is created at launch.</p>
+            <h2 className="font-primary text-[clamp(1.4rem,2.4vw,1.9rem)] font-bold text-brand-black">{shop.deliveryTitle}</h2>
+            <p className="mt-1 max-w-140 text-brand-black/72">{shop.deliveryCopy}</p>
           </div>
-          <OutlineLink href="#delivery">Review delivery details</OutlineLink>
+          <OutlineLink href="#delivery">{shop.deliveryCtaLabel}</OutlineLink>
         </aside>
 
         <p className="sr-only" role="status" aria-live="polite">{cartAnnouncement}</p>

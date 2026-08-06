@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useCart } from "../../cart-context";
+import { useContent } from "../../cms/content-context";
 import { btnPrimaryKit } from "../ui/styles";
 import { findProduct, numberFormatter, productPrice, type ShopProduct } from "./shop-utils";
 
@@ -46,9 +47,10 @@ export function CartDrawer() {
     removeFromCart,
     closeCart,
   } = useCart();
+  const { products } = useContent();
 
   const cartItems = Object.keys(cart)
-    .map((productId) => findProduct(productId))
+    .map((productId) => findProduct(products, productId))
     .filter((product): product is ShopProduct => product !== undefined && (cart[product.id] ?? 0) > 0);
   const hasCompletePricing = cartItems.length > 0 && cartItems.every((product) => product.priceAmount !== null);
   const subtotal = cartItems.reduce((total, product) => total + (product.priceAmount ?? 0) * cart[product.id], 0);

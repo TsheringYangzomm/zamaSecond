@@ -50,19 +50,19 @@ function toTemplateParams(payload: ContactPayload) {
   };
 }
 
-// function toAutoReplyParams(payload: ContactPayload) {
-//   return {
-//     to_email: payload.email,
-//     to_name: payload.name || "there",
-//     reply_to: payload.email,
-//     subject: "Thanks for writing to Zama",
-//     name: payload.name || "there",
-//     time: new Date().toISOString(),
-//     topic: topicLabels[payload.topic],
-//     message: payload.message,
-//     email: payload.email,
-//   };
-// }
+function toAutoReplyParams(payload: ContactPayload) {
+  return {
+    to_email: payload.email,
+    to_name: payload.name || "there",
+    reply_to: payload.email,
+    subject: "Thanks for writing to Zama",
+    name: payload.name || "there",
+    time: new Date().toISOString(),
+    topic: topicLabels[payload.topic],
+    message: payload.message,
+    email: payload.email,
+  };
+}
 
 function toErrorMessage(error: unknown): string {
   const detail =
@@ -98,8 +98,10 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
   const [notificationResult] = await Promise.allSettled([
     emailjs.send(config.serviceId, config.templateId, toTemplateParams(payload), {
       publicKey: config.publicKey,
-    })
-    
+    }),
+    emailjs.send(config.serviceId, config.autoReplyTemplateId, toAutoReplyParams(payload), {
+      publicKey: config.publicKey,
+    }),
   ]);
 
   if (notificationResult.status === "rejected") {
