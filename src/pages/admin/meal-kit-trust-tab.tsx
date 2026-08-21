@@ -3,7 +3,7 @@ import { deleteMealKitTrustDetail, listMealKitTrustDetails, upsertMealKitTrustDe
 import type { MealKitTrustDetailRow } from "../../cms/types";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { Field, TextInput, TextArea, Checkbox, ImagePicker, inputClasses, selectClasses, textAreaClasses } from "./admin-fields";
+import { Field, TextInput, TextArea, Checkbox, ImagePicker} from "./admin-fields";
 
 function emptyRow(): MealKitTrustDetailRow {
   return {
