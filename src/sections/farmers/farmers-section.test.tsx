@@ -19,4 +19,14 @@ describe("FarmersSection", () => {
     render(<FarmersSection />);
     expect(screen.getByRole("link", { name: /View all farmers/ })).toHaveAttribute("href", "#/farmers");
   });
+
+  it("shows the latest seasonal update as a quote on the landing cards", () => {
+    render(<FarmersSection />);
+    expect(screen.getByText(/harvesting crisp cabbages and carrots from the terraced fields/)).toBeVisible();
+  });
+
+  it("links a farmer story with Read their story", () => {
+    render(<FarmersSection />);
+    expect(screen.getAllByRole("link", { name: /Read their story/ }).length).toBeGreaterThan(0);
+  });
 });

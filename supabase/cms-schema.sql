@@ -81,6 +81,23 @@ create table if not exists public.reviews (
 
 create index if not exists reviews_product_id_idx on public.reviews (product_id);
 
+create table if not exists public.meal_kit_trust_details (
+  slug text primary key,
+  title text not null,
+  image text not null default '',
+  alt text not null default '',
+  consultant_note text not null default '',
+  dietician_note text not null default '',
+  health_benefits text[] not null default '{}',
+  allergens text[] not null default '{}',
+  sourcing text not null default '',
+  storage_advice text not null default '',
+  sort_order integer not null default 0,
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 -- Generic landing copy: key -> JSON value (hero, footer, faqs, policies, ...)
 create table if not exists public.content_blocks (
   key text primary key,
@@ -124,6 +141,7 @@ alter table public.products enable row level security;
 alter table public.farmers enable row level security;
 alter table public.reviews enable row level security;
 alter table public.content_blocks enable row level security;
+alter table public.meal_kit_trust_details enable row level security;
 
 drop policy if exists "products public read" on public.products;
 create policy "products public read" on public.products
@@ -165,6 +183,16 @@ create policy "content_blocks admin write" on public.content_blocks
   using (public.is_admin())
   with check (public.is_admin());
 
+drop policy if exists "meal_kit_trust_details public read" on public.meal_kit_trust_details;
+create policy "meal_kit_trust_details public read" on public.meal_kit_trust_details
+  for select using (published = true or public.is_admin());
+
+drop policy if exists "meal_kit_trust_details admin write" on public.meal_kit_trust_details;
+create policy "meal_kit_trust_details admin write" on public.meal_kit_trust_details
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
 -- Admin access to the waitlist (keeps anonymous writes locked to the RPC).
 do $$
 begin
@@ -199,6 +227,11 @@ create trigger content_blocks_set_updated_at
   before update on public.content_blocks
   for each row execute function public.set_updated_at();
 
+drop trigger if exists meal_kit_trust_details_set_updated_at on public.meal_kit_trust_details;
+create trigger meal_kit_trust_details_set_updated_at
+  before update on public.meal_kit_trust_details
+  for each row execute function public.set_updated_at();
+
 -- ---------------------------------------------------------------------------
 -- Image storage bucket (public-read; admin upload)
 -- ---------------------------------------------------------------------------
@@ -224,3 +257,4 @@ drop policy if exists "catalog admin delete" on storage.objects;
 create policy "catalog admin delete" on storage.objects
   for delete to authenticated
   using (bucket_id = 'catalog' and public.is_admin());
+  

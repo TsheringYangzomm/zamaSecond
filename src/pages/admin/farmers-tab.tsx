@@ -1,30 +1,123 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { GripVertical } from "lucide-react";
 import {
   deleteFarmer,
+  farmerPrivateInfoTableExists,
+  farmerSeasonalUpdatesTableExists,
+  farmerStoriesTableExists,
+  listFarmerPrivateInfo,
+  listFarmerSeasonalUpdates,
+  listFarmerStories,
   listFarmers,
+  listProducts,
   nextSlugId,
-  swapSortOrder,
+  reorderRows,
   upsertFarmer,
+  upsertFarmerPrivateInfo,
+  upsertFarmerSeasonalUpdate,
+  upsertFarmerStory,
 } from "../../admin/admin-api";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
-import type { FarmerRow } from "../../cms/types";
-import { blankFarmer, FarmerForm } from "./farmer-form";
+import { ConfirmDialog } from "../../components/ui/confirm-dialog";
+import { inputClasses, selectClasses } from "./admin-fields";
+import type { FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, ProductRow } from "../../cms/types";
+import { blankFarmer, blankFarmerPrivateInfo, blankFarmerSeasonalUpdate, blankFarmerStory, FarmerForm } from "./farmer-form";
+import { useRowDragSort } from "./use-row-drag";
 
 export function FarmersTab() {
   const [farmers, setFarmers] = useState<FarmerRow[] | null>(null);
+  const [products, setProducts] = useState<ProductRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<FarmerRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<FarmerRow | null>(null);
+  const [query, setQuery] = useState("");
+  const [dzongkhagFilter, setDzongkhagFilter] = useState("");
+  const [privateEnabled, setPrivateEnabled] = useState(false);
+  const [privateMap, setPrivateMap] = useState<Record<string, FarmerPrivateInfoRow>>({});
+  const [privateInfo, setPrivateInfo] = useState<FarmerPrivateInfoRow | null>(null);
+  const [storyEnabled, setStoryEnabled] = useState(false);
+  const [storyMap, setStoryMap] = useState<Record<string, FarmerStoryRow>>({});
+  const [storyInfo, setStoryInfo] = useState<FarmerStoryRow | null>(null);
+  const [seasonalEnabled, setSeasonalEnabled] = useState(false);
+  const [seasonalMap, setSeasonalMap] = useState<Record<string, FarmerSeasonalUpdateRow>>({});
+  const [seasonalInfo, setSeasonalInfo] = useState<FarmerSeasonalUpdateRow | null>(null);
+
+  const dzongkhags = useMemo(() => {
+    const set = new Set((farmers ?? []).map((row) => row.dzongkhag).filter(Boolean));
+    return [...set].sort();
+  }, [farmers]);
+
+  const productName = useMemo(() => {
+    const map = new Map(products.map((product) => [product.id, product.name]));
+    return (productId: string) => map.get(productId) ?? productId;
+  }, [products]);
+
+  const filtered = useMemo(() => {
+    if (!farmers) return [];
+    const needle = query.trim().toLowerCase();
+    return farmers.filter((row) => {
+      if (dzongkhagFilter && row.dzongkhag !== dzongkhagFilter) return false;
+      if (!needle) return true;
+      return (
+        row.name.toLowerCase().includes(needle) ||
+        row.location.toLowerCase().includes(needle) ||
+        row.dzongkhag.toLowerCase().includes(needle) ||
+        row.products.some((id) => productName(id).toLowerCase().includes(needle))
+      );
+    });
+  }, [farmers, query, dzongkhagFilter, productName]);
+
+  const reorderEnabled = farmers !== null && query === "" && !dzongkhagFilter;
 
   async function load() {
     setFarmers(null);
     setError(null);
     try {
-      setFarmers(await listFarmers());
+      const [farmerRows, productRows] = await Promise.all([listFarmers(), listProducts()]);
+      setFarmers(farmerRows);
+      setProducts(productRows);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load farmers.");
+    }
+    try {
+      const enabled = await farmerPrivateInfoTableExists();
+      setPrivateEnabled(enabled);
+      if (enabled) {
+        const rows = await listFarmerPrivateInfo();
+        setPrivateMap(Object.fromEntries(rows.map((row) => [row.farmer_id, row])));
+      }
+    } catch {
+      setPrivateEnabled(false);
+      setPrivateMap({});
+    }
+    try {
+      const enabled = await farmerStoriesTableExists();
+      setStoryEnabled(enabled);
+      if (enabled) {
+        const rows = await listFarmerStories();
+        setStoryMap(Object.fromEntries(rows.map((row) => [row.farmer_id, row])));
+      }
+    } catch {
+      setStoryEnabled(false);
+      setStoryMap({});
+    }
+    try {
+      const enabled = await farmerSeasonalUpdatesTableExists();
+      setSeasonalEnabled(enabled);
+      if (enabled) {
+        const rows = await listFarmerSeasonalUpdates();
+        const latest: Record<string, FarmerSeasonalUpdateRow> = {};
+        for (const row of rows) {
+          if (!latest[row.farmer_id]) latest[row.farmer_id] = row;
+        }
+        setSeasonalMap(latest);
+      }
+    } catch {
+      setSeasonalEnabled(false);
+      setSeasonalMap({});
     }
   }
 
@@ -40,6 +133,9 @@ export function FarmersTab() {
       const id = await nextSlugId("New farmer", "farmers");
       const maxSort = (farmers ?? []).reduce((max, item) => Math.max(max, item.sort_order), -1);
       setEditing({ ...blankFarmer(id), sort_order: maxSort + 1 });
+      setPrivateInfo(blankFarmerPrivateInfo(id));
+      setStoryInfo(blankFarmerStory(id));
+      setSeasonalInfo(blankFarmerSeasonalUpdate(id));
       setCreating(true);
     } catch (addError) {
       setError(addError instanceof Error ? addError.message : "Could not start a new farmer.");
@@ -48,46 +144,93 @@ export function FarmersTab() {
     }
   }
 
-  async function handleSave(row: FarmerRow) {
+  async function handleSave(row: FarmerRow, privateRow: FarmerPrivateInfoRow | null, storyRow: FarmerStoryRow | null, seasonalRow: FarmerSeasonalUpdateRow | null) {
     await upsertFarmer(row);
+    if (privateEnabled && privateRow) {
+      await upsertFarmerPrivateInfo(privateRow);
+      setPrivateMap((current) => ({ ...current, [privateRow.farmer_id]: privateRow }));
+    }
+    if (storyEnabled && storyRow && (storyMap[row.id] || storyRow.content.trim() !== "" || storyRow.published)) {
+      await upsertFarmerStory(storyRow);
+      setStoryMap((current) => ({ ...current, [storyRow.farmer_id]: storyRow }));
+    }
+    if (seasonalEnabled && seasonalRow && (seasonalMap[row.id] || seasonalRow.content.trim() !== "" || seasonalRow.published)) {
+      await upsertFarmerSeasonalUpdate(seasonalRow);
+      setSeasonalMap((current) => ({ ...current, [seasonalRow.farmer_id]: seasonalRow }));
+    }
     const next = await listFarmers();
     setFarmers(next);
     setStatus(creating ? `Created ${row.name}.` : `Saved ${row.name}.`);
     setEditing(null);
     setCreating(false);
+    setPrivateInfo(null);
+    setStoryInfo(null);
+    setSeasonalInfo(null);
   }
 
   async function handleDelete(row: FarmerRow) {
-    if (!window.confirm(`Delete "${row.name}"?`)) return;
     setStatus(null);
     try {
       await deleteFarmer(row.id);
       setFarmers((current) => (current ?? []).filter((item) => item.id !== row.id));
+      setPrivateMap((current) => {
+        const next = { ...current };
+        delete next[row.id];
+        return next;
+      });
+      setStoryMap((current) => {
+        const next = { ...current };
+        delete next[row.id];
+        return next;
+      });
+      setSeasonalMap((current) => {
+        const next = { ...current };
+        delete next[row.id];
+        return next;
+      });
       setStatus(`Deleted ${row.name}.`);
     } catch (deleteError) {
       setStatus(deleteError instanceof Error ? deleteError.message : "Could not delete the farmer.");
+    } finally {
+      setPendingDelete(null);
     }
   }
 
-  async function handleMove(row: FarmerRow, direction: -1 | 1) {
-    if (!farmers) return;
-    const neighbor = direction === -1
-      ? farmers.find((item) => item.sort_order < row.sort_order)
-      : [...farmers].reverse().find((item) => item.sort_order > row.sort_order);
-    if (!neighbor) return;
+  async function handleReorder(orderedIds: string[]) {
     setStatus(null);
+    if (!farmers) return;
+    const byId = new Map(farmers.map((row) => [row.id, row]));
+    const next = orderedIds
+      .map((id, index) => {
+        const row = byId.get(id);
+        return row ? { ...row, sort_order: index } : undefined;
+      })
+      .filter((row): row is FarmerRow => row !== undefined);
+    setFarmers(next);
     try {
-      await swapSortOrder("farmers", row.id, neighbor.id);
+      await reorderRows("farmers", orderedIds);
+    } catch (reorderError) {
+      setStatus(reorderError instanceof Error ? reorderError.message : "Could not reorder farmers.");
       await load();
-    } catch (moveError) {
-      setStatus(moveError instanceof Error ? moveError.message : "Could not reorder farmers.");
     }
   }
+
+  const { rowProps } = useRowDragSort(filtered, (orderedIds) => void handleReorder(orderedIds));
 
   if (editing) {
     return (
       <div className="grid gap-4">
-        <FarmerForm initial={editing} onSave={handleSave} onCancel={() => { setEditing(null); setCreating(false); }} />
+        <FarmerForm
+          initial={editing}
+          privateInfo={privateInfo}
+          storyInfo={storyInfo}
+          seasonalInfo={seasonalInfo}
+          privateEnabled={privateEnabled}
+          storyEnabled={storyEnabled}
+          seasonalEnabled={seasonalEnabled}
+          onSave={handleSave}
+          onCancel={() => { setEditing(null); setCreating(false); setPrivateInfo(null); setStoryInfo(null); setSeasonalInfo(null); }}
+        />
       </div>
     );
   }
@@ -114,17 +257,31 @@ export function FarmersTab() {
 
       {status ? <p className="text-sm font-semibold text-brand-green-ink" role="status">{status}</p> : null}
 
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+        <input className={`${inputClasses} min-w-0`} type="search" aria-label="Search farmers" placeholder="Search by name, location, or product..." value={query} onChange={(event) => setQuery(event.target.value)} />
+        <select className={`${selectClasses} min-w-44`} aria-label="Filter by dzongkhag" value={dzongkhagFilter} onChange={(event) => setDzongkhagFilter(event.target.value)}>
+          <option value="">All dzongkhags</option>
+          {dzongkhags.map((dzongkhag) => <option key={dzongkhag} value={dzongkhag}>{dzongkhag}</option>)}
+        </select>
+      </div>
+
       {farmers ? (
         farmers.length === 0 ? (
           <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">No farmers yet. Add the first one.</p>
+        ) : filtered.length === 0 ? (
+          <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">No farmers match the current search or filter.</p>
         ) : (
           <div className="overflow-x-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white shadow-brand-soft">
-            <table className="w-full min-w-150 border-collapse text-left">
+            <table className="w-full min-w-190 border-collapse text-left">
               <caption className="sr-only">Farmers</caption>
               <thead>
                 <tr className="border-b-3 border-dashed border-brand-forest/30 bg-brand-warm-white text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">
+                  <th className="w-12 px-2 py-3 text-center">
+                    <span className="sr-only">Reorder</span>
+                  </th>
                   <th className="px-4 py-3">Farmer</th>
                   <th className="px-4 py-3">Dzongkhag</th>
+                  <th className="px-4 py-3">Products supplied</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">
                     <span className="sr-only">Actions</span>
@@ -132,9 +289,24 @@ export function FarmersTab() {
                 </tr>
               </thead>
               <tbody>
-                {farmers.map((row) => (
-                  <tr className="border-b-2 border-dashed border-brand-forest/16 text-sm last:border-b-0" key={row.id}>
-                    <td className="px-4 py-3">
+                {filtered.map((row) => {
+                  const drag = rowProps(row);
+                  return (
+                    <tr
+                      className={`border-b-2 border-dashed border-brand-forest/16 text-sm last:border-b-0 ${reorderEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${drag.isDragging ? "opacity-40" : ""} ${drag.isDropTarget ? "bg-brand-yellow/30" : ""}`}
+                      key={row.id}
+                      draggable={reorderEnabled}
+                      onDragStart={drag.onDragStart}
+                      onDragOver={drag.onDragOver}
+                      onDrop={drag.onDrop}
+                      onDragEnd={drag.onDragEnd}
+                    >
+                      <td className="px-2 py-3 text-center">
+                        <span className={`inline-flex items-center justify-center ${reorderEnabled ? "text-brand-black/40" : "text-brand-black/20"}`} title="Drag to reorder" aria-hidden="true">
+                          <GripVertical className="h-4 w-4" />
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {row.image ? <img className="h-11 w-11 flex-none rounded-full border-2 border-brand-forest/30 bg-brand-warm-white object-cover" src={row.image} alt="" aria-hidden="true" /> : null}
                         <div className="grid gap-0.5">
@@ -144,6 +316,11 @@ export function FarmersTab() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-brand-black/72">{row.dzongkhag}</td>
+                    <td className="px-4 py-3 text-brand-black/72">
+                      {row.products.length === 0 ? <span className="text-brand-black/52">None</span> : (
+                        <span className="line-clamp-2">{row.products.map((id) => productName(id)).join(", ")}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-yellow text-brand-forest" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
                         {row.published ? "Published" : "Draft"}
@@ -151,19 +328,25 @@ export function FarmersTab() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => { setCreating(false); setEditing(row); }}>Edit</button>
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" aria-label={`Move ${row.name} up`} onClick={() => void handleMove(row, -1)}>↑</button>
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" aria-label={`Move ${row.name} down`} onClick={() => void handleMove(row, 1)}>↓</button>
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleDelete(row)}>Delete</button>
+                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => { setCreating(false); setEditing(row); setPrivateInfo(privateMap[row.id] ?? blankFarmerPrivateInfo(row.id)); setStoryInfo(storyMap[row.id] ?? blankFarmerStory(row.id)); setSeasonalInfo(seasonalMap[row.id] ?? blankFarmerSeasonalUpdate(row.id)); }}>Edit</button>
+                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )
       ) : null}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete farmer"
+        message={pendingDelete ? `Delete "${pendingDelete.name}"?` : ""}
+        onConfirm={() => { if (pendingDelete) void handleDelete(pendingDelete); }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

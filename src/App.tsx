@@ -16,18 +16,26 @@ import { ProcessSection } from "./sections/process/process-section";
 import { ContactPage } from "./pages/contact-page";
 import { ShopPage } from "./pages/shop-page";
 import { ProductPage } from "./pages/product-page";
+import { CustomizeBoxPage } from "./pages/customize-box-page";
+import { CategoryPage } from "./pages/category-page";
 import { FarmersPage } from "./pages/farmers-page";
+import { LaunchUpdatesPage } from "./pages/launch-updates-page";
+import { MembershipPage } from "./pages/membership-page";
+import { MealKitTrustPage } from "./pages/meal-kit-trust-page";
 import { AdminPage } from "./pages/admin/admin-page";
 import { AdminAuthProvider } from "./admin/admin-auth";
-import { getProductId, getRoute, setPendingSection, takePendingSection, type Route } from "./router";
+import { CustomerAuthProvider } from "./checkout/customer-auth";
+import { getCategoryFromHash, getProductId, getRoute, setPendingSection, takePendingSection } from "./router";
 
 function App() {
-  const [route, setRoute] = useState<Route>(() => getRoute(window.location.hash));
-  const productId = route === "product" ? getProductId(window.location.hash) : null;
+  const [hash, setHash] = useState(window.location.hash);
+  const route = getRoute(hash);
+  const productId = route === "product" ? getProductId(hash) : null;
+  const categorySlug = route === "category" ? getCategoryFromHash(hash) : null;
   const previousRoute = useRef(route);
 
   useEffect(() => {
-    const onHashChange = () => setRoute(getRoute(window.location.hash));
+    const onHashChange = () => setHash(window.location.hash);
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
@@ -39,9 +47,9 @@ function App() {
   }, [route]);
 
   useEffect(() => {
-    if (route !== "product") return;
+    if (route !== "product" && route !== "category") return;
     window.scrollTo(0, 0);
-  }, [productId, route]);
+  }, [productId, categorySlug, route]);
 
   useEffect(() => {
     if (route !== "home") return;
@@ -79,9 +87,10 @@ function App() {
   return (
     <ContentProvider>
       <CartProvider>
-        <a className="fixed left-4 top-3 z-50 -translate-y-24 rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow px-4 py-3 font-bold text-brand-black shadow-brand transition-transform focus:translate-y-0 focus:outline-none focus:ring-4 focus:ring-brand-leaf/30" href="#top">
-          Skip to Content
-        </a>
+        <CustomerAuthProvider>
+          <a className="fixed left-4 top-3 z-50 -translate-y-24 rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow px-4 py-3 font-bold text-brand-black shadow-brand transition-transform focus:translate-y-0 focus:outline-none focus:ring-4 focus:ring-brand-leaf/30" href="#top">
+            Skip to Content
+          </a>
       <SiteHeader />
       {route === "contact" ? (
         <main id="top" tabIndex={-1}>
@@ -94,6 +103,26 @@ function App() {
       ) : route === "shop" ? (
         <main id="top" tabIndex={-1}>
           <ShopPage />
+        </main>
+      ) : route === "customize" ? (
+        <main id="top" tabIndex={-1}>
+          <CustomizeBoxPage />
+        </main>
+      ) : route === "launch-updates" ? (
+        <main id="top" tabIndex={-1}>
+          <LaunchUpdatesPage />
+        </main>
+      ) : route === "membership" ? (
+        <main id="top" tabIndex={-1}>
+          <MembershipPage />
+        </main>
+      ) : route === "meal-kit-trust" ? (
+        <main id="top" tabIndex={-1}>
+          <MealKitTrustPage />
+        </main>
+      ) : route === "category" ? (
+        <main id="top" tabIndex={-1}>
+          <CategoryPage key={categorySlug ?? "missing"} categorySlug={categorySlug ?? ""} />
         </main>
       ) : route === "product" ? (
         <main id="top" tabIndex={-1}>
@@ -113,6 +142,7 @@ function App() {
       )}
       <SiteFooter />
       <CartDrawer />
+        </CustomerAuthProvider>
       </CartProvider>
     </ContentProvider>
   );

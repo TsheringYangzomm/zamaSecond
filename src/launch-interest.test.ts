@@ -1,13 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { submitLaunchInterest } from "./launch-interest";
+import emailjs from "@emailjs/browser";
+import { submitLaunchInterest, submitMembershipInterest } from "./launch-interest";
 import { getSupabaseClient } from "./supabase";
+
+vi.mock("@emailjs/browser", () => ({
+  default: { send: vi.fn() },
+}));
 
 vi.mock("./supabase", () => ({
   getSupabaseClient: vi.fn(),
 }));
 
 const getSupabaseClientMock = vi.mocked(getSupabaseClient);
+const mockSend = vi.mocked(emailjs.send);
 
 function mockSupabaseClient(rpc: ReturnType<typeof vi.fn>) {
   getSupabaseClientMock.mockReturnValue({ rpc } as unknown as SupabaseClient);
@@ -92,4 +98,63 @@ describe("submitLaunchInterest", () => {
 
     await expect(submitLaunchInterest({ email: "hello@example.com", source: "hero-waitlist" })).rejects.toThrow("could not save");
   });
+
+  it("saves a membership signup through the existing launch-interest table and sends the confirmation email", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon");
+    vi.stubEnv("VITE_EMAILJS_SERVICE_ID", "service_zama");
+    vi.stubEnv("VITE_EMAILJS_TEMPLATE_ID", "template_contact");
+    vi.stubEnv("VITE_EMAILJS_AUTOREPLY_TEMPLATE_ID", "template_autoreply");
+    vi.stubEnv("VITE_EMAILJS_PUBLIC_KEY", "public_key");
+    mockSend.mockResolvedValue("success" as never);
+
+    const rpc = vi.fn().mockResolvedValue({ data: { status: "ok", submissionId: "member_123" }, error: null });
+    mockSupabaseClient(rpc);
+
+    await expect(submitMembershipInterest({
+      fullName: "Ada Lovelace",
+      email: "ada@example.com",
+      interests: ["Fresh groceries", "Meal kits"],
+    })).resolves.toMatchObject({ mode: "remote" });
+
+    expect(rpc).toHaveBeenCalledWith("create_launch_interest", {
+      p_email: "ada@example.com",
+      p_source: "membership",
+      p_area: null,
+      p_full_name: "Ada Lovelace",
+      p_items: [{ interest: "Fresh groceries" }, { interest: "Meal kits" }],
+    });
+    expect(mockSend).toHaveBeenCalledWith(
+      "service_zama",
+      "template_autoreply",
+      expect.objectContaining({
+        to_email: "ada@example.com",
+        to_name: "Ada Lovelace",
+        subject: "You're on the Zama+ update list",
+      }),
+      { publicKey: "public_key" },
+    );
+  });
+
+  it("keeps the membership signup when the confirmation email fails", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "anon");
+    vi.stubEnv("VITE_EMAILJS_SERVICE_ID", "service_zama");
+    vi.stubEnv("VITE_EMAILJS_TEMPLATE_ID", "template_contact");
+    vi.stubEnv("VITE_EMAILJS_AUTOREPLY_TEMPLATE_ID", "template_autoreply");
+    vi.stubEnv("VITE_EMAILJS_PUBLIC_KEY", "public_key");
+    mockSend.mockRejectedValue(new Error("email failed"));
+
+    const rpc = vi.fn().mockResolvedValue({ data: { status: "ok", submissionId: "member_456" }, error: null });
+    mockSupabaseClient(rpc);
+
+    await expect(submitMembershipInterest({
+      fullName: "Grace Hopper",
+      email: "grace@example.com",
+      interests: ["Future Zama+ benefits"],
+    })).resolves.toMatchObject({ mode: "remote", emailWasSent: false });
+    expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+
 });

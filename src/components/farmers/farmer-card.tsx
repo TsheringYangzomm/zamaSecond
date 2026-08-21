@@ -50,15 +50,28 @@ export function FarmerCard({ farmer, image, detailed }: { farmer: Farmer; image?
           </div>
         )}
 
-        <p className={`border-t-2 border-dashed border-brand-forest/12 pt-3 leading-[1.5] text-brand-black/68 ${detailed ? "text-base" : "mt-auto text-sm italic"}`}>
-          {detailed ? farmer.bio : <>&ldquo;{farmer.bio}&rdquo;</>}
-        </p>
-
-        {!detailed && (
-          <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href={`#/farmers?farmer=${farmer.id}`}>
-            Learn more
-            <ArrowIcon className="!h-4 !w-4" />
-          </a>
+        {detailed ? (
+          <>
+            <p className="border-t-2 border-dashed border-brand-forest/12 pt-3 text-base leading-[1.5] text-brand-black/68">
+              {farmer.bio}
+            </p>
+            {farmer.story ? (
+              <div className="grid gap-2 border-t-2 border-dashed border-brand-forest/12 pt-3">
+                <p className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Their story</p>
+                <p className="text-base leading-[1.5] text-brand-black/68">{farmer.story}</p>
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <p className="mt-auto border-t-2 border-dashed border-brand-forest/12 pt-3 text-sm italic leading-[1.5] text-brand-black/68">
+              &ldquo;{farmer.seasonalUpdate || farmer.bio}&rdquo;
+            </p>
+            <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href={`#/farmers?farmer=${farmer.id}`}>
+              {farmer.story ? "Read their story" : "Learn more"}
+              <ArrowIcon className="!h-4 !w-4" />
+            </a>
+          </>
         )}
       </div>
     </article>

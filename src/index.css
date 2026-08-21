@@ -1,9 +1,12 @@
 @import "tailwindcss";
- 
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --font-primary: "Bricolage Grotesque", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
   --font-secondary: "DM Sans", "Inter", "Helvetica Neue", Arial, sans-serif;
- 
+
   /* Official Zama colors: reserved for the logo and playful highlights. */
   --color-brand-green: #00b94f;
   --color-brand-yellow: #ffde00;
@@ -27,13 +30,13 @@
   --color-brand-black: #2a2723;
   --color-brand-white: #ffffff;
   --color-brand-cream: #fff8f0;
- 
+
   /* hand-drawn / wobbly border radii used across cards, buttons, tags */
   --radius-wobbly: 255px 18px 225px 18px / 18px 225px 18px 255px;
   --radius-wobbly-md: 32px 18px 38px 16px / 16px 34px 20px 38px;
   --radius-wobbly-card: 24px 44px 30px 36px / 36px 24px 42px 30px;
   --radius-wobbly-tag: 18px 12px 16px 10px / 12px 18px 10px 16px;
- 
+
   /* sketch-style offset shadows */
   --shadow-brand: 4px 4px 0 0 var(--color-brand-forest);
   --shadow-brand-big: 8px 8px 0 0 var(--color-brand-forest);
@@ -42,7 +45,7 @@
   --shadow-brand-button: 3px 3px 0 0 var(--color-brand-forest);
   --shadow-brand-hover: 6px 6px 0 0 var(--color-brand-forest);
   --shadow-brand-tight: 2px 2px 0 0 var(--color-brand-forest);
- 
+
   /* custom breakpoints matched to the original desktop-first media queries
      (620px / 820px / 1060px), used mobile-first via sm:/md:/lg: */
   --breakpoint-sm: 620px;
@@ -94,13 +97,13 @@
   border-radius: 999px;
   background: linear-gradient(90deg, var(--color-brand-green) 0 55%, var(--color-brand-yellow) 55% 78%, var(--color-brand-orange) 78%);
 }
- 
+
 html {
   scroll-behavior: smooth;
   overflow-x: clip;
   color-scheme: light;
 }
- 
+
 body {
   background: linear-gradient(
     180deg,
@@ -133,7 +136,7 @@ details[id],
 main[id] {
   scroll-margin-top: 8.5rem;
 }
- 
+
 body::before {
   position: fixed;
   inset: 0;
@@ -148,12 +151,12 @@ body::before {
   -webkit-mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 82%) 18%, transparent 37%, transparent 63%, rgb(0 0 0 / 82%) 82%, #000 100%);
   mask-image: linear-gradient(90deg, #000 0%, rgb(0 0 0 / 82%) 18%, transparent 37%, transparent 63%, rgb(0 0 0 / 82%) 82%, #000 100%);
 }
- 
+
 ::selection {
   background: var(--color-brand-yellow);
   color: var(--color-brand-black);
 }
- 
+
 /* ---------- Button underline squiggle (::after) ---------- */
 .btn-sketch::after {
   position: absolute;
@@ -171,18 +174,19 @@ body::before {
 .btn-sketch:focus-visible::after {
   opacity: 0.7;
 }
- 
+
 /* ---------- Header tape marks + gradient wash ---------- */
 .site-header {
   background:
     linear-gradient(105deg, color-mix(in srgb, var(--color-brand-mint) 92%, transparent), transparent 42%),
     color-mix(in srgb, var(--color-brand-warm-white) 97%, transparent);
   backdrop-filter: blur(14px);
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--color-brand-forest) 12%, transparent);
 }
 .site-header::before,
 .site-header::after {
   position: absolute;
-  top: -13px;
+  bottom: -13px;
   width: 78px;
   height: 22px;
   content: "";
@@ -197,7 +201,7 @@ body::before {
   right: 18%;
   transform: rotate(3deg);
 }
- 
+
 /* ---------- Nav link highlighter underline ---------- */
 .nav-link::after {
   position: absolute;
@@ -224,7 +228,7 @@ body::before {
   opacity: 0.55;
   transform: rotate(-1deg) scaleX(1);
 }
- 
+
 /* ---------- Hero poster ---------- */
 .hero-shell {
   background:
@@ -323,7 +327,7 @@ body::before {
   border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: translateX(-50%) rotate(-2deg);
 }
- 
+
 /* ---------- Product row dashed baseline ---------- */
 .product-row-shell::after {
   position: absolute;
@@ -370,7 +374,7 @@ body::before {
 .section-heading > h2 {
   color: var(--color-brand-green-ink);
 }
- 
+
 /* ---------- Meal-kit menu board ---------- */
 .meal-kit-feature {
   background:
@@ -405,7 +409,7 @@ body::before {
   left: 18%;
   transform: rotate(-3deg);
 }
- 
+
 /* ---------- Dietician banner tape ---------- */
 .dietician-banner-shell::after {
   position: absolute;
@@ -418,7 +422,7 @@ body::before {
   border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: rotate(-3deg);
 }
- 
+
 /* ---------- Process field map + connector line ---------- */
 .process-journey {
   isolation: isolate;
@@ -495,7 +499,7 @@ body::before {
     opacity: 0.34;
   }
 }
- 
+
 /* ---------- Top picks dashed underline ---------- */
 .top-picks-copy-shell::after {
   display: block;
@@ -507,7 +511,7 @@ body::before {
   border-radius: 50%;
   transform: rotate(-2deg);
 }
- 
+
 /* ---------- Editorial shop + launch receipt ---------- */
 .shop-feature-card::before {
   position: absolute;
@@ -865,7 +869,7 @@ body::before {
   border-radius: 50%;
   transform: rotate(-12deg);
 }
- 
+
 /* ---------- Featured plan dashed badge ---------- */
 .featured-plan-shell::before {
   position: absolute;
@@ -877,7 +881,7 @@ body::before {
   border-radius: 50%;
   transform: rotate(10deg);
 }
- 
+
 /* ---------- Plan builder tape ---------- */
 .plan-builder-shell::before {
   position: absolute;
@@ -890,7 +894,7 @@ body::before {
   border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: rotate(-3deg);
 }
- 
+
 /* ---------- App preview tape + dotted backdrop ---------- */
 .app-preview-shell {
   background:
@@ -908,7 +912,7 @@ body::before {
   border: 2px dashed color-mix(in srgb, var(--color-brand-black) 30%, transparent);
   transform: translateX(-50%) rotate(-2deg);
 }
- 
+
 /* ---------- Mini map dashed route + dot trail ---------- */
 .mini-map-shell {
   background:
@@ -928,7 +932,7 @@ body::before {
 .mini-map-dot {
   box-shadow: -70px 0 0 -2px var(--color-brand-green), 70px 0 0 -2px var(--color-brand-green);
 }
- 
+
 /* ---------- Footer link underline ---------- */
 .footer-link::after {
   position: absolute;
@@ -1042,4 +1046,106 @@ body::before {
   .postcard-shell::after {
     right: -36px;
   }
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: var(--color-brand-warm-white);
+  --foreground: var(--color-brand-black);
+  --card: var(--color-brand-warm-white);
+  --card-foreground: var(--color-brand-black);
+  --popover: var(--color-brand-warm-white);
+  --popover-foreground: var(--color-brand-black);
+  --primary: var(--color-brand-forest);
+  --primary-foreground: var(--color-brand-warm-white);
+  --secondary: var(--color-brand-buff);
+  --secondary-foreground: var(--color-brand-black);
+  --muted: var(--color-brand-stone-soft);
+  --muted-foreground: var(--color-brand-stone-muted);
+  --accent: var(--color-brand-mint);
+  --accent-foreground: var(--color-brand-forest);
+  --destructive: var(--color-brand-chilli);
+  --border: color-mix(in srgb, var(--color-brand-black) 20%, transparent);
+  --input: color-mix(in srgb, var(--color-brand-black) 28%, transparent);
+  --ring: var(--color-brand-forest);
+  --chart-1: var(--color-brand-green);
+  --chart-2: var(--color-brand-yellow);
+  --chart-3: var(--color-brand-orange);
+  --chart-4: var(--color-brand-sky);
+  --chart-5: var(--color-brand-purple);
+  --sidebar: var(--color-brand-forest);
+  --sidebar-foreground: var(--color-brand-warm-white);
+  --sidebar-primary: var(--color-brand-yellow);
+  --sidebar-primary-foreground: var(--color-brand-forest);
+  --sidebar-accent: var(--color-brand-yellow);
+  --sidebar-accent-foreground: var(--color-brand-forest);
+  --sidebar-border: color-mix(in srgb, var(--color-brand-warm-white) 20%, transparent);
+  --sidebar-ring: var(--color-brand-yellow);
+}
+
+.dark {
+  --background: var(--color-brand-forest);
+  --foreground: var(--color-brand-warm-white);
+  --card: #163d2b;
+  --card-foreground: var(--color-brand-warm-white);
+  --popover: #163d2b;
+  --popover-foreground: var(--color-brand-warm-white);
+  --primary: var(--color-brand-yellow);
+  --primary-foreground: var(--color-brand-forest);
+  --secondary: var(--color-brand-leaf);
+  --secondary-foreground: var(--color-brand-warm-white);
+  --muted: color-mix(in srgb, var(--color-brand-warm-white) 12%, var(--color-brand-forest));
+  --muted-foreground: var(--color-brand-stone-soft);
+  --accent: var(--color-brand-leaf);
+  --accent-foreground: var(--color-brand-warm-white);
+  --destructive: var(--color-brand-chilli);
+  --border: color-mix(in srgb, var(--color-brand-warm-white) 18%, transparent);
+  --input: color-mix(in srgb, var(--color-brand-warm-white) 22%, transparent);
+  --ring: var(--color-brand-yellow);
+  --sidebar: var(--color-brand-forest);
+  --sidebar-foreground: var(--color-brand-warm-white);
+  --sidebar-primary: var(--color-brand-yellow);
+  --sidebar-primary-foreground: var(--color-brand-forest);
+  --sidebar-accent: var(--color-brand-leaf);
+  --sidebar-accent-foreground: var(--color-brand-warm-white);
+  --sidebar-border: color-mix(in srgb, var(--color-brand-warm-white) 18%, transparent);
+  --sidebar-ring: var(--color-brand-yellow);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }

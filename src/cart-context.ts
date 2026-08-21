@@ -6,11 +6,15 @@ export type CartContextValue = {
   cart: Cart;
   cartQuantity: number;
   isCartOpen: boolean;
+  authPaneOpen: boolean;
   addToCart: (productId: string) => void;
   changeCartQuantity: (productId: string, difference: number) => void;
+  setCartQuantity: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
+  clearCart: () => void;
   openCart: () => void;
   closeCart: () => void;
+  openAuth: () => void;
 };
 
 export const CartContext = createContext<CartContextValue | null>(null);

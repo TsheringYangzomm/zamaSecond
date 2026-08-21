@@ -104,7 +104,6 @@ test("lists blocks and edits the hero JSON", async ({ page }) => {
 });
 
 test("adds a block and deletes it", async ({ page }) => {
-  page.on("dialog", (dialog) => void dialog.accept());
   await mockContentAdmin(page);
   await signInAsAdmin(page);
 
@@ -120,6 +119,7 @@ test("adds a block and deletes it", async ({ page }) => {
   await expect(page.locator("li", { hasText: "policies" })).toBeVisible();
 
   await page.locator("li", { hasText: "policies" }).getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText('Deleted block "policies".')).toBeVisible();
   await expect(page.locator("li", { hasText: "policies" })).toHaveCount(0);
 });

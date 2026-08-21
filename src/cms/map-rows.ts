@@ -28,6 +28,7 @@ export function mapProductRow(row: ProductRow): ShopProduct {
     nutrition: row.nutrition,
     tags: row.tags,
     collections: row.collections,
+    contents: [],
   };
 }
 

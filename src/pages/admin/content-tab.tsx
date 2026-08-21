@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { deleteContentBlock, getContentBlock, listContentBlocks, upsertContentBlock, type ContentBlockSummary } from "../../admin/admin-api";
 import { slugify } from "../../admin/admin-api";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
+import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import { Field, TextInput } from "./admin-fields";
 import { textAreaClasses } from "./admin-fields";
 
@@ -15,6 +16,7 @@ export function ContentTab() {
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [newKey, setNewKey] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<ContentBlockSummary | null>(null);
 
   const keySet = useMemo(() => new Set((blocks ?? []).map((block) => block.key)), [blocks]);
 
@@ -95,7 +97,6 @@ export function ContentTab() {
   }
 
   async function handleDelete(block: ContentBlockSummary) {
-    if (!window.confirm(`Delete the "${block.key}" block?`)) return;
     setStatus(null);
     try {
       await deleteContentBlock(block.key);
@@ -103,6 +104,8 @@ export function ContentTab() {
       setStatus(`Deleted block "${block.key}".`);
     } catch (deleteError) {
       setStatus(deleteError instanceof Error ? deleteError.message : "Could not delete the block.");
+    } finally {
+      setPendingDelete(null);
     }
   }
 
@@ -167,13 +170,20 @@ export function ContentTab() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button className={btnOutlineSm} type="button" onClick={() => void handleEdit(block)} disabled={busy}>Edit</button>
-                  <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleDelete(block)}>Delete</button>
+                  <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(block)}>Delete</button>
                 </div>
               </li>
             ))}
           </ul>
         )
       ) : null}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete content block"
+        message={pendingDelete ? `Delete the "${pendingDelete.key}" block?` : ""}
+        onConfirm={() => { if (pendingDelete) void handleDelete(pendingDelete); }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

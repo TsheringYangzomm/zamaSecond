@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useContent } from "../cms/content-context";
 import { farmerDzongkhags, farmerTagFilters, type Dzongkhag, type FarmTag, type Farmer } from "../data/farmers";
 import { OutlineTag } from "../components/ui/tag";
@@ -51,6 +51,16 @@ export function FarmersPage() {
   }, [activeDzongkhag, activeTag, search, sort, farmers]);
 
   const resultCount = filtered.length;
+
+  useEffect(() => {
+    const match = window.location.hash.match(/[?&]farmer=([^&]+)/);
+    const farmerId = match ? decodeURIComponent(match[1]) : null;
+    if (!farmerId || farmers.length === 0) return;
+    const frame = requestAnimationFrame(() => {
+      document.querySelector(`[data-farmer-id="${farmerId}"]`)?.scrollIntoView({ block: "center" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [farmers]);
 
   return (
     <section className="farm-story-surface full-bleed-safe relative overflow-hidden py-[clamp(2.5rem,5vw,4.5rem)]" aria-labelledby="farmers-page-title">
@@ -128,7 +138,7 @@ export function FarmersPage() {
         ) : (
           <div className="grid gap-8 sm:grid-cols-2" id="farmers-grid" key={`${activeDzongkhag}:${activeTag}:${search}:${sort}`}>
             {filtered.map((farmer, index) => (
-              <div className="farmers-grid-item min-w-0 self-start" key={farmer.id} style={{ animationDelay: `${index * 50}ms` }}>
+              <div className="farmers-grid-item min-w-0 self-start" key={farmer.id} data-farmer-id={farmer.id} style={{ animationDelay: `${index * 50}ms` }}>
                 <FarmerCard farmer={farmer} image={farmer.image || "assets/farmer.webp"} detailed />
               </div>
             ))}

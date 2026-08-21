@@ -67,6 +67,18 @@ function farmerRow(farmer: Farmer, sortOrder: number) {
   };
 }
 
+function farmerStoryRow(farmer: Farmer): Record<string, unknown> | null {
+  return farmer.story
+    ? { farmer_id: farmer.id, content: farmer.story, published: true }
+    : null;
+}
+
+function farmerSeasonalUpdateRow(farmer: Farmer): Record<string, unknown> | null {
+  return farmer.seasonalUpdate
+    ? { farmer_id: farmer.id, season: String(new Date().getFullYear()), content: farmer.seasonalUpdate, published: true }
+    : null;
+}
+
 function reviewRows(entries: [string, Review[]][]): Record<string, unknown>[] {
   const rows: Record<string, unknown>[] = [];
   for (const [productId, reviews] of entries) {
@@ -106,11 +118,23 @@ async function run() {
   const reviewResult = await client.from("reviews").upsert(reviewRowsData, { onConflict: "id" });
   if (reviewResult.error) throw new Error(`reviews: ${reviewResult.error.message}`);
 
+  const storyRowsData = farmerRows.map((row) => farmerStoryRow(row)).filter((row): row is Record<string, unknown> => row !== null);
+  if (storyRowsData.length > 0) {
+    const storyResult = await client.from("farmer_stories").upsert(storyRowsData, { onConflict: "farmer_id" });
+    if (storyResult.error) throw new Error(`farmer_stories: ${storyResult.error.message}`);
+  }
+
+  const seasonalRowsData = farmerRows.map((row) => farmerSeasonalUpdateRow(row)).filter((row): row is Record<string, unknown> => row !== null);
+  if (seasonalRowsData.length > 0) {
+    const seasonalResult = await client.from("farmer_seasonal_updates").upsert(seasonalRowsData, { onConflict: "farmer_id,season" });
+    if (seasonalResult.error) throw new Error(`farmer_seasonal_updates: ${seasonalResult.error.message}`);
+  }
+
   const blockRowsData = blockRows(defaultBlocks);
   const blockResult = await client.from("content_blocks").upsert(blockRowsData, { onConflict: "key" });
   if (blockResult.error) throw new Error(`content_blocks: ${blockResult.error.message}`);
 
-  console.log(`Seeded ${products.length} products, ${farmerRows.length} farmers, ${reviewRowsData.length} reviews, ${blockRowsData.length} content blocks.`);
+  console.log(`Seeded ${products.length} products, ${farmerRows.length} farmers, ${reviewRowsData.length} reviews, ${blockRowsData.length} content blocks, ${storyRowsData.length} stories, ${seasonalRowsData.length} seasonal updates.`);
 }
 
 run().catch((error) => {

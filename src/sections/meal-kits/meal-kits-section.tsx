@@ -98,7 +98,7 @@ export function MealKitsSection() {
           <h3 className="font-primary text-[clamp(1.45rem,2.4vw,2rem)] font-bold leading-[1.02] text-brand-black">{mealKitBlock.nutritionTitle}</h3>
           <p className="text-brand-black/72">{mealKitBlock.nutritionCopy}</p>
         </div>
-        <OutlineLink href="#trust">{mealKitBlock.nutritionLinkLabel}</OutlineLink>
+        <OutlineLink href="#/meal-kit-trust">{mealKitBlock.nutritionLinkLabel}</OutlineLink>
       </aside>
     </section>
   );

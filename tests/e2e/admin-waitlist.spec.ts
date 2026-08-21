@@ -67,7 +67,6 @@ async function signInAsAdmin(page) {
 
 test("signs in as an admin and manages the waitlist", async ({ page }) => {
   await mockSupabaseAdmin(page);
-  page.on("dialog", (dialog) => void dialog.accept());
 
   await signInAsAdmin(page);
   await expect(page.getByText(adminEmail)).toBeVisible();
@@ -80,6 +79,7 @@ test("signs in as an admin and manages the waitlist", async ({ page }) => {
   await expect(page.getByText("1 item (2)")).toBeVisible();
 
   await page.getByRole("button", { name: "Delete" }).first().click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText(/Deleted hello@example.com/)).toBeVisible();
   await expect(page.getByRole("cell", { name: "hello@example.com" })).toHaveCount(0);
 });

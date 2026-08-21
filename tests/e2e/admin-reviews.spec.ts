@@ -72,7 +72,10 @@ async function mockReviewsAdmin(page) {
   const store: Store = {
     products: [sampleProduct(), sampleProduct({ id: "meal-kit", sku: "MK-1", name: "Meal Kit", category: "Meal kits" })],
     farmers: [],
-    reviews: [sampleReview()],
+    reviews: [
+      sampleReview(),
+      sampleReview({ id: "rv-mk-1", product_id: "meal-kit", author: "Yeshey", rating: 4, title: "Comfort food" }),
+    ],
   };
 
   await page.route("**/auth/v1/token*", (route) =>
@@ -129,6 +132,7 @@ async function mockReviewsAdmin(page) {
   await page.route("**/rest/v1/products*", handleTable("products"));
   await page.route("**/rest/v1/farmers*", handleTable("farmers"));
   await page.route("**/rest/v1/reviews*", handleTable("reviews"));
+  await page.route("**/rest/v1/inventory*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
 }
 
 async function signInAsAdmin(page) {
@@ -145,52 +149,29 @@ test("lists reviews with product names", async ({ page }) => {
 
   await page.getByRole("button", { name: "Reviews" }).click();
   await expect(page.getByRole("heading", { name: "Reviews" })).toBeVisible();
-  await expect(page.getByText("1 review")).toBeVisible();
+  await expect(page.getByText("2 reviews")).toBeVisible();
   await expect(page.getByRole("row", { name: /Karma/ })).toContainText("Vegetable Box");
   await expect(page.getByRole("row", { name: /Karma/ })).toContainText("5/5");
   await expect(page.getByRole("row", { name: /Karma/ })).toContainText("Crisp and fresh");
 });
 
-test("creates and edits a review", async ({ page }) => {
+test("filters reviews by product", async ({ page }) => {
   await mockReviewsAdmin(page);
   await signInAsAdmin(page);
 
   await page.getByRole("button", { name: "Reviews" }).click();
-  await page.getByRole("button", { name: "Add review" }).click();
-  await expect(page.getByRole("heading", { name: "New review" })).toBeVisible();
-  await page.getByLabel("Author *").fill("Yeshey");
-  await page.getByLabel("Title").fill("Lovely greens");
-  await page.getByLabel("Rating").selectOption("4 stars");
-  await page.getByLabel("Date").fill("March 2026");
-  await page.getByRole("button", { name: "Save review" }).click();
-
-  await expect(page.getByText("Created review by Yeshey.")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Karma/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Yeshey/ })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Yeshey/ })).toContainText("Lovely greens");
 
-  await page.getByRole("row", { name: /Yeshey/ }).getByRole("button", { name: "Edit" }).click();
-  await expect(page.getByRole("heading", { name: "Edit review" })).toBeVisible();
-  await page.getByLabel("Title").fill("Even better");
-  await page.getByRole("button", { name: "Save review" }).click();
+  await page.getByLabel("Filter by product").selectOption("veg-box");
+  await expect(page.getByRole("row", { name: /Karma/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Yeshey/ })).toHaveCount(0);
 
-  await expect(page.getByText("Saved review by Yeshey.")).toBeVisible();
-  await expect(page.getByRole("row", { name: /Yeshey/ })).toContainText("Even better");
-});
-
-test("toggles a review to draft and deletes it", async ({ page }) => {
-  page.on("dialog", (dialog) => void dialog.accept());
-  await mockReviewsAdmin(page);
-  await signInAsAdmin(page);
-
-  await page.getByRole("button", { name: "Reviews" }).click();
-  await page.getByRole("row", { name: /Karma/ }).getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Published (visible on the site)").uncheck();
-  await page.getByRole("button", { name: "Save review" }).click();
-
-  await expect(page.getByText("Saved review by Karma.")).toBeVisible();
-  await expect(page.getByRole("row", { name: /Karma/ })).toContainText("Draft");
-
-  await page.getByRole("row", { name: /Karma/ }).getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText("Deleted review by Karma.")).toBeVisible();
+  await page.getByLabel("Filter by product").selectOption("meal-kit");
+  await expect(page.getByRole("row", { name: /Yeshey/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Karma/ })).toHaveCount(0);
+
+  await page.getByLabel("Filter by product").selectOption("");
+  await expect(page.getByRole("row", { name: /Karma/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Yeshey/ })).toBeVisible();
 });

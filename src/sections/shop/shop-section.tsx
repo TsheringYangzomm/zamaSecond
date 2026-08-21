@@ -1,27 +1,55 @@
-import { useState } from "react";
-import { useCart } from "../../cart-context";
 import { useContent } from "../../cms/content-context";
 import { OutlineTag } from "../../components/ui/tag";
 import { PrimaryLink } from "../../components/ui/action-link";
 import { sectionShell, sectionTitleCompact } from "../../components/ui/styles";
-import { FeaturedShopCard, SupportingShopCard } from "../../components/shop/product-cards";
-import type { ShopProduct } from "../../components/shop/shop-utils";
+import {
+  categoryBadgeClasses,
+  categoryRailClasses,
+  categorySlug,
+  type ProductCategory,
+} from "../../components/shop/shop-utils";
+
+type ShopCategoryItem = {
+  category: ProductCategory;
+  title: string;
+  description: string;
+  image: string;
+  alt: string;
+};
+
+const focusRing =
+  "focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3";
+
+function CategoryCard({ item, count }: { item: ShopCategoryItem; count: number }) {
+  const href = `#/shop/${categorySlug(item.category)}`;
+  const browseLabel = item.category === "Custom boxes" ? "Start building your box" : `Browse ${item.title.toLowerCase()}`;
+  return (
+    <a
+      className={`group grid content-start gap-3 overflow-hidden rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRailClasses[item.category]} bg-brand-white p-4 shadow-brand-soft transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand ${focusRing}`}
+      href={href}
+      aria-label={`${item.title}, ${item.category === "Custom boxes" ? "pick any stock item and quantity" : `${count} product${count === 1 ? "" : "s"}`}. ${browseLabel}.`}
+    >
+      <div className="brand-pattern relative grid h-40 place-items-center overflow-hidden rounded-wobbly-md border-2 border-dashed border-brand-forest/30 p-2">
+        <img className="h-32 w-full object-contain" src={item.image} alt={item.alt} loading="lazy" decoding="async" width="210" height="170" />
+        {item.category !== "Custom boxes" ? (
+          <span className={`absolute right-2 bottom-2 rounded-full border-2 border-brand-forest px-2 py-1 text-xs font-bold ${categoryBadgeClasses[item.category]}`}>
+            {count} product{count === 1 ? "" : "s"}
+          </span>
+        ) : null}
+      </div>
+      <div className="grid min-w-0 content-start gap-1.5">
+        <h3 className="font-primary text-[1.5rem] font-bold leading-[1.05] text-brand-black">{item.title}</h3>
+        <p className="text-sm leading-[1.42] text-brand-black/72">{item.description}</p>
+        <span className="text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 group-hover:text-brand-forest">{browseLabel} →</span>
+      </div>
+    </a>
+  );
+}
 
 export function ShopSection() {
-  const {
-    cartQuantity,
-    addToCart,
-  } = useCart();
-  const [cartAnnouncement, setCartAnnouncement] = useState("");
   const { products, blocks } = useContent();
   const shop = blocks.shopSection;
-  const [featuredProduct, ...supportingProducts] = products;
-
-  function handleAddToCart(product: ShopProduct) {
-    addToCart(product.id);
-    const nextQuantity = cartQuantity + 1;
-    setCartAnnouncement(`${product.name} added to cart. ${nextQuantity} item${nextQuantity === 1 ? "" : "s"} in cart.`);
-  }
+  const categoryItems = blocks.shopCategories.items;
 
   return (
     <section className="shop-section" id="shop" aria-labelledby="shop-title">
@@ -36,16 +64,13 @@ export function ShopSection() {
             <PrimaryLink href="#/shop">{shop.ctaLabel}</PrimaryLink>
           </div>
 
-          <div className="grid gap-5" id="product-grid">
-            {featuredProduct ? <FeaturedShopCard product={featuredProduct} onAdd={handleAddToCart} preview /> : null}
-            {supportingProducts.length > 0 ? (
-              <div className={`grid content-start items-start gap-4 ${supportingProducts.length >= 2 ? "md:grid-cols-2" : ""} ${supportingProducts.length >= 3 ? "lg:grid-cols-3" : ""}`}>
-                {supportingProducts.map((product) => <SupportingShopCard key={product.id} product={product} onAdd={handleAddToCart} preview />)}
-              </div>
-            ) : null}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" id="shop-category-grid">
+            {categoryItems.map((item) => (
+              <CategoryCard key={item.category} item={item} count={products.filter((product) => product.category === item.category).length} />
+            ))}
           </div>
-          <p className="sr-only" role="status" aria-live="polite">{cartAnnouncement}</p>
-          <p className="text-sm text-brand-black/64">{shop.footerPrefix} <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#/shop">{shop.footerBrowseLabel}</a> or review <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#delivery">{shop.footerDeliveryLabel}</a></p>
+
+          <p className="text-sm text-brand-black/64">{shop.footerPrefix} <a className={`font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 ${focusRing}`} href="#delivery">{shop.footerDeliveryLabel}</a></p>
         </div>
       </div>
     </section>

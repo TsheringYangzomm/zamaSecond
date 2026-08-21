@@ -12,6 +12,8 @@ import {
   valueItems,
 } from "./landing";
 
+import type { ProductCategory } from "../components/shop/shop-utils";
+
 export type NavItem = { label: string; href: string };
 export type FeatureItem = (typeof featureItems)[number];
 export type ValueItem = (typeof valueItems)[number];
@@ -147,8 +149,16 @@ export type ContentBlocks = {
     copy: string;
     ctaLabel: string;
     footerPrefix: string;
-    footerBrowseLabel: string;
     footerDeliveryLabel: string;
+  };
+  shopCategories: {
+    items: readonly {
+      category: ProductCategory;
+      title: string;
+      description: string;
+      image: string;
+      alt: string;
+    }[];
   };
   shopPage: {
     tag: string;
@@ -202,6 +212,38 @@ export type ContentBlocks = {
     relatedHeading: string;
     suggestionsHeading: string;
   };
+  mealKitTrustPage: {
+    tag: string;
+    heading: string;
+    copy: string;
+    backLabel: string;
+    consultantHeading: string;
+    dieticianHeading: string;
+    healthBenefitsHeading: string;
+    allergensHeading: string;
+    sourcingHeading: string;
+    storageHeading: string;
+  };
+  categoryPages: {
+    vegetables: CategoryPageContent;
+    fruits: CategoryPageContent;
+    mealKits: CategoryPageContent;
+    groceries: CategoryPageContent;
+    customBoxes: CategoryPageContent;
+  };
+};
+
+type CategoryPageContent = {
+  tag: string;
+  heading: string;
+  copy: string;
+  heroImage: string;
+  heroAlt: string;
+  customizationTitle: string;
+  customizationCopy: string;
+  customizationCtaLabel: string;
+  alsoLikeHeading: string;
+  alsoLikeCopy: string;
 };
 
 export const defaultBlocks: ContentBlocks = {
@@ -340,11 +382,49 @@ export const defaultBlocks: ContentBlocks = {
   shopSection: {
     tag: "Launch shop",
     heading: "Shop the launch range.",
-    copy: "A first look at every fresh box, meal kit, and grocery top-up. Open the full shop for portions, ingredients, and reviews.",
+    copy: "Browse the launch range by category — seasonal vegetables and fruit, meal kits, groceries, and custom boxes. Open the full shop for every product, portion, and review.",
     ctaLabel: "View full shop",
-    footerPrefix: "Want the full range, portions, and buyer reviews?",
-    footerBrowseLabel: "Browse the full shop →",
-    footerDeliveryLabel: "delivery details.",
+    footerPrefix: "Wondering about delivery in Thimphu?",
+    footerDeliveryLabel: "Review delivery details.",
+  },
+  shopCategories: {
+    items: [
+      {
+        category: "Meal kits",
+        title: "Meal Kits",
+        description: "Pre-portioned recipes for easy home cooking — breakfast, high-protein, plant-powered, and more.",
+        image: "assets/meal-kit-box.webp",
+        alt: "Meal kit box with pre-portioned ingredients",
+      },
+      {
+        category: "Groceries",
+        title: "Groceries",
+        description: "Pantry staples, snacks, and household essentials for a quick weekly top-up.",
+        image: "assets/grocery-box.webp",
+        alt: "Grocery essentials box",
+      },
+      {
+        category: "Vegetables",
+        title: "Vegetables",
+        description: "Seasonal produce from Bhutanese farms, with the weekly list shown before you order.",
+        image: "assets/vegetable-box.webp",
+        alt: "Seasonal vegetable box",
+      },
+      {
+        category: "Fruits",
+        title: "Fruits",
+        description: "Peak-ripeness fruit selections with the contents confirmed before an order is accepted.",
+        image: "assets/fruit-box.webp",
+        alt: "Seasonal fruit box",
+      },
+      {
+        category: "Custom boxes",
+        title: "Customize your box",
+        description: "Mix fresh produce, a meal kit, and pantry essentials into one flexible kitchen refill.",
+        image: "assets/all-in-one-box.webp",
+        alt: "All-in-one box with groceries and produce",
+      },
+    ],
   },
   shopPage: {
     tag: "Zama Shop",
@@ -397,5 +477,79 @@ export const defaultBlocks: ContentBlocks = {
     notFoundCtaLabel: "Browse all products",
     relatedHeading: "More",
     suggestionsHeading: "You may also like",
+  },
+  mealKitTrustPage: {
+    tag: "Trust standards",
+    heading: "Every recipe, reviewed before you order.",
+    copy: "Consultant and dietician notes, health benefits, allergen information, sourcing details, and storage advice for each meal kit — published before launch.",
+    backLabel: "← Back to meal kits",
+    consultantHeading: "Consultant note",
+    dieticianHeading: "Dietician note",
+    healthBenefitsHeading: "Health benefits",
+    allergensHeading: "Allergens",
+    sourcingHeading: "Sourcing",
+    storageHeading: "Storage advice",
+  },
+  categoryPages: {
+    vegetables: {
+      tag: "Vegetables",
+      heading: "Fresh vegetables, sourced weekly.",
+      copy: "Seasonal produce from Bhutanese farms with the current contents shown before ordering. Pick a ready box or build your own from the full range.",
+      heroImage: "assets/vegetable-box.webp",
+      heroAlt: "Seasonal vegetable box with fresh greens",
+      customizationTitle: "Build your own vegetable box",
+      customizationCopy: "Pick exactly what you want from our weekly selection of fresh vegetables. Choose quantities, swap items, and create a box that fits your kitchen.",
+      customizationCtaLabel: "Start building your box",
+      alsoLikeHeading: "Explore more categories",
+      alsoLikeCopy: "Not just vegetables — there is a full kitchen refill waiting.",
+    },
+    fruits: {
+      tag: "Fruits",
+      heading: "Seasonal fruit, peak ripeness.",
+      copy: "Fruit selected for freshness with availability and substitutions explained up front. Choose a ready box or build your own fruit selection.",
+      heroImage: "assets/fruit-box.webp",
+      heroAlt: "Seasonal fruit box with fresh fruit",
+      customizationTitle: "Build your own fruit box",
+      customizationCopy: "Pick your favourite fruits from the weekly selection. Mix and match to create a fruit box that suits your household.",
+      customizationCtaLabel: "Start building your box",
+      alsoLikeHeading: "Explore more categories",
+      alsoLikeCopy: "Fruit goes well with a vegetable box, a meal kit, or a grocery top-up.",
+    },
+    mealKits: {
+      tag: "Meal kits",
+      heading: "Recipes, already sketched out.",
+      copy: "Pre-portioned ingredients and a recipe card designed for a simple home-cooked meal. Nutrition, allergens, and final pricing confirmed before ordering.",
+      heroImage: "assets/meal-kit-box.webp",
+      heroAlt: "Meal kit box with pre-portioned ingredients",
+      customizationTitle: "",
+      customizationCopy: "",
+      customizationCtaLabel: "",
+      alsoLikeHeading: "You may also like",
+      alsoLikeCopy: "Pair a meal kit with fresh produce or a grocery top-up.",
+    },
+    groceries: {
+      tag: "Groceries",
+      heading: "Pantry staples and everyday essentials.",
+      copy: "A focused basket of pantry, snack, beverage, and household essentials for a quick weekly refill. Ingredients and sourcing shown per item.",
+      heroImage: "assets/grocery-box.webp",
+      heroAlt: "Grocery essentials box with pantry staples",
+      customizationTitle: "",
+      customizationCopy: "",
+      customizationCtaLabel: "",
+      alsoLikeHeading: "You may also like",
+      alsoLikeCopy: "Top up your kitchen with fresh produce or a ready meal kit.",
+    },
+    customBoxes: {
+      tag: "Custom boxes",
+      heading: "Your box, your rules.",
+      copy: "Mix fresh produce, a meal kit, and pantry essentials into one flexible kitchen refill. Choose every item and quantity yourself.",
+      heroImage: "assets/all-in-one-box.webp",
+      heroAlt: "All-in-one box with groceries and produce",
+      customizationTitle: "Build your custom box",
+      customizationCopy: "Browse the full inventory of available items. Pick exactly what you want, in the quantities you need, and add everything to your basket in one go.",
+      customizationCtaLabel: "Start building your box",
+      alsoLikeHeading: "You may also like",
+      alsoLikeCopy: "See what else the shop has to offer.",
+    },
   },
 };

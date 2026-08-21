@@ -31,7 +31,10 @@ const cardLinkFocus =
 const detailsLinkClasses =
   "inline-flex min-h-10 w-full items-center justify-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2";
 
-export function FeaturedShopCard({ product, onAdd, preview = false }: { product: ShopProduct; onAdd: (product: ShopProduct) => void; preview?: boolean }) {
+const viewContentsButtonClasses =
+  "inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-wobbly-md border-2 border-brand-forest bg-brand-mint px-3 text-xs font-bold text-brand-green-ink transition-all duration-150 ease-out hover:bg-brand-yellow hover:shadow-brand-soft focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2";
+
+export function FeaturedShopCard({ product, onAdd, onViewDetail, preview = false }: { product: ShopProduct; onAdd: (product: ShopProduct) => void; onViewDetail?: (product: ShopProduct) => void; preview?: boolean }) {
   const headingId = `${product.id}-title`;
   const detailHref = productDetailHref(product);
 
@@ -58,6 +61,11 @@ export function FeaturedShopCard({ product, onAdd, preview = false }: { product:
         {!preview ? <p className="text-xs text-brand-black/64">{product.deliveryEstimate}</p> : null}
         {!preview ? <ProductDetail product={product} short /> : null}
         <div className="mt-auto grid gap-2">
+          {onViewDetail ? (
+            <button className={viewContentsButtonClasses} type="button" onClick={() => onViewDetail(product)}>
+              View box contents ({product.contents.length} items)
+            </button>
+          ) : null}
           <AddToCartButton product={product} onAdd={onAdd} />
           <a className={detailsLinkClasses} href={detailHref}>View full details →</a>
         </div>
@@ -68,23 +76,27 @@ export function FeaturedShopCard({ product, onAdd, preview = false }: { product:
 
 function categoryBadge(product: ShopProduct) {
   const classes = {
-    "Fresh boxes": "bg-brand-lime text-brand-forest",
+    Vegetables: "bg-brand-lime text-brand-forest",
+    Fruits: "bg-brand-orange/18 text-brand-orange-ink",
     "Meal kits": "bg-brand-purple text-brand-white",
-    Groceries: "bg-brand-orange/18 text-brand-orange-ink",
+    Groceries: "bg-brand-buff text-brand-forest",
+    "Custom boxes": "bg-brand-mint text-brand-forest",
   } as const;
   return classes[product.category];
 }
 
 function categoryRail(product: ShopProduct) {
   const classes = {
-    "Fresh boxes": "border-t-brand-leaf",
+    Vegetables: "border-t-brand-leaf",
+    Fruits: "border-t-brand-orange",
     "Meal kits": "border-t-brand-purple",
-    Groceries: "border-t-brand-orange",
+    Groceries: "border-t-brand-yellow",
+    "Custom boxes": "border-t-brand-green-ink",
   } as const;
   return classes[product.category];
 }
 
-export function SupportingShopCard({ product, onAdd, preview = false }: { product: ShopProduct; onAdd: (product: ShopProduct) => void; preview?: boolean }) {
+export function SupportingShopCard({ product, onAdd, onViewDetail, preview = false }: { product: ShopProduct; onAdd: (product: ShopProduct) => void; onViewDetail?: (product: ShopProduct) => void; preview?: boolean }) {
   const headingId = `${product.id}-title`;
   const detailHref = productDetailHref(product);
 
@@ -101,6 +113,11 @@ export function SupportingShopCard({ product, onAdd, preview = false }: { produc
         </h3>
         <p className="line-clamp-2 text-sm leading-[1.35] text-brand-black/72">{product.description}</p>
         <strong className="text-sm text-brand-orange-ink">{productPrice(product)}</strong>
+        {onViewDetail ? (
+          <button className={`${viewContentsButtonClasses} min-h-8 text-[0.7rem]`} type="button" onClick={() => onViewDetail(product)}>
+            View box contents
+          </button>
+        ) : null}
         <a className={`${detailsLinkClasses} min-h-9 justify-start px-0`} href={detailHref}>View details →</a>
       </div>
       {!preview ? <div className="col-span-full"><ProductFacts product={product} compact /></div> : null}

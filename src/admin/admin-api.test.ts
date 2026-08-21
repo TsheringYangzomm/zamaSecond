@@ -7,6 +7,7 @@ const sample: WaitlistEntry[] = [
     email: "a@example.com",
     source: "hero-waitlist",
     area: "Thimphu",
+    full_name: "Ada Lovelace",
     items: null,
     created_at: "2026-08-01T10:00:00Z",
   },
@@ -15,6 +16,7 @@ const sample: WaitlistEntry[] = [
     email: 'weird"email@example.com',
     source: "launch-basket",
     area: "",
+    full_name: null,
     items: [{ sku: "vb-1", quantity: 2 }],
     created_at: "2026-08-02T09:30:00Z",
   },
@@ -25,7 +27,7 @@ describe("waitlistToCsv", () => {
     const csv = waitlistToCsv(sample);
     const lines = csv.split("\n");
     expect(lines).toHaveLength(3);
-    expect(lines[0]).toBe("id,email,source,area,items,created_at");
+    expect(lines[0]).toBe("id,email,source,area,full_name,items,created_at");
     expect(lines[1]).toContain("a@example.com");
     expect(lines[1]).toContain("Thimphu");
   });

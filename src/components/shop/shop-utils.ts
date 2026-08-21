@@ -2,7 +2,12 @@ import { shopProducts } from "../../data/landing";
 
 export { shopProducts };
 
-export type ProductCategory = "Fresh boxes" | "Meal kits" | "Groceries";
+export type ProductCategory = "Vegetables" | "Fruits" | "Meal kits" | "Groceries" | "Custom boxes";
+
+export type BoxContents = {
+  name: string;
+  quantity: string;
+};
 
 export type ShopProduct = {
   id: string;
@@ -27,27 +32,38 @@ export type ShopProduct = {
   nutrition: string;
   tags: readonly string[];
   collections: readonly string[];
+  contents: readonly BoxContents[];
 };
 
-export const categories = ["All", "Fresh boxes", "Meal kits", "Groceries"] as const;
+export const categories = ["All", "Vegetables", "Fruits", "Meal kits", "Groceries", "Custom boxes"] as const;
 export type Category = (typeof categories)[number];
 
 export const categoryBadgeClasses: Record<ProductCategory, string> = {
-  "Fresh boxes": "bg-brand-lime text-brand-forest",
+  Vegetables: "bg-brand-lime text-brand-forest",
+  Fruits: "bg-brand-orange/18 text-brand-orange-ink",
   "Meal kits": "bg-brand-purple text-brand-white",
-  Groceries: "bg-brand-orange/18 text-brand-orange-ink",
+  Groceries: "bg-brand-buff text-brand-forest",
+  "Custom boxes": "bg-brand-mint text-brand-forest",
 };
 
 export const categoryRailClasses: Record<ProductCategory, string> = {
-  "Fresh boxes": "border-t-brand-leaf",
+  Vegetables: "border-t-brand-leaf",
+  Fruits: "border-t-brand-orange",
   "Meal kits": "border-t-brand-purple",
-  Groceries: "border-t-brand-orange",
+  Groceries: "border-t-brand-yellow",
+  "Custom boxes": "border-t-brand-green-ink",
 };
 
 export const numberFormatter = new Intl.NumberFormat("en-BT", { maximumFractionDigits: 0 });
 
 export function categorySlug(category: Category) {
   return category.toLowerCase().replaceAll(" ", "-");
+}
+
+export const categorySlugs = ["vegetables", "fruits", "meal-kits", "groceries", "custom-boxes"] as const;
+
+export function slugToCategory(slug: string): Category | null {
+  return categories.find((c) => categorySlug(c) === slug) ?? null;
 }
 
 export type ShopFilter = {

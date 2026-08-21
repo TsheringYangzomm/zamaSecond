@@ -1,93 +1,183 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import {
+  Boxes,
+  CreditCard,
+  FileText,
+  LayoutDashboard,
+  ListChecks,
+  LogOut,
+  Package,
+  Repeat,
+  ShoppingBag,
+  Sprout,
+  Star,
+  Truck,
+  UtensilsCrossed,
+  Users,
+} from "lucide-react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { AdminLogin } from "./admin-login";
+import { OverviewTab } from "./overview-tab";
 import { WaitlistTab } from "./waitlist-tab";
 import { ProductsTab } from "./products-tab";
+import { InventoryTab } from "./inventory-tab";
 import { FarmersTab } from "./farmers-tab";
 import { ReviewsTab } from "./reviews-tab";
 import { ContentTab } from "./content-tab";
+import { OrdersTab } from "./orders-tab";
+import { CustomersTab } from "./customers-tab";
+import { SubscriptionsTab } from "./subscriptions-tab";
+import { DeliveriesTab } from "./deliveries-tab";
+import { PaymentsTab } from "./payments-tab";
+import { MealKitTrustTab } from "./meal-kit-trust-tab";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
 
-type AdminTab = "overview" | "waitlist" | "products" | "farmers" | "reviews" | "content";
+type AdminTab = "overview" | "orders" | "products" | "inventory" | "farmers" | "customers" | "waitlist" | "reviews" | "subscriptions" | "deliveries" | "payments" | "content" | "meal-kit-trust";
 
-const tabs: { key: AdminTab; label: string }[] = [
-  { key: "overview", label: "Overview" },
-  { key: "waitlist", label: "Waitlist" },
-  { key: "products", label: "Products" },
-  { key: "farmers", label: "Farmers" },
-  { key: "reviews", label: "Reviews" },
-  { key: "content", label: "Content" },
+const tabs: { key: AdminTab; label: string; icon: ReactNode }[] = [
+  { key: "overview", label: "Overview", icon: <LayoutDashboard /> },
+  { key: "orders", label: "Orders", icon: <ShoppingBag /> },
+  { key: "products", label: "Products", icon: <Package /> },
+  { key: "inventory", label: "Inventory", icon: <Boxes /> },
+  { key: "farmers", label: "Farmers", icon: <Sprout /> },
+  { key: "customers", label: "Customers", icon: <Users /> },
+  { key: "waitlist", label: "Waitlist", icon: <ListChecks /> },
+  { key: "reviews", label: "Reviews", icon: <Star /> },
+  { key: "meal-kit-trust", label: "Meal Kit Trust", icon: <UtensilsCrossed /> },
+  { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
+  { key: "deliveries", label: "Deliveries", icon: <Truck /> },
+  { key: "payments", label: "Payments", icon: <CreditCard /> },
+  { key: "content", label: "Content", icon: <FileText /> },
 ];
-
-const activeTabClasses = "bg-brand-forest text-brand-white";
-const inactiveTabClasses = "bg-brand-white text-brand-forest hover:bg-brand-yellow";
 
 function AdminShell() {
   const { email, signOut } = useAdminAuth();
   const [tab, setTab] = useState<AdminTab>("overview");
 
   return (
-    <div className="min-h-screen bg-brand-warm-white">
-      <header className="border-b-4 border-brand-forest bg-brand-yellow">
-        <div className="section-shell flex flex-wrap items-center justify-between gap-3 py-4">
-          <div className="flex items-center gap-3">
-            <img className="w-24" src="assets/zama_logo.png" alt="Zama" width="96" height="41" />
-            <span className="rounded-full border-2 border-brand-forest bg-brand-warm-white px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-forest">Admin</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-bold text-brand-black">{email}</span>
-            <a className={btnOutlineSm} href="#/">← Back to site</a>
-            <button className={btnOutlineSm} type="button" onClick={() => void signOut()}>Sign out</button>
-          </div>
+    <SidebarProvider className="flex min-h-svh w-full flex-col">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b-4 border-brand-forest bg-brand-yellow px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger />
+          <img className="w-24" src="assets/zama_logo.png" alt="Zama" width="96" height="41" />
+          <span className="rounded-full border-2 border-brand-forest bg-brand-warm-white px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-forest">Admin</span>
         </div>
+        <a className={btnOutlineSm} href="#/">← Back to site</a>
       </header>
 
-      <nav className="border-b-3 border-dashed border-brand-forest/30 bg-brand-white" aria-label="Admin sections">
-        <div className="section-shell flex flex-wrap gap-2 py-3">
-          {tabs.map(({ key, label }) => (
-            <button
-              key={key}
-              type="button"
-              aria-current={tab === key ? "page" : undefined}
-              className={`min-h-10 rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 ${tab === key ? activeTabClasses : inactiveTabClasses}`}
-              onClick={() => setTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      <main className="section-shell py-8">
-        {tab === "overview" ? <OverviewTab /> : null}
-        {tab === "waitlist" ? <WaitlistTab /> : null}
-        {tab === "products" ? <ProductsTab /> : null}
-        {tab === "farmers" ? <FarmersTab /> : null}
-        {tab === "reviews" ? <ReviewsTab /> : null}
-        {tab === "content" ? <ContentTab /> : null}
-      </main>
-    </div>
+      <div className="flex flex-1 min-w-0">
+        <AdminSidebar
+          className="top-16! h-[calc(100svh-4rem)]!"
+          tab={tab}
+          onSelect={setTab}
+          email={email}
+          onSignOut={() => void signOut()}
+        />
+        <SidebarInset className="min-w-0">
+          <main className="px-4 py-8 sm:px-6 lg:px-10">
+            {tab === "overview" ? <OverviewTab /> : null}
+            {tab === "orders" ? <OrdersTab /> : null}
+            {tab === "products" ? <ProductsTab /> : null}
+            {tab === "inventory" ? <InventoryTab /> : null}
+            {tab === "farmers" ? <FarmersTab /> : null}
+            {tab === "customers" ? <CustomersTab /> : null}
+            {tab === "waitlist" ? <WaitlistTab /> : null}
+            {tab === "reviews" ? <ReviewsTab /> : null}
+            {tab === "meal-kit-trust" ? <MealKitTrustTab /> : null}
+            {tab === "subscriptions" ? <SubscriptionsTab /> : null}
+            {tab === "deliveries" ? <DeliveriesTab /> : null}
+            {tab === "payments" ? <PaymentsTab /> : null}
+            {tab === "content" ? <ContentTab /> : null}
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }
 
-function OverviewTab() {
+function AdminSidebar({
+  tab,
+  onSelect,
+  email,
+  onSignOut,
+  className,
+}: {
+  tab: AdminTab;
+  onSelect: (tab: AdminTab) => void;
+  email: string | null;
+  onSignOut: () => void;
+  className?: string;
+}) {
+  const { state } = useSidebar();
+
   return (
-    <div className="grid gap-4">
-      <h1 className="font-primary text-[clamp(1.9rem,4vw,2.8rem)] font-bold leading-[1.02] text-brand-green-ink">Welcome to the Zama admin.</h1>
-      <p className="max-w-170 text-[1.05rem] text-brand-black/72">Manage the waitlist, catalog, farmers, reviews, and landing content from here. Changes publish to the live site immediately.</p>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          { label: "Waitlist", note: "Signups, delete, CSV export" },
-          { label: "Catalog", note: "Products, farmers, reviews" },
-          { label: "Content", note: "Landing copy blocks" },
-        ].map(({ label, note }) => (
-          <div key={label} className="grid gap-1 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">{label}</span>
-            <p className="text-sm text-brand-black/72">{note}</p>
-          </div>
-        ))}
-      </div>
-    </div>
+    <Sidebar
+      collapsible="icon"
+      role="complementary"
+      aria-label="Admin sections"
+      data-collapsed={state === "collapsed"}
+      className={className}
+    >
+      <SidebarHeader>
+        <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {tabs.map(({ key, label, icon }) => (
+                <SidebarMenuItem key={key}>
+                  <SidebarMenuButton
+                    isActive={tab === key}
+                    tooltip={label}
+                    onClick={() => onSelect(key)}
+                    aria-current={tab === key ? "page" : undefined}
+                  >
+                    {icon}
+                    <span>{label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <UserCard email={email} onSignOut={onSignOut} />
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
+
+function UserCard({ email, onSignOut }: { email: string | null; onSignOut: () => void }) {
+  return (
+    <SidebarGroup>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton onClick={onSignOut} tooltip="Sign out">
+            <LogOut />
+            <span>Sign out</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+      <p className="hidden truncate px-3 pt-1 text-xs font-bold text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden md:block">{email}</p>
+    </SidebarGroup>
   );
 }
 

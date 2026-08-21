@@ -68,10 +68,10 @@ function sampleFarmer(overrides = {}) {
   };
 }
 
-type Store = { products: Record<string, unknown>[]; farmers: Record<string, unknown>[] };
+type Store = { products: Record<string, unknown>[]; farmers: Record<string, unknown>[]; privateInfo: Record<string, unknown>[]; stories: Record<string, unknown>[]; seasonalUpdates: Record<string, unknown>[] };
 
 async function mockCatalogAdmin(page) {
-  const store: Store = { products: [sampleProduct()], farmers: [sampleFarmer()] };
+  const store: Store = { products: [sampleProduct()], farmers: [sampleFarmer()], privateInfo: [], stories: [], seasonalUpdates: [] };
 
   await page.route("**/auth/v1/token*", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sessionBody) }),
@@ -110,6 +110,13 @@ async function mockCatalogAdmin(page) {
         }
         return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(body) });
       }
+      if (method === "PATCH") {
+        const id = (url.searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const parsed = JSON.parse(request.postData() ?? "{}");
+        const index = store[table].findIndex((item) => item.id === id);
+        if (index >= 0) store[table][index] = { ...store[table][index], ...parsed };
+        return route.fulfill({ status: 204, body: "" });
+      }
       if (method === "DELETE") {
         const id = (url.searchParams.get("id") ?? "").replace(/^eq\./, "");
         store[table] = store[table].filter((row) => row.id !== id);
@@ -120,6 +127,45 @@ async function mockCatalogAdmin(page) {
 
   await page.route("**/rest/v1/products*", handleTable("products"));
   await page.route("**/rest/v1/farmers*", handleTable("farmers"));
+
+  const handlePrivateInfo = async (route) => {
+    const request = route.request();
+    const method = request.method();
+    if (method === "GET") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(store.privateInfo) });
+    }
+    if (method === "POST") {
+      const parsed = JSON.parse(request.postData() ?? "{}");
+      const index = store.privateInfo.findIndex((row) => row.farmer_id === parsed.farmer_id);
+      if (index >= 0) store.privateInfo[index] = { ...store.privateInfo[index], ...parsed };
+      else store.privateInfo.push(parsed);
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(parsed) });
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  };
+  await page.route("**/rest/v1/farmer_private_info*", handlePrivateInfo);
+
+  const handleKeyedTable = (rows: Record<string, unknown>[], keys: string[]) =>
+    async (route) => {
+      const request = route.request();
+      const method = request.method();
+      if (method === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(rows) });
+      }
+      if (method === "POST") {
+        const parsed = JSON.parse(request.postData() ?? "{}");
+        const index = rows.findIndex((row) => keys.every((key) => row[key] === parsed[key]));
+        if (index >= 0) rows[index] = { ...rows[index], ...parsed };
+        else rows.push(parsed);
+        return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(parsed) });
+      }
+      return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    };
+
+  await page.route("**/rest/v1/farmer_stories*", handleKeyedTable(store.stories, ["farmer_id"]));
+  await page.route("**/rest/v1/farmer_seasonal_updates*", handleKeyedTable(store.seasonalUpdates, ["farmer_id", "season"]));
+
+  await page.route("**/rest/v1/inventory*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
 
   await page.route("**/storage/v1/object/catalog/products/**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ Key: "products/veg-box/1.png" }) }),
@@ -160,7 +206,6 @@ test("creates and edits a product", async ({ page }) => {
 });
 
 test("toggles a product to draft and deletes it", async ({ page }) => {
-  page.on("dialog", (dialog) => void dialog.accept());
   await mockCatalogAdmin(page);
   await signInAsAdmin(page);
 
@@ -173,6 +218,7 @@ test("toggles a product to draft and deletes it", async ({ page }) => {
   await expect(page.getByRole("row", { name: /Vegetable Box/ })).toContainText("Draft");
 
   await page.getByRole("row", { name: /Vegetable Box/ }).getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Deleted Vegetable Box.")).toBeVisible();
   await expect(page.getByRole("row", { name: /Vegetable Box/ })).toHaveCount(0);
 });
@@ -194,7 +240,6 @@ test("uploads a product image from a file", async ({ page }) => {
 });
 
 test("creates, edits, and deletes a farmer", async ({ page }) => {
-  page.on("dialog", (dialog) => void dialog.accept());
   await mockCatalogAdmin(page);
   await signInAsAdmin(page);
 
@@ -208,12 +253,32 @@ test("creates, edits, and deletes a farmer", async ({ page }) => {
   await expect(page.getByText("Created Yeshey Wangmo.")).toBeVisible();
   await expect(page.getByRole("row", { name: /Yeshey Wangmo/ })).toBeVisible();
 
+  await page.getByRole("row", { name: /Yeshey Wangmo/ }).getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Village").fill("Dotey");
+  await page.getByLabel("Phone number").fill("+975 17 000 000");
+  await page.getByLabel("Farmer story").fill("Yeshey grew up in Dotey and now runs the family farm.");
+  await page.getByLabel("Show story on the site").check();
+  await page.getByLabel("Seasonal update").fill("Expecting a strong tomato harvest this summer.");
+  await page.getByLabel("Publish this update (show on the landing page)").check();
+  await page.getByRole("button", { name: "Save farmer" }).click();
+  await expect(page.getByText("Saved Yeshey Wangmo.")).toBeVisible();
+
+  await page.getByRole("row", { name: /Yeshey Wangmo/ }).getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByLabel("Village")).toHaveValue("Dotey");
+  await expect(page.getByLabel("Phone number")).toHaveValue("+975 17 000 000");
+  await expect(page.getByLabel("Farmer story")).toHaveValue("Yeshey grew up in Dotey and now runs the family farm.");
+  await expect(page.getByLabel("Show story on the site")).toBeChecked();
+  await expect(page.getByLabel("Seasonal update")).toHaveValue("Expecting a strong tomato harvest this summer.");
+  await expect(page.getByLabel("Publish this update (show on the landing page)")).toBeChecked();
+  await page.getByRole("button", { name: "Cancel" }).click();
+
   await page.getByRole("row", { name: /Yeshey Wangmo/ }).getByRole("button", { name: "Delete" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Deleted Yeshey Wangmo.")).toBeVisible();
   await expect(page.getByRole("row", { name: /Yeshey Wangmo/ })).toHaveCount(0);
 });
 
-test("reorders products with the arrow buttons", async ({ page }) => {
+test("reorders products by dragging", async ({ page }) => {
   await mockCatalogAdmin(page);
   await signInAsAdmin(page);
 
@@ -223,10 +288,9 @@ test("reorders products with the arrow buttons", async ({ page }) => {
   await page.getByRole("button", { name: "Save product" }).click();
   await expect(page.getByRole("row", { name: /Second Box/ })).toBeVisible();
 
-  const firstRow = page.getByRole("row", { name: /Second Box/ });
-  await firstRow.getByRole("button", { name: "Move Second Box up" }).click();
+  const rows = page.locator("tbody tr");
+  await rows.nth(1).dragTo(rows.nth(0));
 
   await expect(page.getByRole("row", { name: /Second Box/ })).toBeVisible();
-  const rows = page.locator("tbody tr");
   await expect(rows.first()).toContainText("Second Box");
 });

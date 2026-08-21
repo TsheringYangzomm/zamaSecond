@@ -7,16 +7,9 @@ import {
   type WaitlistEntry,
 } from "../../admin/admin-api";
 import { btnOutlineSm } from "../../components/ui/styles";
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-}
+import { ConfirmDialog } from "../../components/ui/confirm-dialog";
+import { inputClasses, selectClasses } from "./admin-fields";
+import { formatDate } from "./commerce-shared";
 
 function itemSummary(entry: WaitlistEntry) {
   const items = (entry.items ?? []) as Array<{ quantity?: number }>;
@@ -29,7 +22,20 @@ export function WaitlistTab() {
   const [entries, setEntries] = useState<WaitlistEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
+  const [areaFilter, setAreaFilter] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<WaitlistEntry | null>(null);
+
+  const sources = useMemo(() => {
+    const set = new Set((entries ?? []).map((entry) => entry.source).filter(Boolean));
+    return [...set].sort();
+  }, [entries]);
+
+  const areas = useMemo(() => {
+    const set = new Set((entries ?? []).map((entry) => entry.area).filter((area): area is string => Boolean(area)));
+    return [...set].sort();
+  }, [entries]);
 
   async function load() {
     setEntries(null);
@@ -48,17 +54,19 @@ export function WaitlistTab() {
   const filtered = useMemo(() => {
     if (!entries) return [];
     const q = query.trim().toLowerCase();
-    if (!q) return entries;
-    return entries.filter(
-      (entry) =>
+    return entries.filter((entry) => {
+      if (sourceFilter && entry.source !== sourceFilter) return false;
+      if (areaFilter && entry.area !== areaFilter) return false;
+      if (!q) return true;
+      return (
         entry.email.toLowerCase().includes(q) ||
         (entry.area ?? "").toLowerCase().includes(q) ||
-        entry.source.toLowerCase().includes(q),
-    );
-  }, [entries, query]);
+        entry.source.toLowerCase().includes(q)
+      );
+    });
+  }, [entries, query, sourceFilter, areaFilter]);
 
   async function handleDelete(entry: WaitlistEntry) {
-    if (!window.confirm(`Delete ${entry.email} from the waitlist?`)) return;
     setStatus(null);
     try {
       await deleteWaitlistEntry(entry.id);
@@ -66,6 +74,8 @@ export function WaitlistTab() {
       setStatus(`Deleted ${entry.email}.`);
     } catch (deleteError) {
       setStatus(deleteError instanceof Error ? deleteError.message : "Could not delete the entry.");
+    } finally {
+      setPendingDelete(null);
     }
   }
 
@@ -92,16 +102,24 @@ export function WaitlistTab() {
         </div>
       </div>
 
-      <label className="grid gap-1.5">
-        <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Search</span>
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter by email, area, or source..."
-          className="min-h-11.5 w-full max-w-150 rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
+          aria-label="Search waitlist"
+          className={inputClasses}
         />
-      </label>
+        <select className={`${selectClasses} min-w-40`} aria-label="Filter by source" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
+          <option value="">All sources</option>
+          {sources.map((source) => <option key={source} value={source}>{source}</option>)}
+        </select>
+        <select className={`${selectClasses} min-w-40`} aria-label="Filter by area" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
+          <option value="">All areas</option>
+          {areas.map((area) => <option key={area} value={area}>{area}</option>)}
+        </select>
+      </div>
 
       {error ? (
         <div className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-5">
@@ -115,7 +133,7 @@ export function WaitlistTab() {
       {entries ? (
         filtered.length === 0 ? (
           <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">
-            {query ? "No signups match that search." : "No waitlist signups yet."}
+            {query || sourceFilter || areaFilter ? "No signups match the current search or filters." : "No waitlist signups yet."}
           </p>
         ) : (
           <div className="overflow-x-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white shadow-brand-soft">
@@ -145,7 +163,7 @@ export function WaitlistTab() {
                       <button
                         className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink bg-brand-white px-3 py-1 text-xs font-bold text-brand-black transition-colors duration-120 ease-in-out hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
                         type="button"
-                        onClick={() => void handleDelete(entry)}
+                        onClick={() => setPendingDelete(entry)}
                       >
                         Delete
                       </button>
@@ -157,6 +175,14 @@ export function WaitlistTab() {
           </div>
         )
       ) : null}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete waitlist entry"
+        message={pendingDelete ? `Delete ${pendingDelete.email} from the waitlist?` : ""}
+        confirmLabel="Delete"
+        onConfirm={() => { if (pendingDelete) void handleDelete(pendingDelete); }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

@@ -1,13 +1,17 @@
 import { useCallback, useState } from "react";
 import { useCart } from "../../cart-context";
 import { useContent } from "../../cms/content-context";
+import { useCustomerAuth } from "../../checkout/customer-auth";
 import { SmallOutlineLink, SmallPrimaryLink } from "../ui/action-link";
 import { ArrowIcon } from "../ui/icons";
-import { navLinkClass } from "../ui/styles";
+import { btnOutlineSm, btnPrimarySm, navLinkClass } from "../ui/styles";
 
 function navArrow(itemHref: string) {
   return itemHref.startsWith("#/") ? <ArrowIcon className="ml-1.5" /> : null;
 }
+
+const ghostActionClass =
+  "inline-flex min-h-11 items-center gap-1.5 px-1.5 font-secondary font-bold text-brand-forest transition-colors duration-120 ease-in-out hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4";
 
 function CartIcon() {
   return (
@@ -45,11 +49,11 @@ function CartButton({ onOpen }: { onOpen: () => void }) {
 
 function DesktopNav() {
   const { blocks } = useContent();
-  const { items: navItems, partnerLabel } = blocks.nav;
+  const { items: navItems } = blocks.nav;
 
   return (
     <nav
-      className="site-nav hidden sm:order-3 sm:col-span-2 sm:flex sm:flex-wrap sm:justify-start sm:gap-[clamp(0.7rem,1.35vw,1.15rem)] sm:text-[1.03rem] md:order-none md:col-span-1 lg:flex-nowrap"
+      className="site-nav hidden md:flex md:flex-wrap lg:flex-nowrap md:items-center md:justify-center md:gap-[clamp(0.75rem,1.2vw,1.6rem)] md:text-[1.02rem] md:font-bold xl:gap-[clamp(1.25rem,1.8vw,2.5rem)] xl:text-[1.06rem]"
       aria-label="Main navigation"
     >
       {navItems.map((item) => (
@@ -58,17 +62,19 @@ function DesktopNav() {
           {navArrow(item.href)}
         </a>
       ))}
-      <a className={navLinkClass} href="#b2b">
-        {partnerLabel}
-        {navArrow("#b2b")}
-      </a>
     </nav>
   );
 }
 
-function MobileNav({ onSelect, isOpen }: { onSelect: () => void; isOpen: boolean }) {
+function MobileNav({ onSelect, onAuth, isOpen }: { onSelect: () => void; onAuth: () => void; isOpen: boolean }) {
   const { blocks } = useContent();
   const { items: navItems, partnerLabel } = blocks.nav;
+  const { status, signOut } = useCustomerAuth();
+
+  const handleSignOut = () => {
+    onSelect();
+    void signOut();
+  };
 
   return (
     <nav
@@ -84,13 +90,19 @@ function MobileNav({ onSelect, isOpen }: { onSelect: () => void; isOpen: boolean
       <SmallOutlineLink className="mt-1 w-full" href="#b2b" onClick={onSelect}>
         {partnerLabel}
       </SmallOutlineLink>
+      {status === "signed-in" ? (
+        <button className={`${btnOutlineSm} mt-1 w-full`} type="button" onClick={handleSignOut}>Sign out</button>
+      ) : (
+        <button className={`${btnPrimarySm} mt-1 w-full`} type="button" onClick={onAuth}>Sign in</button>
+      )}
     </nav>
   );
 }
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const { cartQuantity, openCart } = useCart();
+  const { cartQuantity, openCart, openAuth } = useCart();
+  const { status, signOut } = useCustomerAuth();
   const { blocks } = useContent();
   const { partnerLabel, joinLabel, joinShortLabel } = blocks.nav;
   const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
@@ -99,23 +111,61 @@ export function SiteHeader() {
     closeMenu();
     openCart();
   }, [closeMenu, openCart]);
+  const handleOpenAuth = useCallback(() => {
+    closeMenu();
+    openAuth();
+  }, [closeMenu, openAuth]);
+  const handleSignOut = useCallback(() => {
+    closeMenu();
+    void signOut();
+  }, [closeMenu, signOut]);
 
   return (
-    <header className="site-header sticky top-2.5 z-20 mx-auto mt-3 w-[calc(100%-16px)] max-w-280 rounded-[26px_18px_28px_14px/16px_30px_18px_28px] border-3 border-brand-forest px-2 py-[0.6rem] shadow-brand sm:w-[min(1260px,calc(100%-40px))] sm:px-[0.9rem] sm:py-[0.7rem]">
-      <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[auto_1fr] sm:gap-3 md:grid-cols-[auto_1fr_auto]">
-        <a className="brand inline-flex shrink-0 -rotate-2 items-center" href="#top" aria-label="Zama home">
-          <img className="h-14 w-auto sm:h-16" src="assets/zama_logo.png" alt="Zama" width="144" height="94" />
+    <header className="site-header sticky top-0 z-20 w-full border-b-3 border-brand-forest">
+      <div className="mx-auto grid min-w-0 w-full max-w-[90rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[clamp(0.75rem,2vw,1.5rem)] px-[clamp(0.75rem,2.2vw,2.75rem)] py-[0.6rem] sm:py-[0.7rem] md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-x-[clamp(0.75rem,1.6vw,2rem)]">
+        <a className="brand inline-flex shrink-0 items-center" href="#top" aria-label="Zama home">
+          <img
+            className="h-14 w-[5.35rem] sm:h-16 sm:w-[6.1rem] xl:h-20 xl:w-[7.65rem]"
+            src="assets/zama_logo.png"
+            alt="Zama"
+            width="144"
+            height="94"
+          />
         </a>
 
         <DesktopNav />
 
-        <div className="header-actions hidden items-center gap-2 sm:flex sm:justify-end" aria-label="Primary actions">
-          <SmallOutlineLink href="#b2b">{partnerLabel}</SmallOutlineLink>
-          <SmallPrimaryLink href="#waitlist">{joinLabel}</SmallPrimaryLink>
+        <div className="header-actions hidden items-center gap-x-2 md:flex md:justify-end xl:gap-x-3" aria-label="Primary actions">
+          {status === "signed-in" ? (
+            <>
+              <span className="hidden shrink-0 md:inline-flex lg:hidden xl:inline-flex">
+                <a className={ghostActionClass} href="#b2b">
+                  {partnerLabel}
+                  <ArrowIcon className="h-4 w-4" />
+                </a>
+              </span>
+              <span className="hidden shrink-0 md:inline-flex">
+                <button className={ghostActionClass} type="button" onClick={handleSignOut}>Sign out</button>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="hidden shrink-0 md:inline-flex">
+                <a className={ghostActionClass} href="#b2b">
+                  {partnerLabel}
+                  <ArrowIcon className="h-4 w-4" />
+                </a>
+              </span>
+              <span className="hidden shrink-0 xl:inline-flex">
+                <button className={ghostActionClass} type="button" onClick={handleOpenAuth}>Sign in</button>
+              </span>
+            </>
+          )}
+          <SmallPrimaryLink className="shrink-0" href="#waitlist">{joinLabel}</SmallPrimaryLink>
           <CartButton onOpen={handleOpenCart} />
         </div>
 
-        <div className="flex items-center justify-end gap-[0.55rem] sm:hidden">
+        <div className="flex items-center justify-end gap-[0.55rem] md:hidden">
           <SmallPrimaryLink className="px-3 text-[0.92rem]" href="#waitlist">
             {joinShortLabel}
           </SmallPrimaryLink>
@@ -146,13 +196,13 @@ export function SiteHeader() {
 
       <div
         id="mobile-menu"
-        className={`mobile-menu grid overflow-hidden transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out sm:hidden ${
+        className={`mobile-menu grid overflow-hidden transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out md:hidden ${
           menuOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
         aria-hidden={!menuOpen}
         inert={!menuOpen}
       >
-        <MobileNav onSelect={closeMenu} isOpen={menuOpen} />
+        <MobileNav onSelect={closeMenu} onAuth={handleOpenAuth} isOpen={menuOpen} />
       </div>
     </header>
   );

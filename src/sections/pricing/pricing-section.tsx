@@ -21,6 +21,7 @@ type PricingPlan = {
 
 function PlanCard({ name, price, cadence, eyebrow, features, action, tone, rotation }: PricingPlan) {
   const actionClass = tone === "yellow" ? btnPrimaryLg : btnOutlineLg;
+  const actionHref = name === "Zama+ Membership" ? "#/membership" : "#waitlist";
 
   return (
     <article className={`price-card relative grid min-w-0 min-h-97.5 ${rotation} content-start gap-4 overflow-hidden rounded-wobbly-card border-3 border-brand-black ${planToneClasses[tone]} p-[1.2rem] transition-[box-shadow,transform] duration-120 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:rotate-0`}>
@@ -34,7 +35,7 @@ function PlanCard({ name, price, cadence, eyebrow, features, action, tone, rotat
           <li className="relative pl-5 before:absolute before:left-0 before:font-primary before:leading-none before:text-brand-green-ink before:content-['+']" key={feature}>{feature}</li>
         ))}
       </ul>
-      <ActionLink className={`${actionClass} mt-auto self-end`} href="#waitlist">{action}</ActionLink>
+      <ActionLink className={`${actionClass} mt-auto self-end`} href={actionHref}>{action}</ActionLink>
     </article>
   );
 }

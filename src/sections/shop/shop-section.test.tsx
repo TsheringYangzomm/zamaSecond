@@ -1,62 +1,48 @@
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { CartProvider } from "../../cart-provider";
-import { CartDrawer } from "../../components/shop/cart-drawer";
-import { SiteHeader } from "../../components/layout/site-header";
 import { ShopSection } from "./shop-section";
 
-function renderShop({ withHeader = false } = {}) {
-  return render(
-    <CartProvider>
-      {withHeader ? <SiteHeader /> : null}
-      <ShopSection />
-      <CartDrawer />
-    </CartProvider>,
-  );
-}
+const expectedTiles = [
+  { title: "Meal Kits", slug: "meal-kits", count: "4 products" },
+  { title: "Groceries", slug: "groceries", count: "3 products" },
+  { title: "Vegetables", slug: "vegetables", count: "3 products" },
+  { title: "Fruits", slug: "fruits", count: "3 products" },
+];
 
 describe("ShopSection", () => {
-  it("keeps the home cards simple and links to the full shop", () => {
-    renderShop();
+  it("shows one tile per category linking to the filtered shop", () => {
+    render(<ShopSection />);
 
-    const groceryCard = screen.getByRole("article", { name: "Grocery Top-Up" });
-    expect(groceryCard.querySelector("details")).toBeNull();
-    expect(within(groceryCard).getByRole("link", { name: "View details →" })).toHaveAttribute("href", "#/shop/grocery-top-up");
-
-    const featuredCard = screen.getByRole("article", { name: "Seasonal Vegetable Box" });
-    expect(featuredCard.querySelector("details")).toBeNull();
-    expect(within(featuredCard).getByRole("link", { name: /view full details/i })).toHaveAttribute("href", "#/shop/seasonal-vegetable-box");
-
-    expect(screen.getByRole("link", { name: "View full shop" })).toHaveAttribute("href", "#/shop");
+    for (const tile of expectedTiles) {
+      const link = screen.getByRole("link", { name: new RegExp(`^${tile.title},`) });
+      expect(link).toHaveAttribute("href", `#/shop/${tile.slug}`);
+      expect(link).toHaveTextContent(tile.count);
+    }
   });
 
-  it("updates the header count and opens the selected items in a cart drawer", async () => {
-    const user = userEvent.setup();
-    renderShop({ withHeader: true });
+  it("points the customize-your-box tile to the category page", () => {
+    render(<ShopSection />);
 
-    await user.click(screen.getByRole("button", { name: "Add Recipe Meal Kit to cart" }));
-
-    const cartButtons = screen.getAllByRole("button", { name: "Open cart, 1 item" });
-    expect(cartButtons.length).toBeGreaterThan(0);
-    await user.click(cartButtons[0]);
-
-    const drawer = screen.getByRole("dialog", { name: "Market picks" });
-    expect(drawer).toBeVisible();
-    expect(within(drawer).getByText("Recipe Meal Kit")).toBeVisible();
-    expect(within(drawer).getByLabelText("1 in cart")).toBeVisible();
+    const link = screen.getByRole("link", { name: /^Customize your box,/ });
+    expect(link).toHaveAttribute("href", "#/shop/custom-boxes");
+    expect(link).not.toHaveTextContent("product");
   });
 
-  it("keeps the cart summary outside the scrollable product list", async () => {
-    const user = userEvent.setup();
-    renderShop({ withHeader: true });
+  it("offers one clear path to the full shop and a separate delivery link", () => {
+    render(<ShopSection />);
 
-    await user.click(screen.getByRole("button", { name: "Add Seasonal Vegetable Box to cart" }));
-    await user.click(screen.getAllByRole("button", { name: "Open cart, 1 item" })[0]);
-    const drawer = screen.getByRole("dialog", { name: "Market picks" });
-    const summary = within(drawer).getByText("Nu. 500").closest(".cart-summary-bar");
+    const fullShopLinks = screen
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("href") === "#/shop");
+    expect(fullShopLinks.map((link) => link.textContent?.trim())).toEqual(["View full shop"]);
 
-    expect(summary).toBeVisible();
-    expect(summary?.parentElement).toBe(drawer);
+    expect(screen.getByRole("link", { name: /delivery details/i })).toHaveAttribute("href", "#delivery");
+  });
+
+  it("keeps the launch section free of product cards and add-to-cart buttons", () => {
+    render(<ShopSection />);
+
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("article")).toBeNull();
   });
 });

@@ -12,7 +12,7 @@ export function blankProduct(id: string): ProductRow {
     description: "",
     image: "",
     alt: "",
-    category: "Fresh boxes",
+    category: "Vegetables",
     price_amount: null,
     price_unit: "",
     servings: "",
@@ -56,10 +56,30 @@ function fromDraft(draft: ProductDraft): ProductRow {
   };
 }
 
-const categories = ["Fresh boxes", "Meal kits", "Groceries"] as const;
+export type ProductStockInput = { quantity: number | null; alertAt: number | null };
 
-export function ProductForm({ initial, onSave, onCancel }: { initial: ProductRow; onSave: (row: ProductRow) => Promise<void> | void; onCancel: () => void }) {
+const categories = ["Vegetables", "Fruits", "Meal kits", "Groceries", "Custom boxes"] as const;
+
+export function ProductForm({
+  initial,
+  initialStock,
+  onSave,
+  onCancel,
+  stockAvailable = false,
+}: {
+  initial: ProductRow;
+  initialStock?: ProductStockInput | null;
+  onSave: (row: ProductRow, stock: ProductStockInput) => Promise<void> | void;
+  onCancel: () => void;
+  stockAvailable?: boolean;
+}) {
   const [draft, setDraft] = useState<ProductDraft>(() => toDraft(initial));
+  const [stockQuantity, setStockQuantity] = useState<string>(() =>
+    initialStock?.quantity == null ? "" : String(initialStock.quantity),
+  );
+  const [stockAlertAt, setStockAlertAt] = useState<string>(() =>
+    initialStock?.alertAt == null ? "" : String(initialStock.alertAt),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +96,12 @@ export function ProductForm({ initial, onSave, onCancel }: { initial: ProductRow
     setBusy(true);
     setError(null);
     try {
-      await onSave(fromDraft(draft));
+      const parsedQuantity = Number(stockQuantity.trim());
+      const parsedAlert = Number(stockAlertAt.trim());
+      await onSave(fromDraft(draft), {
+        quantity: stockQuantity.trim() === "" || Number.isNaN(parsedQuantity) ? null : parsedQuantity,
+        alertAt: stockAlertAt.trim() === "" || Number.isNaN(parsedAlert) ? null : parsedAlert,
+      });
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save the product.");
       setBusy(false);
@@ -108,6 +133,21 @@ export function ProductForm({ initial, onSave, onCancel }: { initial: ProductRow
         <Field label="Delivery estimate" htmlFor="product-delivery"><TextInput id="product-delivery" value={draft.delivery_estimate} onChange={(e) => set("delivery_estimate", e.target.value)} /></Field>
         <Field label="Cooking time" htmlFor="product-cooking"><TextInput id="product-cooking" value={draft.cooking_time} onChange={(e) => set("cooking_time", e.target.value)} /></Field>
       </div>
+
+      {stockAvailable ? (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Stock quantity" htmlFor="product-stock" hint="Leave blank to stop tracking stock.">
+            <TextInput id="product-stock" type="number" inputMode="numeric" min="0" value={stockQuantity} onChange={(e) => setStockQuantity(e.target.value)} />
+          </Field>
+          <Field label="Stock alert level" htmlFor="product-stock-alert" hint="Mark as low stock when quantity is at or below this.">
+            <TextInput id="product-stock-alert" type="number" inputMode="numeric" min="0" value={stockAlertAt} onChange={(e) => setStockAlertAt(e.target.value)} />
+          </Field>
+        </div>
+      ) : (
+        <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 px-3 py-2 text-sm font-semibold text-brand-black">
+          Stock tracking is not available yet. Run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the inventory table.
+        </p>
+      )}
 
       <Field label="Description" htmlFor="product-description"><TextArea id="product-description" value={draft.description} onChange={(e) => set("description", e.target.value)} /></Field>
       <Field label="Ingredients" htmlFor="product-ingredients"><TextArea id="product-ingredients" value={draft.ingredients} onChange={(e) => set("ingredients", e.target.value)} /></Field>
