@@ -4,7 +4,6 @@ import type { InventoryRow, ProductRow, ReviewRow } from "../../cms/types";
 import {
   CommerceStatusBadge,
   DevDataNotice,
-  StockBadge,
   formatDate,
   formatMoney,
   stockInfo,
