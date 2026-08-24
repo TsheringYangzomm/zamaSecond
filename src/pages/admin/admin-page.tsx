@@ -30,6 +30,7 @@ import { SubscriptionsTab } from "./subscriptions-tab";
 import { DeliveriesTab } from "./deliveries-tab";
 import { PaymentsTab } from "./payments-tab";
 import { MealKitTrustTab } from "./meal-kit-trust-tab";
+import { MessagesTab } from "./messages-tab";
 import {
   Sidebar,
   SidebarContent,
@@ -48,7 +49,7 @@ import {
 } from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
 
-type AdminTab = "overview" | "orders" | "products" | "inventory" | "farmers" | "customers" | "waitlist" | "reviews" | "subscriptions" | "deliveries" | "payments" | "content" | "meal-kit-trust";
+type AdminTab = "overview" | "orders" | "products" | "inventory" | "farmers" | "customers" | "waitlist" | "reviews" | "messages" | "subscriptions" | "deliveries" | "payments" | "content" | "meal-kit-trust";
 
 const tabs: { key: AdminTab; label: string; icon: ReactNode }[] = [
   { key: "overview", label: "Overview", icon: <LayoutDashboard /> },
@@ -59,6 +60,7 @@ const tabs: { key: AdminTab; label: string; icon: ReactNode }[] = [
   { key: "customers", label: "Customers", icon: <Users /> },
   { key: "waitlist", label: "Waitlist", icon: <ListChecks /> },
   { key: "reviews", label: "Reviews", icon: <Star /> },
+  { key: "messages", label: "Messages", icon: <FileText /> },
   { key: "meal-kit-trust", label: "Meal Kit Trust", icon: <UtensilsCrossed /> },
   { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
   { key: "deliveries", label: "Deliveries", icon: <Truck /> },
@@ -99,6 +101,7 @@ function AdminShell() {
             {tab === "customers" ? <CustomersTab /> : null}
             {tab === "waitlist" ? <WaitlistTab /> : null}
             {tab === "reviews" ? <ReviewsTab /> : null}
+            {tab === "messages" ? <MessagesTab /> : null}
             {tab === "meal-kit-trust" ? <MealKitTrustTab /> : null}
             {tab === "subscriptions" ? <SubscriptionsTab /> : null}
             {tab === "deliveries" ? <DeliveriesTab /> : null}

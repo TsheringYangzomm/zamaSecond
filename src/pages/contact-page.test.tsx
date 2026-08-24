@@ -15,6 +15,8 @@ describe("ContactPage form", () => {
     vi.stubEnv("VITE_EMAILJS_SERVICE_ID", "");
     vi.stubEnv("VITE_EMAILJS_TEMPLATE_ID", "");
     vi.stubEnv("VITE_EMAILJS_PUBLIC_KEY", "");
+    vi.stubEnv("VITE_SUPABASE_URL", "");
+    vi.stubEnv("VITE_SUPABASE_ANON_KEY", "");
   });
 
   afterEach(() => {

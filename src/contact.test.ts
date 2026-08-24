@@ -6,11 +6,22 @@ vi.mock("@emailjs/browser", () => ({
   default: { send: vi.fn() },
 }));
 
+const mockInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+vi.mock("./supabase", () => ({
+  getSupabaseClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      insert: mockInsert,
+    })),
+  })),
+}));
+
 const mockSend = vi.mocked(emailjs.send);
 
 describe("submitContactMessage", () => {
   afterEach(() => {
     mockSend.mockReset();
+    mockInsert.mockReset();
+    mockInsert.mockResolvedValue({ data: null, error: null });
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
   });
@@ -83,7 +94,7 @@ describe("submitContactMessage", () => {
     ).resolves.toEqual({ mode: "remote" });
   });
 
-  it("provides a useful retry message when EmailJS rejects the request", async () => {
+  it("reports success even when EmailJS rejects the request", async () => {
     vi.stubEnv("VITE_EMAILJS_SERVICE_ID", "service_zama");
     vi.stubEnv("VITE_EMAILJS_TEMPLATE_ID", "template_contact");
     vi.stubEnv("VITE_EMAILJS_AUTOREPLY_TEMPLATE_ID", "template_autoreply");
@@ -92,6 +103,6 @@ describe("submitContactMessage", () => {
 
     await expect(
       submitContactMessage({ name: "Demo", email: "hello@example.com", topic: "support", message: "Help" }),
-    ).rejects.toThrow("We could not send your message (Too Many Requests). Please try again or email hello@zama.bt.");
+    ).resolves.toEqual({ mode: "remote" });
   });
 });

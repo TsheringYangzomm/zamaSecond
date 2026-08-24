@@ -153,3 +153,12 @@ export type MealKitTrustDetailRow = {
   sort_order: number;
   published: boolean;
 };
+
+export type ContactMessageRow = {
+  id: string;
+  name: string;
+  email: string;
+  topic: string;
+  message: string;
+  created_at: string;
+};

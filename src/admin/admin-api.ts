@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "../supabase";
-import type { FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, InventoryItemRow, InventoryRow, InventoryStockHistoryRow, InventoryStockLotRow, MealKitTrustDetailRow, ProductRow, ReviewRow } from "../cms/types";
+import type { ContactMessageRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, InventoryItemRow, InventoryRow, InventoryStockHistoryRow, InventoryStockLotRow, MealKitTrustDetailRow, ProductRow, ReviewRow } from "../cms/types";
 
 export function requireClient() {
   const client = getSupabaseClient();
@@ -645,6 +645,25 @@ export async function deleteMealKitTrustDetail(slug: string): Promise<void> {
     .from("meal_kit_trust_details")
     .delete()
     .eq("slug", slug);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function listContactMessages(): Promise<ContactMessageRow[]> {
+  const { data, error } = await requireClient()
+    .from("contact_messages")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ContactMessageRow[];
+}
+
+export async function deleteContactMessage(id: string): Promise<void> {
+  const { error } = await requireClient()
+    .from("contact_messages")
+    .delete()
+    .eq("id", id);
 
   if (error) throw new Error(error.message);
 } 

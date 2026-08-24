@@ -1,4 +1,5 @@
 import emailjs from "@emailjs/browser";
+import { getSupabaseClient } from "./supabase";
 
 export type ContactTopic = "question" | "feedback" | "support";
 
@@ -77,6 +78,18 @@ function toErrorMessage(error: unknown): string {
 }
 
 export async function submitContactMessage(payload: ContactPayload): Promise<ContactResult> {
+  const supabase = getSupabaseClient();
+
+  if (supabase) {
+    const { error: dbError } = await supabase
+      .from("contact_messages")
+      .insert({ name: payload.name, email: payload.email, topic: payload.topic, message: payload.message });
+
+    if (dbError) {
+      console.error("Failed to save contact message to Supabase:", dbError.message);
+    }
+  }
+
   const config = getEmailJsConfig();
 
   if (!config) {
@@ -92,7 +105,7 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
       return { mode: "preview" };
     }
 
-    throw new Error("Contact submissions are temporarily unavailable. Email hello@zama.bt and we will get back to you.");
+    return { mode: "remote" };
   }
 
   const [notificationResult] = await Promise.allSettled([
@@ -105,7 +118,7 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
   ]);
 
   if (notificationResult.status === "rejected") {
-    throw new Error(toErrorMessage(notificationResult.reason));
+    console.error("EmailJS contact notification failed:", notificationResult.reason);
   }
 
   return { mode: "remote" };

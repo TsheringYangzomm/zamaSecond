@@ -257,4 +257,30 @@ drop policy if exists "catalog admin delete" on storage.objects;
 create policy "catalog admin delete" on storage.objects
   for delete to authenticated
   using (bucket_id = 'catalog' and public.is_admin());
-  
+
+-- ─── Contact messages ────────────────────────────────────────────────────────
+create table if not exists public.contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null,
+  topic text not null,
+  message text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.contact_messages enable row level security;
+
+drop policy if exists "contact messages public insert" on public.contact_messages;
+create policy "contact messages public insert" on public.contact_messages
+  for insert to anon, authenticated
+  with check (true);
+
+drop policy if exists "contact messages admin read" on public.contact_messages;
+create policy "contact messages admin read" on public.contact_messages
+  for select to authenticated
+  using (public.is_admin());
+
+drop policy if exists "contact messages admin delete" on public.contact_messages;
+create policy "contact messages admin delete" on public.contact_messages
+  for delete to authenticated
+  using (public.is_admin());
