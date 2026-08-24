@@ -22,7 +22,7 @@ type ProcessStep = {
 
 function ProcessStep({ title, number, image, alt, tone, rotation, index, note, fieldNoteLabel }: ProcessStep & { index: number; note: string; fieldNoteLabel: string }) {
   return (
-    <article className={`process-step process-stop relative z-[1] grid min-h-55 ${rotation} ${processPositionClasses[index]} justify-items-center gap-2 rounded-wobbly-card border-2 border-dashed border-brand-forest/56 ${processToneClasses[tone]} p-3 text-center shadow-brand-soft transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-y-1 hover:rotate-0 hover:shadow-brand sm:min-h-62`}>
+    <article className={`process-step process-stop relative z-[1] grid min-h-55 ${rotation} ${processPositionClasses[index]} justify-items-center gap-2 rounded-wobbly-card border-2 border-dashed border-brand-forest/56 ${processToneClasses[tone]} p-3 text-center shadow-brand-soft transition-shadow duration-150 ease-in-out hover:shadow-brand sm:min-h-62`}>
       <div className="flex w-full items-center justify-between gap-2">
         <span className="grid h-9.5 w-9.5 place-items-center rounded-[42%_58%_52%_48%/54%_48%_52%_46%] border-3 border-brand-forest bg-brand-leaf font-primary text-base leading-none text-brand-white">{number}</span>
         <span className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-brand-green-ink">{fieldNoteLabel} {number}</span>

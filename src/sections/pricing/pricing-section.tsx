@@ -24,7 +24,7 @@ function PlanCard({ name, price, cadence, eyebrow, features, action, tone, rotat
   const actionHref = name === "Zama+ Membership" ? "#/membership" : "#waitlist";
 
   return (
-    <article className={`price-card relative grid min-w-0 min-h-97.5 ${rotation} content-start gap-4 overflow-hidden rounded-wobbly-card border-3 border-brand-black ${planToneClasses[tone]} p-[1.2rem] transition-[box-shadow,transform] duration-120 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:rotate-0`}>
+    <article className={`price-card relative grid min-w-0 min-h-97.5 ${rotation} content-start gap-4 overflow-hidden rounded-wobbly-card border-3 border-brand-black ${planToneClasses[tone]} p-[1.2rem] transition-shadow duration-120 ease-in-out`}>
       <OutlineTag>{eyebrow}</OutlineTag>
       <h3 className="font-primary text-[2rem] font-bold text-brand-black">{name}</h3>
       <p className="break-words font-primary text-[clamp(2.15rem,9vw,2.6rem)] font-bold leading-none text-brand-orange-ink">

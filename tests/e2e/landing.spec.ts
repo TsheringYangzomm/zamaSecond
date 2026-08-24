@@ -68,11 +68,11 @@ test("keeps the home shop tiles simple and links to filtered shop pages", async 
   await expect(tiles.first().getByRole("heading")).toBeVisible();
   await expect(page.locator("#shop-category-grid details")).toHaveCount(0);
 
-  await expect(page.getByRole("link", { name: /^Meal Kits,/ })).toHaveAttribute("href", "#/shop?category=meal-kits");
-  await expect(page.getByRole("link", { name: /^Groceries,/ })).toHaveAttribute("href", "#/shop?category=groceries");
-  await expect(page.getByRole("link", { name: /^Vegetables,/ })).toHaveAttribute("href", "#/shop?category=vegetables");
-  await expect(page.getByRole("link", { name: /^Fruits,/ })).toHaveAttribute("href", "#/shop?category=fruits");
-  await expect(page.getByRole("link", { name: /^Customize your box,/ })).toHaveAttribute("href", "#/shop?category=custom-boxes");
+  await expect(page.getByRole("link", { name: /^Meal Kits,/ })).toHaveAttribute("href", "#/shop/meal-kits");
+  await expect(page.getByRole("link", { name: /^Groceries,/ })).toHaveAttribute("href", "#/shop/groceries");
+  await expect(page.getByRole("link", { name: /^Vegetables,/ })).toHaveAttribute("href", "#/shop/vegetables");
+  await expect(page.getByRole("link", { name: /^Fruits,/ })).toHaveAttribute("href", "#/shop/fruits");
+  await expect(page.getByRole("link", { name: /^Customize your box,/ })).toHaveAttribute("href", "#/shop/custom-boxes");
 });
 
 test("opens a filtered shop page from a home shop tile", async ({ page }) => {
@@ -80,7 +80,7 @@ test("opens a filtered shop page from a home shop tile", async ({ page }) => {
   await page.goto("/#shop");
 
   await page.getByRole("link", { name: /^Vegetables,/ }).click();
-  await expect(page).toHaveURL(/#\/shop\?category=vegetables/);
+  await expect(page).toHaveURL(/#\/shop\/vegetables/);
   await expect(page.getByRole("article", { name: "Seasonal Vegetable Box" })).toBeVisible();
   await expect(page.getByRole("article", { name: "Grocery Top-Up" })).not.toBeVisible();
 });

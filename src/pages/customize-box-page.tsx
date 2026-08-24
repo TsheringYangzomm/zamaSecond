@@ -68,7 +68,7 @@ function ItemCard({ item, quantity, onSetQuantity }: { item: InventoryItemRow; q
   const disabled = level === "out";
 
   return (
-    <article className="grid content-start gap-3 rounded-wobbly-card border-3 border-t-8 border-brand-forest bg-brand-white p-4 shadow-brand-soft transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand" aria-labelledby={`customize-${item.id}-title`}>
+    <article className="grid content-start gap-3 rounded-wobbly-card border-3 border-t-8 border-brand-forest bg-brand-white p-4 shadow-brand-soft transition-shadow duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand" aria-labelledby={`customize-${item.id}-title`}>
       <div className="flex flex-wrap items-center gap-2">
         <span className={`rounded-full border-2 border-brand-forest px-2 py-1 text-xs font-bold ${categoryBadge(item.category)}`}>{item.category || "Other"}</span>
         <span className={`ml-auto rounded-full border-2 px-2 py-1 text-xs font-bold ${stockBadgeClasses[level]}`}>{stockLabels[level]}{item.stock_quantity != null ? ` · ${item.stock_quantity} ${item.unit}` : ""}</span>

@@ -39,7 +39,7 @@ export function FeaturedShopCard({ product, onAdd, onViewDetail, preview = false
   const detailHref = productDetailHref(product);
 
   return (
-    <article className="shop-feature-card relative grid gap-4 overflow-hidden rounded-wobbly-card border-4 border-brand-forest bg-brand-white p-4 shadow-brand transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand-hover sm:p-5 md:grid-cols-[minmax(240px,0.9fr)_minmax(0,1.1fr)]" id={product.id} aria-labelledby={headingId}>
+    <article className="shop-feature-card relative grid gap-4 overflow-hidden rounded-wobbly-card border-4 border-brand-forest bg-brand-white p-4 shadow-brand transition-shadow duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand-hover sm:p-5 md:grid-cols-[minmax(240px,0.9fr)_minmax(0,1.1fr)]" id={product.id} aria-labelledby={headingId}>
       <a className={`brand-pattern relative grid min-h-72 place-items-center overflow-hidden rounded-wobbly-card border-2 border-dashed border-brand-forest/36 p-4 md:min-h-110 ${cardLinkFocus}`} href={detailHref} aria-label={`View ${product.name} details`}>
         <img className="h-64 w-full object-contain md:h-auto md:max-h-100" src={product.image} alt={product.alt} loading="lazy" decoding="async" width="420" height="340" />
         <span className="absolute left-3 top-3 rounded-full border-2 border-brand-forest bg-brand-yellow px-2 py-1 text-xs font-bold text-brand-black">Today’s field pick</span>
@@ -101,7 +101,7 @@ export function SupportingShopCard({ product, onAdd, onViewDetail, preview = fal
   const detailHref = productDetailHref(product);
 
   return (
-    <article className={`shop-note-card grid self-start content-start grid-cols-[96px_minmax(0,1fr)] gap-3 rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRail(product)} bg-brand-white p-3 shadow-brand-soft transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand sm:grid-cols-[112px_minmax(0,1fr)]`} id={product.id} aria-labelledby={headingId}>
+    <article className={`shop-note-card grid self-start content-start grid-cols-[96px_minmax(0,1fr)] gap-3 rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRail(product)} bg-brand-white p-3 shadow-brand-soft transition-shadow duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand sm:grid-cols-[112px_minmax(0,1fr)]`} id={product.id} aria-labelledby={headingId}>
       <a className={`brand-pattern relative grid min-h-34 place-items-center overflow-hidden rounded-wobbly-md border-2 border-dashed border-brand-forest/30 p-2 ${cardLinkFocus}`} href={detailHref} aria-label={`View ${product.name} details`}>
         <img className="h-28 w-full object-contain" src={product.image} alt={product.alt} loading="lazy" decoding="async" width="210" height="170" />
         <span className={`absolute right-1.5 bottom-1.5 rounded-full border-2 border-brand-forest px-2 py-1 text-[0.65rem] font-bold ${categoryBadge(product)}`}>{product.category}</span>

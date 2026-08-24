@@ -88,7 +88,7 @@ function AlsoLikeCard({ item }: { item: { category: ProductCategory; title: stri
   const slug = categorySlug(item.category);
   return (
     <a
-      className={`group grid content-start gap-3 overflow-hidden rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRailClasses[item.category]} bg-brand-white p-4 shadow-brand-soft transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3`}
+      className={`group grid content-start gap-3 overflow-hidden rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRailClasses[item.category]} bg-brand-white p-4 shadow-brand-soft transition-shadow duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3`}
       href={`#/shop/${slug}`}
       aria-label={`Browse ${item.title}`}
     >

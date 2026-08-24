@@ -3,9 +3,9 @@ import { sectionShell } from "../../components/ui/styles";
 
 const featureToneClasses = {
   yellow:
-    "flex min-h-26.5 -rotate-[1.5deg] items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-buff p-[1rem_1.1rem] shadow-brand transition-[box-shadow,transform] duration-120 ease-in-out hover:translate-x-0.5 hover:translate-y-0.5 hover:rotate-0 hover:shadow-brand-tight",
+    "flex min-h-26.5 -rotate-[1.5deg] items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-buff p-[1rem_1.1rem] shadow-brand transition-shadow duration-120 ease-in-out hover:shadow-brand-tight",
   white:
-    "flex min-h-26.5 rotate-[1.2deg] items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-[1rem_1.1rem] shadow-brand transition-[box-shadow,transform] duration-120 ease-in-out hover:translate-x-0.5 hover:translate-y-0.5 hover:rotate-0 hover:shadow-brand-tight",
+    "flex min-h-26.5 rotate-[1.2deg] items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-[1rem_1.1rem] shadow-brand transition-shadow duration-120 ease-in-out hover:shadow-brand-tight",
 } as const;
 
 type FeatureItem = { number: string; copy: string; tone: "yellow" | "white" };
@@ -30,7 +30,7 @@ type ValueItem = { title: string; body: string; image: string; tone: "white" | "
 
 function ValueCard({ title, body, image, tone, rotation }: ValueItem) {
   return (
-    <article className={`value-card value-card-shell relative grid ${rotation} justify-items-center gap-2 rounded-wobbly-card border-3 border-brand-forest ${valueToneClasses[tone]} p-[1.1rem_1rem_1rem] text-center shadow-brand-soft transition-[box-shadow,transform] duration-120 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:rotate-0 hover:shadow-brand sm:gap-[0.8rem] sm:p-[1.45rem_1rem_1.3rem]`}>
+    <article className={`value-card value-card-shell relative grid ${rotation} justify-items-center gap-2 rounded-wobbly-card border-3 border-brand-forest ${valueToneClasses[tone]} p-[1.1rem_1rem_1rem] text-center shadow-brand-soft transition-shadow duration-120 ease-in-out hover:shadow-brand sm:gap-[0.8rem] sm:p-[1.45rem_1rem_1.3rem]`}>
       <img className="h-19 w-19 object-contain sm:h-31 sm:w-31" src={image} alt="" aria-hidden="true" loading="lazy" decoding="async" width="124" height="124" />
       <h3 className="font-primary text-[1.55rem] font-bold leading-[1.02] text-brand-black sm:text-[2.1rem]">{title}</h3>
       <p className="max-w-75 text-[0.98rem] text-brand-black/72 sm:text-[1.12rem]">{body}</p>

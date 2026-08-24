@@ -439,6 +439,7 @@ body::before {
   left: 3%;
   height: 112px;
   content: "";
+  pointer-events: none;
   border-top: 4px dashed color-mix(in srgb, var(--color-brand-forest) 50%, transparent);
   border-radius: 54% 46% 48% 52% / 60% 42% 58% 40%;
   transform: rotate(-1.5deg);

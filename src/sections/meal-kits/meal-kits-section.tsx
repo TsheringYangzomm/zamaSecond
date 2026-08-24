@@ -51,7 +51,7 @@ function FeaturedMealKit({ kit, labels }: { kit: MealKit; labels: { featuredLabe
 
 function CompactMealKit({ kit }: { kit: MealKit }) {
   return (
-    <article className={`meal-kit-note relative grid grid-cols-[minmax(0,1fr)_112px] items-center gap-3 overflow-hidden rounded-wobbly-card border-3 border-brand-forest p-4 shadow-brand transition-[box-shadow,transform] duration-150 ease-in-out hover:-translate-y-0.5 hover:rotate-0 hover:shadow-brand-hover sm:grid-cols-[minmax(0,1fr)_140px] ${kitVariantClasses[kit.variant]} ${kit.rotation}`}>
+    <article className={`meal-kit-note relative grid grid-cols-[minmax(0,1fr)_112px] items-center gap-3 overflow-hidden rounded-wobbly-card border-3 border-brand-forest p-4 shadow-brand transition-shadow duration-150 ease-in-out hover:shadow-brand-hover sm:grid-cols-[minmax(0,1fr)_140px] ${kitVariantClasses[kit.variant]} ${kit.rotation}`}>
       <div className="relative z-[1] grid min-w-0 content-start gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge tone={kit.statusTone}>{kit.status}</StatusBadge>
