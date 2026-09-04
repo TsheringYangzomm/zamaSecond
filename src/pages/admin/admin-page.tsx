@@ -45,6 +45,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarSeparator,
+  SidebarTrigger,
   useSidebar,
 } from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
@@ -96,13 +97,18 @@ function AdminShell() {
 
   return (
     <SidebarProvider className="flex min-h-svh w-full flex-col">
-      <header className="sticky top-0 z-30 flex h-12 items-center justify-end gap-3 border-b-2 border-brand-forest/15 bg-brand-yellow px-4 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b-4 border-brand-forest bg-brand-yellow px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger />
+          <img className="h-12 w-auto shrink-0" src="/assets/zama_logo.png" alt="Zama" width="144" height="94" />
+          <span className="rounded-full border-2 border-brand-forest bg-brand-warm-white px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-forest">Admin</span>
+        </div>
         <a className={btnOutlineSm} href="#/">← Back to site</a>
       </header>
 
       <div className="flex flex-1 min-w-0">
         <AdminSidebar
-          className="top-0! h-svh!"
+          className="top-16! h-[calc(100svh-4rem)]!"
           tab={tab}
           onSelect={setTab}
           email={email}
