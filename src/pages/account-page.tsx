@@ -384,7 +384,9 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Rewards summary">
         {rewardCards.map((card) => {
           const Icon = card.icon;
-          return <div className="flex items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft" key={card.label}><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-brand-forest ${card.color} text-brand-green-ink`}><Icon className="h-5 w-5" /></span><span className="grid min-w-0 gap-0.5"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-black/56">{card.label}</span><strong className="font-primary text-xl leading-none text-brand-green-ink">{card.value}</strong><span className="truncate text-xs text-brand-black/56">{card.note}</span></span></div>;
+          const cardContent = <><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-brand-forest ${card.color} text-brand-green-ink`}><Icon className="h-5 w-5" /></span><span className="grid min-w-0 gap-0.5"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-black/56">{card.label}</span><strong className="font-primary text-xl leading-none text-brand-green-ink">{card.value}</strong><span className="truncate text-xs text-brand-black/56">{card.note}</span></span>{card.label === "Wallet" ? <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-brand-forest" /> : null}</>;
+          const cardClass = "flex items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 text-left shadow-brand-soft";
+          return card.label === "Wallet" ? <a className={`${cardClass} hover:bg-brand-warm-white`} key={card.label} href="#/account/wallet" aria-label="Open wallet">{cardContent}</a> : <div className={cardClass} key={card.label}>{cardContent}</div>;
         })}
       </section>
 

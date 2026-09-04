@@ -23,6 +23,7 @@ import { LaunchUpdatesPage } from "./pages/launch-updates-page";
 import { MembershipPage } from "./pages/membership-page";
 import { MealKitTrustPage } from "./pages/meal-kit-trust-page";
 import { AccountOrdersPage, AccountPage } from "./pages/account-page";
+import { AccountWalletPage } from "./pages/account-wallet-page";
 import { AdminPage } from "./pages/admin/admin-page";
 import { AdminAuthProvider } from "./admin/admin-auth";
 import { CustomerAuthProvider } from "./checkout/customer-auth";
@@ -128,6 +129,10 @@ function App() {
       ) : route === "account-orders" ? (
         <main id="top" tabIndex={-1}>
           <AccountOrdersPage />
+        </main>
+      ) : route === "account-wallet" ? (
+        <main id="top" tabIndex={-1}>
+          <AccountWalletPage />
         </main>
       ) : route === "category" ? (
         <main id="top" tabIndex={-1}>

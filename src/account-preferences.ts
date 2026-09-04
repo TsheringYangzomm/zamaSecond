@@ -4,6 +4,15 @@ export type CustomerReview = {
   submittedAt: string;
 };
 
+export type WalletTransaction = {
+  id: string;
+  type: "credit" | "withdrawal";
+  amount: number;
+  description: string;
+  date: string;
+  status: "completed" | "pending" | "failed";
+};
+
 export type CustomerPreferences = {
   wishlist: string[];
   history: string[];
@@ -11,9 +20,10 @@ export type CustomerPreferences = {
   reviewedOrderIds: string[];
   reviews: Record<string, CustomerReview>;
   checkInDates: string[];
+  walletHistory: WalletTransaction[];
 };
 
-const emptyPreferences: CustomerPreferences = { wishlist: [], history: [], points: 0, reviewedOrderIds: [], reviews: {}, checkInDates: [] };
+const emptyPreferences: CustomerPreferences = { wishlist: [], history: [], points: 0, reviewedOrderIds: [], reviews: {}, checkInDates: [], walletHistory: [] };
 
 function storageKey(email: string): string {
   return `zama-account-preferences:${email.trim().toLowerCase()}`;
@@ -32,6 +42,11 @@ export function loadCustomerPreferences(email: string): CustomerPreferences {
         return typeof candidate.rating === "number" && typeof candidate.comment === "string" && typeof candidate.submittedAt === "string";
       })) as Record<string, CustomerReview>
       : {};
+    const walletHistory = Array.isArray(parsed.walletHistory) ? parsed.walletHistory.filter((entry): entry is WalletTransaction => {
+      if (!entry || typeof entry !== "object") return false;
+      const candidate = entry as Partial<WalletTransaction>;
+      return typeof candidate.id === "string" && (candidate.type === "credit" || candidate.type === "withdrawal") && typeof candidate.amount === "number" && Number.isFinite(candidate.amount) && typeof candidate.description === "string" && typeof candidate.date === "string" && (candidate.status === "completed" || candidate.status === "pending" || candidate.status === "failed");
+    }) : [];
     return {
       wishlist: Array.isArray(parsed.wishlist) ? parsed.wishlist.filter((id): id is string => typeof id === "string") : [],
       history: Array.isArray(parsed.history) ? parsed.history.filter((id): id is string => typeof id === "string") : [],
@@ -39,6 +54,7 @@ export function loadCustomerPreferences(email: string): CustomerPreferences {
       reviewedOrderIds: Array.isArray(parsed.reviewedOrderIds) ? parsed.reviewedOrderIds.filter((id): id is string => typeof id === "string") : [],
       reviews,
       checkInDates: Array.isArray(parsed.checkInDates) ? parsed.checkInDates.filter((date): date is string => typeof date === "string") : [],
+      walletHistory,
     };
   } catch {
     return emptyPreferences;
