@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import {
+  Apple,
   Boxes,
+  ClipboardList,
   CreditCard,
   FileText,
   LayoutDashboard,
@@ -11,8 +13,6 @@ import {
   ShoppingBag,
   Sprout,
   Star,
-  Truck,
-  UtensilsCrossed,
   Users,
 } from "lucide-react";
 import { useAdminAuth } from "../../admin/admin-auth";
@@ -20,16 +20,16 @@ import { AdminLogin } from "./admin-login";
 import { OverviewTab } from "./overview-tab";
 import { WaitlistTab } from "./waitlist-tab";
 import { ProductsTab } from "./products-tab";
+import { MealKitNotesTab } from "./meal-kit-notes-tab";
 import { InventoryTab } from "./inventory-tab";
 import { FarmersTab } from "./farmers-tab";
+import { DieticiansTab } from "./dieticians-tab";
 import { ReviewsTab } from "./reviews-tab";
 import { ContentTab } from "./content-tab";
 import { OrdersTab } from "./orders-tab";
 import { CustomersTab } from "./customers-tab";
 import { SubscriptionsTab } from "./subscriptions-tab";
-import { DeliveriesTab } from "./deliveries-tab";
 import { PaymentsTab } from "./payments-tab";
-import { MealKitTrustTab } from "./meal-kit-trust-tab";
 import { MessagesTab } from "./messages-tab";
 import {
   Sidebar,
@@ -44,28 +44,50 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
+  SidebarSeparator,
   useSidebar,
 } from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
 
-type AdminTab = "overview" | "orders" | "products" | "inventory" | "farmers" | "customers" | "waitlist" | "reviews" | "messages" | "subscriptions" | "deliveries" | "payments" | "content" | "meal-kit-trust";
+type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "farmers" | "dieticians" | "customers" | "waitlist" | "reviews" | "messages" | "subscriptions" | "payments" | "content";
 
-const tabs: { key: AdminTab; label: string; icon: ReactNode }[] = [
-  { key: "overview", label: "Overview", icon: <LayoutDashboard /> },
-  { key: "orders", label: "Orders", icon: <ShoppingBag /> },
-  { key: "products", label: "Products", icon: <Package /> },
-  { key: "inventory", label: "Inventory", icon: <Boxes /> },
-  { key: "farmers", label: "Farmers", icon: <Sprout /> },
-  { key: "customers", label: "Customers", icon: <Users /> },
-  { key: "waitlist", label: "Waitlist", icon: <ListChecks /> },
-  { key: "reviews", label: "Reviews", icon: <Star /> },
-  { key: "messages", label: "Messages", icon: <FileText /> },
-  { key: "meal-kit-trust", label: "Meal Kit Trust", icon: <UtensilsCrossed /> },
-  { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
-  { key: "deliveries", label: "Deliveries", icon: <Truck /> },
-  { key: "payments", label: "Payments", icon: <CreditCard /> },
-  { key: "content", label: "Content", icon: <FileText /> },
+type NavItem = { key: AdminTab; label: string; icon: ReactNode };
+
+const navGroups: { label: string; items: NavItem[] }[] = [
+  {
+    label: "Commerce",
+    items: [
+      { key: "overview", label: "Overview", icon: <LayoutDashboard /> },
+      { key: "orders", label: "Orders", icon: <ShoppingBag /> },
+      { key: "products", label: "Products", icon: <Package /> },
+      { key: "inventory", label: "Inventory", icon: <Boxes /> },
+      { key: "meal-kit-notes", label: "Meal Kit Notes", icon: <ClipboardList /> },
+    ],
+  },
+  {
+    label: "People",
+    items: [
+      { key: "farmers", label: "Farmers", icon: <Sprout /> },
+      { key: "dieticians", label: "Dieticians", icon: <Apple /> },
+      { key: "customers", label: "Customers", icon: <Users /> },
+      { key: "waitlist", label: "Waitlist", icon: <ListChecks /> },
+    ],
+  },
+  {
+    label: "Engagement",
+    items: [
+      { key: "reviews", label: "Reviews", icon: <Star /> },
+      { key: "messages", label: "Messages", icon: <FileText /> },
+      { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
+      { key: "payments", label: "Payments", icon: <CreditCard /> },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { key: "content", label: "Content", icon: <FileText /> },
+    ],
+  },
 ];
 
 function AdminShell() {
@@ -74,18 +96,13 @@ function AdminShell() {
 
   return (
     <SidebarProvider className="flex min-h-svh w-full flex-col">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b-4 border-brand-forest bg-brand-yellow px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <SidebarTrigger />
-          <img className="w-24" src="assets/zama_logo.png" alt="Zama" width="96" height="41" />
-          <span className="rounded-full border-2 border-brand-forest bg-brand-warm-white px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-forest">Admin</span>
-        </div>
+      <header className="sticky top-0 z-30 flex h-12 items-center justify-end gap-3 border-b-2 border-brand-forest/15 bg-brand-yellow px-4 sm:px-6">
         <a className={btnOutlineSm} href="#/">← Back to site</a>
       </header>
 
       <div className="flex flex-1 min-w-0">
         <AdminSidebar
-          className="top-16! h-[calc(100svh-4rem)]!"
+          className="top-0! h-svh!"
           tab={tab}
           onSelect={setTab}
           email={email}
@@ -97,14 +114,14 @@ function AdminShell() {
             {tab === "orders" ? <OrdersTab /> : null}
             {tab === "products" ? <ProductsTab /> : null}
             {tab === "inventory" ? <InventoryTab /> : null}
+            {tab === "meal-kit-notes" ? <MealKitNotesTab /> : null}
             {tab === "farmers" ? <FarmersTab /> : null}
+            {tab === "dieticians" ? <DieticiansTab /> : null}
             {tab === "customers" ? <CustomersTab /> : null}
             {tab === "waitlist" ? <WaitlistTab /> : null}
             {tab === "reviews" ? <ReviewsTab /> : null}
             {tab === "messages" ? <MessagesTab /> : null}
-            {tab === "meal-kit-trust" ? <MealKitTrustTab /> : null}
             {tab === "subscriptions" ? <SubscriptionsTab /> : null}
-            {tab === "deliveries" ? <DeliveriesTab /> : null}
             {tab === "payments" ? <PaymentsTab /> : null}
             {tab === "content" ? <ContentTab /> : null}
           </main>
@@ -141,27 +158,32 @@ function AdminSidebar({
         <SidebarGroupLabel>Navigation</SidebarGroupLabel>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {tabs.map(({ key, label, icon }) => (
-                <SidebarMenuItem key={key}>
-                  <SidebarMenuButton
-                    isActive={tab === key}
-                    tooltip={label}
-                    onClick={() => onSelect(key)}
-                    aria-current={tab === key ? "page" : undefined}
-                  >
-                    {icon}
-                    <span>{label}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {navGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map(({ key, label, icon }) => (
+                  <SidebarMenuItem key={key}>
+                    <SidebarMenuButton
+                      isActive={tab === key}
+                      tooltip={label}
+                      onClick={() => onSelect(key)}
+                      aria-current={tab === key ? "page" : undefined}
+                      className={tab === key ? "bg-brand-yellow/20! text-brand-warm-white!" : ""}
+                    >
+                      {icon}
+                      <span>{label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
       <SidebarFooter>
+        <SidebarSeparator />
         <UserCard email={email} onSignOut={onSignOut} />
       </SidebarFooter>
     </Sidebar>

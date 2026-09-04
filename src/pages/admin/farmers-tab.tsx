@@ -2,9 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { GripVertical } from "lucide-react";
 import {
   deleteFarmer,
+  deleteFarmerDocument,
+  farmerDocumentsTableExists,
   farmerPrivateInfoTableExists,
   farmerSeasonalUpdatesTableExists,
   farmerStoriesTableExists,
+  listFarmerDocuments,
   listFarmerPrivateInfo,
   listFarmerSeasonalUpdates,
   listFarmerStories,
@@ -13,15 +16,18 @@ import {
   nextSlugId,
   reorderRows,
   upsertFarmer,
+  upsertFarmerDocument,
   upsertFarmerPrivateInfo,
   upsertFarmerSeasonalUpdate,
   upsertFarmerStory,
 } from "../../admin/admin-api";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { inputClasses, selectClasses } from "./admin-fields";
-import type { FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, ProductRow } from "../../cms/types";
+import { inputClasses } from "./admin-fields";
+import { ClearFiltersButton, ColumnFilterDropdown } from "./column-filter-dropdown";
+import type { FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, ProductRow } from "../../cms/types";
 import { blankFarmer, blankFarmerPrivateInfo, blankFarmerSeasonalUpdate, blankFarmerStory, FarmerForm } from "./farmer-form";
+import { FarmerDetail } from "./farmer-detail";
 import { useRowDragSort } from "./use-row-drag";
 
 export function FarmersTab() {
@@ -30,11 +36,12 @@ export function FarmersTab() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<FarmerRow | null>(null);
+  const [selected, setSelected] = useState<FarmerRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<FarmerRow | null>(null);
   const [query, setQuery] = useState("");
-  const [dzongkhagFilter, setDzongkhagFilter] = useState("");
+  const [filters, setFilters] = useState({ location: "", status: "", product: "" });
   const [privateEnabled, setPrivateEnabled] = useState(false);
   const [privateMap, setPrivateMap] = useState<Record<string, FarmerPrivateInfoRow>>({});
   const [privateInfo, setPrivateInfo] = useState<FarmerPrivateInfoRow | null>(null);
@@ -44,6 +51,8 @@ export function FarmersTab() {
   const [seasonalEnabled, setSeasonalEnabled] = useState(false);
   const [seasonalMap, setSeasonalMap] = useState<Record<string, FarmerSeasonalUpdateRow>>({});
   const [seasonalInfo, setSeasonalInfo] = useState<FarmerSeasonalUpdateRow | null>(null);
+  const [docsEnabled, setDocsEnabled] = useState(false);
+  const [docsList, setDocsList] = useState<FarmerDocumentRow[]>([]);
 
   const dzongkhags = useMemo(() => {
     const set = new Set((farmers ?? []).map((row) => row.dzongkhag).filter(Boolean));
@@ -59,7 +68,9 @@ export function FarmersTab() {
     if (!farmers) return [];
     const needle = query.trim().toLowerCase();
     return farmers.filter((row) => {
-      if (dzongkhagFilter && row.dzongkhag !== dzongkhagFilter) return false;
+      if (filters.location && row.dzongkhag !== filters.location) return false;
+      if (filters.status && (row.published ? "Active" : "Inactive") !== filters.status) return false;
+      if (filters.product && !row.products.some((id) => productName(id) === filters.product)) return false;
       if (!needle) return true;
       return (
         row.name.toLowerCase().includes(needle) ||
@@ -68,9 +79,11 @@ export function FarmersTab() {
         row.products.some((id) => productName(id).toLowerCase().includes(needle))
       );
     });
-  }, [farmers, query, dzongkhagFilter, productName]);
+  }, [farmers, query, filters, productName]);
 
-  const reorderEnabled = farmers !== null && query === "" && !dzongkhagFilter;
+  const activeFilterCount = (["location", "status", "product"] as const).filter((key) => filters[key] !== "").length;
+
+  const reorderEnabled = farmers !== null && query === "" && activeFilterCount === 0;
 
   async function load() {
     setFarmers(null);
@@ -119,6 +132,22 @@ export function FarmersTab() {
       setSeasonalEnabled(false);
       setSeasonalMap({});
     }
+    try {
+      const enabled = await farmerDocumentsTableExists();
+      setDocsEnabled(enabled);
+      if (enabled) {
+        const rows = await listFarmerDocuments();
+        setDocsList(rows);
+      }
+    } catch {
+      setDocsEnabled(false);
+      setDocsList([]);
+    }
+    setSelected((current) => {
+      if (!current) return current;
+      const latest = farmerRows?.find((row) => row.id === current.id);
+      return latest ?? current;
+    });
   }
 
   useEffect(() => {
@@ -196,6 +225,39 @@ export function FarmersTab() {
     }
   }
 
+  async function handleToggleActive(row: FarmerRow) {
+    setStatus(null);
+    try {
+      await upsertFarmer({ ...row, published: !row.published });
+      setFarmers((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: !row.published } : item)));
+      setSelected((current) => (current && current.id === row.id ? { ...current, published: !row.published } : current));
+      setStatus(row.published ? `${row.name} is no longer active (hidden from the site, records kept).` : `${row.name} is now active.`);
+    } catch (toggleError) {
+      setStatus(toggleError instanceof Error ? toggleError.message : "Could not change the farmer status.");
+    }
+  }
+
+  async function handleSaveDocuments(adds: FarmerDocumentRow[], deletes: FarmerDocumentRow[]) {
+    if (!selected) return;
+    const saved: FarmerDocumentRow[] = [];
+    for (const doc of adds) {
+      saved.push(await upsertFarmerDocument(doc));
+    }
+    for (const doc of deletes) {
+      await deleteFarmerDocument(doc.id);
+    }
+    setDocsList((current) => {
+      const deletesIds = new Set(deletes.map((doc) => doc.id));
+      return [...saved, ...current.filter((doc) => !deletesIds.has(doc.id))];
+    });
+    setStatus(`Saved document changes for ${selected.name}.`);
+  }
+
+  async function handleToggleSelectedActive() {
+    if (!selected) return;
+    await handleToggleActive(selected);
+  }
+
   async function handleReorder(orderedIds: string[]) {
     setStatus(null);
     if (!farmers) return;
@@ -216,6 +278,32 @@ export function FarmersTab() {
   }
 
   const { rowProps } = useRowDragSort(filtered, (orderedIds) => void handleReorder(orderedIds));
+
+  if (selected) {
+    return (
+      <FarmerDetail
+        farmer={selected}
+        privateInfo={privateMap[selected.id] ?? null}
+        storyInfo={storyMap[selected.id] ?? null}
+        seasonalInfo={seasonalMap[selected.id] ?? null}
+        documentsEnabled={docsEnabled}
+        documents={docsList.filter((doc) => doc.farmer_id === selected.id)}
+        productName={productName}
+        onEdit={() => {
+          const row = selected;
+          setSelected(null);
+          setCreating(false);
+          setEditing(row);
+          setPrivateInfo(privateMap[row.id] ?? blankFarmerPrivateInfo(row.id));
+          setStoryInfo(storyMap[row.id] ?? blankFarmerStory(row.id));
+          setSeasonalInfo(seasonalMap[row.id] ?? blankFarmerSeasonalUpdate(row.id));
+        }}
+        onBack={() => setSelected(null)}
+        onToggleActive={() => void handleToggleSelectedActive()}
+        onSaveChanges={(adds, deletes) => handleSaveDocuments(adds, deletes)}
+      />
+    );
+  }
 
   if (editing) {
     return (
@@ -257,12 +345,14 @@ export function FarmersTab() {
 
       {status ? <p className="text-sm font-semibold text-brand-green-ink" role="status">{status}</p> : null}
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-3">
         <input className={`${inputClasses} min-w-0`} type="search" aria-label="Search farmers" placeholder="Search by name, location, or product..." value={query} onChange={(event) => setQuery(event.target.value)} />
-        <select className={`${selectClasses} min-w-44`} aria-label="Filter by dzongkhag" value={dzongkhagFilter} onChange={(event) => setDzongkhagFilter(event.target.value)}>
-          <option value="">All dzongkhags</option>
-          {dzongkhags.map((dzongkhag) => <option key={dzongkhag} value={dzongkhag}>{dzongkhag}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ColumnFilterDropdown label="Location" options={dzongkhags} value={filters.location} onSelect={(v) => setFilters((f) => ({ ...f, location: v }))} allLabel="All locations" />
+          <ColumnFilterDropdown label="Status" options={["Active", "Inactive"]} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+          <ColumnFilterDropdown label="Products" options={products.map((p) => p.name).filter(Boolean).sort() as string[]} value={filters.product} onSelect={(v) => setFilters((f) => ({ ...f, product: v }))} />
+          <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ location: "", status: "", product: "" })} />
+        </div>
       </div>
 
       {farmers ? (
@@ -322,12 +412,16 @@ export function FarmersTab() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-yellow text-brand-forest" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
-                        {row.published ? "Published" : "Draft"}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
+                          {row.published ? "Active" : "Inactive"}
+                        </span>
+                        <button className="min-h-7 touch-manipulation rounded-full border-2 border-brand-forest/60 px-2 py-0.5 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleToggleActive(row)}>{row.published ? "Set inactive" : "Activate"}</button>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setSelected(row)}>View</button>
                         <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => { setCreating(false); setEditing(row); setPrivateInfo(privateMap[row.id] ?? blankFarmerPrivateInfo(row.id)); setStoryInfo(storyMap[row.id] ?? blankFarmerStory(row.id)); setSeasonalInfo(seasonalMap[row.id] ?? blankFarmerSeasonalUpdate(row.id)); }}>Edit</button>
                         <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
                       </div>

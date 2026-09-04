@@ -3,7 +3,7 @@ import { commerceStore } from "../../admin/commerce-api";
 import { paymentStatuses, type Payment, type PaymentStatus } from "../../admin/commerce-types";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { selectClasses } from "./admin-fields";
+import { amountRangeKeyFor, buildAmountRanges, ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 import {
   CommerceError,
   CommerceLoading,
@@ -21,7 +21,7 @@ type PendingChange = { payment: Payment; status: PaymentStatus };
 export function PaymentsTab() {
   const state = useCommerceStore();
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [filters, setFilters] = useState({ customer: "", status: "", method: "", amount: "", date: "" });
   const [selected, setSelected] = useState<Payment | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,11 +35,29 @@ export function PaymentsTab() {
     return customer?.name ?? customerId;
   }, [data]);
 
+  const customers = useMemo(() => {
+    if (!data) return [];
+    return [...new Set(data.payments.map((payment) => customerLabel(payment.customer_id)).filter(Boolean))].sort();
+  }, [data, customerLabel]);
+
+  const methods = useMemo(() => {
+    if (!data) return [];
+    return [...new Set(data.payments.map((payment) => payment.method).filter(Boolean))].sort();
+  }, [data]);
+
+  const amountRanges = useMemo(() => buildAmountRanges((data?.payments ?? []).map((payment) => payment.amount)), [data]);
+
+  const activeFilterCount = (["customer", "status", "method", "amount", "date"] as const).filter((key) => filters[key] !== "").length;
+
   const filtered = useMemo(() => {
     if (!data) return [];
     const needle = query.trim().toLowerCase();
     return data.payments.filter((payment) => {
-      if (statusFilter && payment.status !== statusFilter) return false;
+      if (filters.customer && customerLabel(payment.customer_id) !== filters.customer) return false;
+      if (filters.status && payment.status !== filters.status) return false;
+      if (filters.method && payment.method !== filters.method) return false;
+      if (filters.amount && amountRangeKeyFor(amountRanges, payment.amount) !== filters.amount) return false;
+      if (filters.date && dateRangeKey(payment.date) !== filters.date) return false;
       if (!needle) return true;
       return (
         payment.id.toLowerCase().includes(needle) ||
@@ -49,7 +67,7 @@ export function PaymentsTab() {
         customerLabel(payment.customer_id).toLowerCase().includes(needle)
       );
     });
-  }, [data, query, statusFilter, customerLabel]);
+  }, [data, query, filters, customerLabel, amountRanges]);
 
   async function applyStatusChange() {
     if (!pendingChange) return;
@@ -150,7 +168,7 @@ export function PaymentsTab() {
 
       {!writable ? <DevDataNotice /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-3">
         <input
           className="min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
           type="search"
@@ -159,10 +177,14 @@ export function PaymentsTab() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <select className={`${selectClasses} min-w-44`} aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">All statuses</option>
-          {paymentStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ColumnFilterDropdown label="Customer" options={customers} value={filters.customer} onSelect={(v) => setFilters((f) => ({ ...f, customer: v }))} />
+          <ColumnFilterDropdown label="Status" options={paymentStatuses} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+          <ColumnFilterDropdown label="Method" options={methods} value={filters.method} onSelect={(v) => setFilters((f) => ({ ...f, method: v }))} />
+          <ColumnFilterDropdown label="Amount" options={amountRanges} value={filters.amount} onSelect={(v) => setFilters((f) => ({ ...f, amount: v }))} />
+          <ColumnFilterDropdown label="Date" options={DATE_RANGES} value={filters.date} onSelect={(v) => setFilters((f) => ({ ...f, date: v }))} />
+          <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ customer: "", status: "", method: "", amount: "", date: "" })} />
+        </div>
       </div>
 
       {data.payments.length === 0 ? (

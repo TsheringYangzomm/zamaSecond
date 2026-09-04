@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
 import { commerceStore } from "../../admin/commerce-api";
-import { deliveryStatuses, type Delivery, type DeliveryStatus } from "../../admin/commerce-types";
+import { deliveryStatuses, type Delivery, type DeliveryStatus, type Order } from "../../admin/commerce-types";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { selectClasses, TextInput } from "./admin-fields";
+import { TextInput } from "./admin-fields";
+import { ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 import {
   CommerceError,
   CommerceLoading,
@@ -14,18 +15,20 @@ import {
   formatDate,
   useCommerceStore,
 } from "./commerce-shared";
+import { ReceiptView } from "./receipt-view";
 
 type PendingChange = { delivery: Delivery; status: DeliveryStatus };
 
 export function DeliveriesTab() {
   const state = useCommerceStore();
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [filters, setFilters] = useState({ status: "", area: "", driver: "", customer: "", date: "" });
   const [selected, setSelected] = useState<Delivery | null>(null);
   const [driverDraft, setDriverDraft] = useState("");
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+const [busy, setBusy] = useState(false);
+const [status, setStatus] = useState<string | null>(null);
+const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
 
   const data = state.phase === "ready" ? state.data : null;
   const writable = state.phase === "ready" && state.writable;
@@ -36,11 +39,32 @@ export function DeliveriesTab() {
     return customer?.name ?? customerId;
   }, [data]);
 
+  const activeFilterCount = (["status", "area", "driver", "customer", "date"] as const).filter((key) => filters[key] !== "").length;
+
+  const areas = useMemo(() => {
+    if (!data) return [];
+    return [...new Set(data.deliveries.map((delivery) => delivery.area).filter(Boolean))].sort();
+  }, [data]);
+
+  const drivers = useMemo(() => {
+    if (!data) return [];
+    return [...new Set(data.deliveries.map((delivery) => delivery.driver).filter((driver): driver is string => Boolean(driver)))].sort();
+  }, [data]);
+
+  const customers = useMemo(() => {
+    if (!data) return [];
+    return [...new Set(data.deliveries.map((delivery) => customerLabel(delivery.customer_id)).filter(Boolean))].sort();
+  }, [data, customerLabel]);
+
   const filtered = useMemo(() => {
     if (!data) return [];
     const needle = query.trim().toLowerCase();
     return data.deliveries.filter((delivery) => {
-      if (statusFilter && delivery.status !== statusFilter) return false;
+      if (filters.status && delivery.status !== filters.status) return false;
+      if (filters.area && delivery.area !== filters.area) return false;
+      if (filters.driver && (delivery.driver ?? "") !== filters.driver) return false;
+      if (filters.customer && customerLabel(delivery.customer_id) !== filters.customer) return false;
+      if (filters.date && dateRangeKey(delivery.delivery_date) !== filters.date) return false;
       if (!needle) return true;
       return (
         delivery.id.toLowerCase().includes(needle) ||
@@ -50,7 +74,7 @@ export function DeliveriesTab() {
         customerLabel(delivery.customer_id).toLowerCase().includes(needle)
       );
     });
-  }, [data, query, statusFilter, customerLabel]);
+  }, [data, query, filters, customerLabel]);
 
   async function applyStatusChange() {
     if (!pendingChange) return;
@@ -99,6 +123,7 @@ export function DeliveriesTab() {
 
   if (selected) {
     const order = data.orders.find((item) => item.id === selected.order_id);
+    const customer = data.customers.find((item) => item.id === selected.customer_id);
     return (
       <div className="grid gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -107,6 +132,9 @@ export function DeliveriesTab() {
             <p className="text-sm text-brand-black/68">Order {selected.order_id}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {order && selected.status === "delivered" ? (
+              <button className={btnOutlineSm} type="button" onClick={() => setReceiptOrder(order)}>Print receipt</button>
+            ) : null}
             <button className={btnOutlineSm} type="button" onClick={() => setSelected(null)}>← Back to deliveries</button>
           </div>
         </div>
@@ -165,6 +193,15 @@ export function DeliveriesTab() {
           onConfirm={() => void applyStatusChange()}
           onCancel={() => setPendingChange(null)}
         />
+
+        {receiptOrder ? (
+          <ReceiptView
+            order={receiptOrder}
+            customer={customer}
+            delivery={selected}
+            onClose={() => setReceiptOrder(null)}
+          />
+        ) : null}
       </div>
     );
   }
@@ -177,7 +214,7 @@ export function DeliveriesTab() {
 
       {!writable ? <DevDataNotice /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-3">
         <input
           className="min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
           type="search"
@@ -186,10 +223,14 @@ export function DeliveriesTab() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <select className={`${selectClasses} min-w-48`} aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">All statuses</option>
-          {deliveryStatuses.map((status) => <option key={status} value={status}>{status.replace(/_/g, " ")}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ColumnFilterDropdown label="Status" options={deliveryStatuses} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+          <ColumnFilterDropdown label="Area" options={areas} value={filters.area} onSelect={(v) => setFilters((f) => ({ ...f, area: v }))} />
+          <ColumnFilterDropdown label="Driver" options={drivers} value={filters.driver} onSelect={(v) => setFilters((f) => ({ ...f, driver: v }))} />
+          <ColumnFilterDropdown label="Customer" options={customers} value={filters.customer} onSelect={(v) => setFilters((f) => ({ ...f, customer: v }))} />
+          <ColumnFilterDropdown label="Date" options={DATE_RANGES} value={filters.date} onSelect={(v) => setFilters((f) => ({ ...f, date: v }))} />
+          <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ status: "", area: "", driver: "", customer: "", date: "" })} />
+        </div>
       </div>
 
       {data.deliveries.length === 0 ? (

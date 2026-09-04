@@ -1,19 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, Fragment, useMemo, useState } from "react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { inventoryItemsTableExists, inventoryStockHistoryTableExists, inventoryStockLotsTableExists, listFarmers, listInventoryItems, listInventoryStockLots } from "../../admin/admin-api";
-import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
+import { btnOutlineSm, btnOutlineXs, btnPrimarySm } from "../../components/ui/styles";
 import { SearchIcon } from "../../components/ui/icons";
 import { inputClasses, selectClasses } from "./admin-fields";
+import { ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey, STOCK_QTY_RANGES, stockQtyRangeKey } from "./column-filter-dropdown";
 import type { FarmerRow, InventoryItemRow, InventoryStockLotRow } from "../../cms/types";
 import { itemInventoryDevData } from "../../data/commerce-dev";
 import {
-  CommerceSectionHeading,
   stockLevel,
   StockStatusBadge,
+  ViewButton,
 } from "./commerce-shared";
 import { AddStockModal } from "./add-stock-modal";
 import { InventoryStockHistoryModal } from "./inventory-stock-history-modal";
-import { StockLotsModal } from "./stock-lots-modal";
+import { LotCard } from "./stock-lots-modal";
 import {
   buildInventoryView,
   countLevels,
@@ -30,6 +31,8 @@ const levelOptions: { value: "" | StockLevel; label: string }[] = [
   { value: "out", label: "Out of stock" },
   { value: "untracked", label: "Not tracked" },
 ];
+
+const levelPillOptions = levelOptions.filter((option): option is { value: StockLevel; label: string } => option.value !== "");
 
 type SortOption = "name-asc" | "name-desc" | "qty-asc" | "qty-desc" | "updated";
 
@@ -196,12 +199,13 @@ function supplierLabel(view: InventoryItemView): string {
 
 export function InventoryTab() {
   const { email: adminEmail } = useAdminAuth();
+  const [view, setView] = useState<"overview" | "list">("overview");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [items, setItems] = useState<InventoryItemRow[] | null>(null);
   const [lots, setLots] = useState<InventoryStockLotRow[]>([]);
   const [farmers, setFarmers] = useState<FarmerRow[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [addProduct, setAddProduct] = useState<InventoryItemRow | null>(null);
-  const [stockDetail, setStockDetail] = useState<InventoryItemView | null>(null);
   const [historyItem, setHistoryItem] = useState<InventoryItemRow | null>(null);
   const [stockAvailable, setStockAvailable] = useState(false);
   const [historyAvailable, setHistoryAvailable] = useState(false);
@@ -209,9 +213,7 @@ export function InventoryTab() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [levelFilter, setLevelFilter] = useState<"" | StockLevel>("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [supplierFilter, setSupplierFilter] = useState("");
+  const [filters, setFilters] = useState({ level: "", category: "", supplier: "", quantity: "", updated: "" });
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
 
   async function load() {
@@ -269,18 +271,16 @@ export function InventoryTab() {
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [views]);
 
+  const activeFilterCount = (["level", "category", "supplier", "quantity", "updated"] as const).filter((key) => filters[key] !== "").length;
+
   const hasActiveFilters =
     query.trim() !== "" ||
-    levelFilter !== "" ||
-    categoryFilter !== "" ||
-    supplierFilter !== "" ||
+    activeFilterCount > 0 ||
     sortBy !== "name-asc";
 
   function clearFilters() {
     setQuery("");
-    setLevelFilter("");
-    setCategoryFilter("");
-    setSupplierFilter("");
+    setFilters({ level: "", category: "", supplier: "", quantity: "", updated: "" });
     setSortBy("name-asc");
   }
 
@@ -288,9 +288,11 @@ export function InventoryTab() {
     if (!items) return [];
     const needle = query.trim().toLowerCase();
     const rows = views.filter((view) => {
-      if (levelFilter && stockLevel(view.total, view.item.stock_alert_at) !== levelFilter) return false;
-      if (categoryFilter && view.item.category !== categoryFilter) return false;
-      if (supplierFilter && !view.suppliers.includes(supplierFilter)) return false;
+      if (filters.level && stockLevel(view.total, view.item.stock_alert_at) !== filters.level) return false;
+      if (filters.category && view.item.category !== filters.category) return false;
+      if (filters.supplier && !view.suppliers.includes(filters.supplier)) return false;
+      if (filters.quantity && stockQtyRangeKey(view.total ?? 0) !== filters.quantity) return false;
+      if (filters.updated && dateRangeKey(view.lastUpdated) !== filters.updated) return false;
       if (!needle) return true;
       return (
         view.item.name.toLowerCase().includes(needle) ||
@@ -318,7 +320,7 @@ export function InventoryTab() {
         break;
     }
     return sorted;
-  }, [views, items, query, levelFilter, categoryFilter, supplierFilter, sortBy]);
+  }, [views, items, query, filters, sortBy]);
 
   function handleStockSaved(result: { item: InventoryItemRow; lot: InventoryStockLotRow; createdNewItem: boolean }) {
     setAddOpen(false);
@@ -343,134 +345,193 @@ export function InventoryTab() {
 
   return (
     <div className="grid gap-5">
-      <CommerceSectionHeading title="Inventory" subtitle="Track stock per product across all its suppliers.">
-        <button className={btnPrimarySm} type="button" onClick={() => { setAddProduct(null); setAddOpen(true); }} disabled={!items}>+ Add stock</button>
-        <button className={btnOutlineSm} type="button" onClick={() => void load()} disabled={!items}>Refresh</button>
-      </CommerceSectionHeading>
-
-      {!stockAvailable ? (
-        <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
-          Showing example stock levels. Run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the inventory tables.
-        </p>
-      ) : null}
-
-      {!lotsAvailable ? (
-        <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
-          Stock lots are not enabled yet. Re-run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the <code className="rounded bg-brand-white px-1 py-0.5 text-xs">inventory_stock_lots</code> table and enable per-supplier stock.
-        </p>
-      ) : null}
-
-      {error ? (
-        <div className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-5">
-          <p className="text-sm font-semibold text-brand-black" role="alert">{error}</p>
-          <div><button className={btnOutlineSm} type="button" onClick={() => void load()}>Try again</button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="grid gap-1">
+          <h1 className="font-primary text-[clamp(1.7rem,3.5vw,2.4rem)] font-bold leading-[1.02] text-brand-green-ink">Inventory</h1>
+          <p className="text-sm text-brand-black/68">Track stock per product across all its suppliers.</p>
         </div>
-      ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <ViewButton active={view === "overview"} count={null} onClick={() => setView("overview")}>Overview</ViewButton>
+          <ViewButton active={view === "list"} count={items?.length ?? null} onClick={() => setView("list")}>Stock List</ViewButton>
+        </div>
+      </div>
 
-      {status ? <p className="text-sm font-semibold text-brand-green-ink" role="status">{status}</p> : null}
-
-      {items ? (
+      {view === "overview" ? (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-5">
-            {statCards.map((card) => <InventoryStatCard key={card.label} label={card.label} value={card.value} note={card.note} tone={card.tone} />)}
+          {!stockAvailable ? (
+            <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
+              Showing example stock levels. Run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the inventory tables.
+            </p>
+          ) : null}
+
+          {!lotsAvailable ? (
+            <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
+              Stock lots are not enabled yet. Re-run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the <code className="rounded bg-brand-white px-1 py-0.5 text-xs">inventory_stock_lots</code> table and enable per-supplier stock.
+            </p>
+          ) : null}
+
+          {error ? (
+            <div className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-5">
+              <p className="text-sm font-semibold text-brand-black" role="alert">{error}</p>
+              <div><button className={btnOutlineSm} type="button" onClick={() => void load()}>Try again</button></div>
+            </div>
+          ) : null}
+
+          {status ? <p className="text-sm font-semibold text-brand-green-ink" role="status">{status}</p> : null}
+
+          {items ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <button className={btnPrimarySm} type="button" onClick={() => { setAddProduct(null); setAddOpen(true); }}>+ Add stock</button>
+                <button className={btnOutlineSm} type="button" onClick={() => void load()}>Refresh</button>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-5">
+                {statCards.map((card) => <InventoryStatCard key={card.label} label={card.label} value={card.value} note={card.note} tone={card.tone} />)}
+              </div>
+
+              <InventoryHealth counts={levelCounts} />
+            </>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <button className={btnPrimarySm} type="button" onClick={() => { setAddProduct(null); setAddOpen(true); }} disabled={!items}>+ Add stock</button>
+            <button className={btnOutlineSm} type="button" onClick={() => void load()} disabled={!items}>Refresh</button>
           </div>
 
-          <InventoryHealth counts={levelCounts} />
-
-          <form className="grid gap-3" onSubmit={(event) => event.preventDefault()}>
-            <div className="relative">
-              <SearchIcon className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-ink/60" />
-              <input className={`${inputClasses} min-w-0 pl-11`} type="search" aria-label="Search inventory" placeholder="Search inventory..." value={query} onChange={(event) => setQuery(event.target.value)} />
+          {error ? (
+            <div className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-5">
+              <p className="text-sm font-semibold text-brand-black" role="alert">{error}</p>
+              <div><button className={btnOutlineSm} type="button" onClick={() => void load()}>Try again</button></div>
             </div>
+          ) : null}
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <select className={`${selectClasses} min-w-0`} aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-                <option value="">All categories</option>
-                {categories.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-              <select className={`${selectClasses} min-w-0`} aria-label="Filter by stock status" value={levelFilter} onChange={(event) => setLevelFilter(event.target.value as "" | StockLevel)}>
-                {levelOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-              <select className={`${selectClasses} min-w-0`} aria-label="Filter by supplier" value={supplierFilter} onChange={(event) => setSupplierFilter(event.target.value)}>
-                <option value="">All suppliers</option>
-                {suppliers.map((option) => <option key={option} value={option}>{option}</option>)}
-              </select>
-              <select className={`${selectClasses} min-w-0`} aria-label="Sort by" value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}>
-                {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </select>
-            </div>
+          {status ? <p className="text-sm font-semibold text-brand-green-ink" role="status">{status}</p> : null}
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <button className={btnPrimarySm} type="submit">Search</button>
-              {hasActiveFilters ? (
-                <>
+          {items ? (
+            <form className="grid gap-3" onSubmit={(event) => event.preventDefault()}>
+              <div className="relative">
+                <SearchIcon className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-brand-green-ink/60" />
+                <input className={`${inputClasses} min-w-0 pl-11`} type="search" aria-label="Search inventory" placeholder="Search inventory..." value={query} onChange={(event) => setQuery(event.target.value)} />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <ColumnFilterDropdown label="Level" options={levelPillOptions} value={filters.level} onSelect={(v) => setFilters((f) => ({ ...f, level: v }))} allLabel="All stock statuses" />
+                <ColumnFilterDropdown label="Category" options={categories} value={filters.category} onSelect={(v) => setFilters((f) => ({ ...f, category: v }))} />
+                <ColumnFilterDropdown label="Supplier" options={suppliers} value={filters.supplier} onSelect={(v) => setFilters((f) => ({ ...f, supplier: v }))} />
+                <ColumnFilterDropdown label="Quantity" options={STOCK_QTY_RANGES} value={filters.quantity} onSelect={(v) => setFilters((f) => ({ ...f, quantity: v }))} />
+                <ColumnFilterDropdown label="Updated" options={DATE_RANGES} value={filters.updated} onSelect={(v) => setFilters((f) => ({ ...f, updated: v }))} allLabel="Any time" />
+                <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ level: "", category: "", supplier: "", quantity: "", updated: "" })} />
+                <span className="mx-1 h-6 w-px bg-brand-forest/20" />
+                <label className="text-xs font-bold uppercase tracking-[0.06em] text-brand-green-ink" htmlFor="inventory-sort">Sort</label>
+                <select id="inventory-sort" className={`${selectClasses} min-w-44`} aria-label="Sort by" value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)}>
+                  {sortOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {hasActiveFilters ? (
                   <p className="text-sm font-semibold text-brand-black/64">
                     Showing {filtered.length} of {items.length} items
                   </p>
-                  <button className={btnOutlineSm} type="button" onClick={clearFilters}>Clear filters</button>
-                </>
-              ) : null}
-            </div>
-
-            {filtered.length === 0 ? (
-              <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">No items match the current search or filters.</p>
-            ) : (
-              <div className="overflow-x-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white shadow-brand-soft">
-                <table className="w-full min-w-200 border-collapse text-left">
-                  <caption className="sr-only">Item stock levels</caption>
-                  <thead>
-                    <tr className="border-b-3 border-dashed border-brand-forest/30 bg-brand-warm-white text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">
-                      <th className="px-4 py-3">Product</th>
-                      <th className="px-4 py-3">Category</th>
-                      <th className="px-4 py-3">Total Stock</th>
-                      <th className="px-4 py-3">Suppliers</th>
-                      <th className="px-4 py-3">Status</th>
-                      <th className="px-4 py-3">Last Updated</th>
-                      <th className="px-4 py-3">
-                        <span className="sr-only">Action</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((view) => {
-                      const level = stockLevel(view.total, view.item.stock_alert_at);
-                      return (
-                        <tr className="border-b-2 border-dashed border-brand-forest/16 text-sm last:border-b-0 transition-colors hover:bg-brand-warm-white/70" key={view.item.id}>
-                          <td className="px-4 py-3">
-                            <div className="grid gap-0.5">
-                              <button
-                                className="w-fit text-left font-bold text-brand-forest underline decoration-2 underline-offset-4 hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
-                                type="button"
-                                onClick={() => setStockDetail(view)}
-                              >
-                                {view.item.name}
-                              </button>
-                              <span className="text-xs text-brand-black/52">{view.item.id}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-brand-black/72">{view.item.category}</td>
-                          <td className="px-4 py-3">
-                            <span className="font-bold text-brand-black">{totalLabel(view)}</span>
-                          </td>
-                          <td className="px-4 py-3 text-brand-black/72">{supplierLabel(view)}</td>
-                          <td className="px-4 py-3"><StockStatusBadge level={level} /></td>
-                          <td className="px-4 py-3 text-brand-black/72">{formatLastUpdated(view.lastUpdated)}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button className={btnOutlineSm} type="button" onClick={() => { setAddProduct(view.item); setAddOpen(true); }}>Add stock</button>
-                              <button className={btnOutlineSm} type="button" onClick={() => setHistoryItem(view.item)}>View history</button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                ) : (
+                  <span className="text-sm font-semibold text-brand-black/64">{items.length} items</span>
+                )}
+                {hasActiveFilters ? (
+                  <button className={btnOutlineSm} type="button" onClick={clearFilters}>Clear all</button>
+                ) : null}
               </div>
-            )}
-          </form>
+
+              {filtered.length === 0 ? (
+                <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">No items match the current search or filters.</p>
+              ) : (
+                <div className="overflow-x-hidden rounded-wobbly-card border-3 border-brand-forest bg-brand-white shadow-brand-soft">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-200 border-collapse text-left">
+                      <caption className="sr-only">Item stock levels</caption>
+                      <thead>
+                        <tr className="border-b-3 border-dashed border-brand-forest/30 bg-brand-warm-white text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">
+                          <th className="px-4 py-3">Product</th>
+                          <th className="px-4 py-3">Category</th>
+                          <th className="px-4 py-3">Total Stock</th>
+                          <th className="px-4 py-3">Suppliers</th>
+                          <th className="px-4 py-3">Status</th>
+                          <th className="px-4 py-3">Last Updated</th>
+                          <th className="px-4 py-3">
+                            <span className="sr-only">Action</span>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filtered.map((viewRow) => {
+                          const level = stockLevel(viewRow.total, viewRow.item.stock_alert_at);
+                          const open = expandedId === viewRow.item.id;
+                          return (
+                            <Fragment key={viewRow.item.id}>
+                              <tr className="border-b-2 border-dashed border-brand-forest/16 text-sm last:border-b-0 transition-colors hover:bg-brand-warm-white/70">
+                                <td className="px-4 py-3">
+                                  <div className="grid gap-0.5">
+                                    <button
+                                      className="flex w-fit items-center gap-1.5 text-left font-bold text-brand-forest underline decoration-2 underline-offset-4 hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
+                                      type="button"
+                                      aria-expanded={open}
+                                      onClick={() => setExpandedId(open ? null : viewRow.item.id)}
+                                    >
+                                      <span aria-hidden="true" className={`text-brand-green-ink/70 transition-transform duration-120 ${open ? "rotate-90" : ""}`}>▸</span>
+                                      {viewRow.item.name}
+                                    </button>
+                                    <span className="text-xs text-brand-black/52">{viewRow.item.id}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-brand-black/72">{viewRow.item.category}</td>
+                                <td className="px-4 py-3">
+                                  <span className="font-bold text-brand-black">{totalLabel(viewRow)}</span>
+                                </td>
+                                <td className="px-4 py-3 text-brand-black/72">{supplierLabel(viewRow)}</td>
+                                <td className="px-4 py-3"><StockStatusBadge level={level} /></td>
+                                <td className="px-4 py-3 text-brand-black/72">{formatLastUpdated(viewRow.lastUpdated)}</td>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button className={btnOutlineSm} type="button" onClick={() => { setAddProduct(viewRow.item); setAddOpen(true); }}>Add stock</button>
+                                    <button className={btnOutlineSm} type="button" onClick={() => setHistoryItem(viewRow.item)}>View history</button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {open ? (
+                                <tr className="border-b-2 border-dashed border-brand-forest/16 last:border-b-0 bg-brand-warm-white/50">
+                                  <td colSpan={7} className="px-4 py-4">
+                                    <div className="grid gap-3">
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Stock lots</span>
+                                        <button className={btnOutlineXs} type="button" onClick={() => { setAddProduct(viewRow.item); setAddOpen(true); }}>+ Add stock</button>
+                                      </div>
+                                      {viewRow.lots.length === 0 ? (
+                                        <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-5 text-center text-sm font-semibold text-brand-black/64">
+                                          No stock lots for {viewRow.item.name} yet.
+                                        </p>
+                                      ) : (
+                                        <ul className="grid gap-3" aria-label={`Stock lots for ${viewRow.item.name}`}>
+                                          {viewRow.lots.map((lot) => <LotCard key={lot.id} lot={lot} unit={viewRow.item.unit} />)}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </form>
+          ) : null}
         </>
-      ) : null}
+      )}
 
       <AddStockModal
         open={addOpen}
@@ -483,17 +544,6 @@ export function InventoryTab() {
           setAddProduct(null);
         }}
         onSaved={handleStockSaved}
-      />
-
-      <StockLotsModal
-        open={stockDetail !== null}
-        view={stockDetail}
-        onClose={() => setStockDetail(null)}
-        onAddStock={(item) => {
-          setStockDetail(null);
-          setAddProduct(item);
-          setAddOpen(true);
-        }}
       />
 
       <InventoryStockHistoryModal

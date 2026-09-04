@@ -1,10 +1,11 @@
-import type { ShopProduct } from "../components/shop/shop-utils";
+import type { BoxContents, ShopProduct } from "../components/shop/shop-utils";
 import type { Farmer } from "../data/farmers";
+import type { Dietician } from "../data/dieticians";
 import type { Review } from "../components/shop/reviews";
 import { numberFormatter } from "../components/shop/shop-utils";
-import type { FarmerRow, ProductRow, ReviewRow } from "./types";
+import type { DieticianRow, FarmerRow, ProductRow, ReviewRow } from "./types";
 
-export function mapProductRow(row: ProductRow): ShopProduct {
+export function mapProductRow(row: ProductRow, contents: readonly BoxContents[] = []): ShopProduct {
   return {
     id: row.id,
     sku: row.sku,
@@ -28,7 +29,13 @@ export function mapProductRow(row: ProductRow): ShopProduct {
     nutrition: row.nutrition,
     tags: row.tags,
     collections: row.collections,
-    contents: [],
+    contents,
+    active: row.published,
+    consultantNote: row.consultant_note,
+    dieticianNote: row.dietician_note,
+    healthBenefits: row.health_benefits,
+    trustAllergens: row.trust_allergens,
+    sourcing: row.sourcing,
   };
 }
 
@@ -43,9 +50,46 @@ export function mapFarmerRow(row: FarmerRow): Farmer {
     yearsFarming: row.years_farming,
     bio: row.bio,
     verified: row.verified,
-    partnerSince: row.partner_since ?? 0,
+    partnerSince: row.partner_since ?? null,
     image: row.image || undefined,
   };
+}
+
+export function mapDieticianRow(row: DieticianRow): Dietician {
+  const qualifications = typeof row.qualifications === "string" && row.qualifications.trim()
+    ? row.qualifications
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+    : [];
+  return {
+    id: row.id,
+    name: row.name,
+    title: row.title,
+    image: row.image || undefined,
+    bio: row.bio,
+    qualifications,
+    mealKitNotes: parseMealKitNotes(row.meal_kit_notes),
+    sortOrder: row.sort_order,
+    published: row.published,
+  };
+}
+
+function parseMealKitNotes(raw: string): Dietician["mealKitNotes"] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => item && typeof item.productId === "string")
+      .map((item) => ({
+        productId: String(item.productId),
+        consultantNote: typeof item.consultantNote === "string" ? item.consultantNote : "",
+        dieticianNote: typeof item.dieticianNote === "string" ? item.dieticianNote : "",
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export function mapReviewRow(row: ReviewRow): Review {

@@ -82,6 +82,51 @@ describe("commerce store (dev mode)", () => {
     expect(updated?.status).toBe("confirmed");
     expect(updated?.history.length).toBe(original.history.length + 1);
   });
+
+  it("syncs the linked order when a delivery status changes", async () => {
+    await commerceStore.load(true);
+    const before = commerceStore.getSnapshot();
+    if (before.phase !== "ready") throw new Error("expected ready state");
+    const delivery = before.data.deliveries.find((item) => item.id === "DEL-0001");
+    if (!delivery) throw new Error("missing test delivery");
+    expect(delivery.status).toBe("delivered");
+
+    await commerceStore.updateDeliveryStatus("DEL-0001", "out_for_delivery", null);
+    const after = commerceStore.getSnapshot();
+    if (after.phase !== "ready") throw new Error("expected ready state");
+    expect(after.data.deliveries.find((item) => item.id === "DEL-0001")?.status).toBe("out_for_delivery");
+    const linkedOrder = after.data.orders.find((order) => order.id === delivery.order_id);
+    expect(linkedOrder?.status).toBe("out_for_delivery");
+  });
+
+  it("syncs the linked delivery when an order status changes", async () => {
+    await commerceStore.load(true);
+    const before = commerceStore.getSnapshot();
+    if (before.phase !== "ready") throw new Error("expected ready state");
+    const order = before.data.orders.find((item) => item.id === "ZAM-2026-0143");
+    if (!order) throw new Error("missing test order");
+
+    await commerceStore.updateOrderStatus("ZAM-2026-0143", "delivered");
+    const after = commerceStore.getSnapshot();
+    if (after.phase !== "ready") throw new Error("expected ready state");
+    expect(after.data.orders.find((item) => item.id === "ZAM-2026-0143")?.status).toBe("delivered");
+    const linkedDelivery = after.data.deliveries.find((item) => item.order_id === "ZAM-2026-0143");
+    expect(linkedDelivery?.status).toBe("delivered");
+  });
+
+  it("does not sync a delivery when an order moves to a pending-only status", async () => {
+    await commerceStore.load(true);
+    const before = commerceStore.getSnapshot();
+    if (before.phase !== "ready") throw new Error("expected ready state");
+    const deliveryBefore = before.data.deliveries.find((item) => item.order_id === "ZAM-2026-0142");
+    if (!deliveryBefore) throw new Error("missing test delivery");
+
+    await commerceStore.updateOrderStatus("ZAM-2026-0142", "confirmed");
+    const after = commerceStore.getSnapshot();
+    if (after.phase !== "ready") throw new Error("expected ready state");
+    const deliveryAfter = after.data.deliveries.find((item) => item.order_id === "ZAM-2026-0142");
+    expect(deliveryAfter?.status).toBe(deliveryBefore.status);
+  });
 });
 
 describe("commerce shared helpers", () => {

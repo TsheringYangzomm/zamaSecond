@@ -33,7 +33,18 @@ export type ShopProduct = {
   tags: readonly string[];
   collections: readonly string[];
   contents: readonly BoxContents[];
+  /** Whether the product is active/visible to buy. Inactive products show as out of stock. */
+  active?: boolean;
+  consultantNote?: string;
+  dieticianNote?: string;
+  healthBenefits?: readonly string[];
+  trustAllergens?: readonly string[];
+  sourcing?: string;
 };
+
+export function isProductActive(product: ShopProduct): boolean {
+  return product.active !== false;
+}
 
 export const categories = ["All", "Vegetables", "Fruits", "Meal kits", "Groceries", "Custom boxes"] as const;
 export type Category = (typeof categories)[number];

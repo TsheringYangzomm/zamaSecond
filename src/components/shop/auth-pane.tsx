@@ -13,7 +13,7 @@ export const selectClasses =
 
 export const labelClasses = "text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink";
 
-export function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: ReactNode }) {
+export function Field({ label, htmlFor, children }: { label: ReactNode; htmlFor: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
       <label htmlFor={htmlFor} className={labelClasses}>{label}</label>

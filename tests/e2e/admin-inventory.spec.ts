@@ -58,7 +58,7 @@ function stockFarmer(id: string, name: string, dzongkhag: string) {
     years_farming: 10,
     bio: "",
     verified: true,
-    partner_since: 2025,
+    partner_since: "2025-03-14",
     image: "",
     sort_order: 0,
     published: true,

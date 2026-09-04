@@ -8,7 +8,8 @@ import {
 } from "../../admin/admin-api";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { inputClasses, selectClasses } from "./admin-fields";
+import { inputClasses } from "./admin-fields";
+import { ClearFiltersButton, ColumnFilterDropdown, COUNT_RANGES, countRangeKey, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 import { formatDate } from "./commerce-shared";
 
 function itemSummary(entry: WaitlistEntry) {
@@ -18,12 +19,16 @@ function itemSummary(entry: WaitlistEntry) {
   return `${items.length} item${items.length === 1 ? "" : "s"}${total ? ` (${total})` : ""}`;
 }
 
+function itemCount(entry: WaitlistEntry): number {
+  const items = (entry.items ?? []) as Array<{ quantity?: number }>;
+  return items.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
+}
+
 export function WaitlistTab() {
   const [entries, setEntries] = useState<WaitlistEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
-  const [areaFilter, setAreaFilter] = useState("");
+  const [filters, setFilters] = useState({ source: "", area: "", items: "", signedUp: "" });
   const [status, setStatus] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<WaitlistEntry | null>(null);
 
@@ -51,12 +56,16 @@ export function WaitlistTab() {
     void load();
   }, []);
 
+  const activeFilterCount = (["source", "area", "items", "signedUp"] as const).filter((key) => filters[key] !== "").length;
+
   const filtered = useMemo(() => {
     if (!entries) return [];
     const q = query.trim().toLowerCase();
     return entries.filter((entry) => {
-      if (sourceFilter && entry.source !== sourceFilter) return false;
-      if (areaFilter && entry.area !== areaFilter) return false;
+      if (filters.source && entry.source !== filters.source) return false;
+      if (filters.area && entry.area !== filters.area) return false;
+      if (filters.items && countRangeKey(itemCount(entry)) !== filters.items) return false;
+      if (filters.signedUp && dateRangeKey(entry.created_at) !== filters.signedUp) return false;
       if (!q) return true;
       return (
         entry.email.toLowerCase().includes(q) ||
@@ -64,7 +73,7 @@ export function WaitlistTab() {
         entry.source.toLowerCase().includes(q)
       );
     });
-  }, [entries, query, sourceFilter, areaFilter]);
+  }, [entries, query, filters]);
 
   async function handleDelete(entry: WaitlistEntry) {
     setStatus(null);
@@ -102,7 +111,7 @@ export function WaitlistTab() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+      <div className="grid gap-3">
         <input
           type="search"
           value={query}
@@ -111,14 +120,13 @@ export function WaitlistTab() {
           aria-label="Search waitlist"
           className={inputClasses}
         />
-        <select className={`${selectClasses} min-w-40`} aria-label="Filter by source" value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}>
-          <option value="">All sources</option>
-          {sources.map((source) => <option key={source} value={source}>{source}</option>)}
-        </select>
-        <select className={`${selectClasses} min-w-40`} aria-label="Filter by area" value={areaFilter} onChange={(e) => setAreaFilter(e.target.value)}>
-          <option value="">All areas</option>
-          {areas.map((area) => <option key={area} value={area}>{area}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ColumnFilterDropdown label="Source" options={sources} value={filters.source} onSelect={(v) => setFilters((f) => ({ ...f, source: v }))} />
+          <ColumnFilterDropdown label="Area" options={areas} value={filters.area} onSelect={(v) => setFilters((f) => ({ ...f, area: v }))} />
+          <ColumnFilterDropdown label="Items" options={COUNT_RANGES} value={filters.items} onSelect={(v) => setFilters((f) => ({ ...f, items: v }))} />
+          <ColumnFilterDropdown label="Signed up" options={DATE_RANGES} value={filters.signedUp} onSelect={(v) => setFilters((f) => ({ ...f, signedUp: v }))} allLabel="Any time" />
+          <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ source: "", area: "", items: "", signedUp: "" })} />
+        </div>
       </div>
 
       {error ? (
@@ -133,7 +141,7 @@ export function WaitlistTab() {
       {entries ? (
         filtered.length === 0 ? (
           <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">
-            {query || sourceFilter || areaFilter ? "No signups match the current search or filters." : "No waitlist signups yet."}
+            {query || filters.source || filters.area ? "No signups match the current search or filters." : "No waitlist signups yet."}
           </p>
         ) : (
           <div className="overflow-x-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white shadow-brand-soft">

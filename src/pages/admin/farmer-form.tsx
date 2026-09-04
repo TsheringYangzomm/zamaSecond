@@ -72,13 +72,13 @@ function toDraft(row: FarmerRow): FarmerDraft {
 
 function fromDraft(draft: FarmerDraft): FarmerRow {
   const years = Number(draft.years_farming.trim());
-  const partner = Number(draft.partner_since.trim());
+  const partner = draft.partner_since.trim();
   return {
     ...draft,
     products: draft.products.split(",").map((item) => item.trim()).filter(Boolean),
     tags: draft.tags.split(",").map((item) => item.trim()).filter(Boolean),
     years_farming: Number.isNaN(years) ? 0 : years,
-    partner_since: draft.partner_since.trim() === "" || Number.isNaN(partner) ? null : partner,
+    partner_since: partner === "" ? null : partner,
   };
 }
 
@@ -145,7 +145,7 @@ export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, priv
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name *" htmlFor="farmer-name"><TextInput id="farmer-name" required value={draft.name} onChange={(e) => set("name", e.target.value)} /></Field>
+        <Field label={<>Name <span className="text-brand-orange">*</span></>} htmlFor="farmer-name"><TextInput id="farmer-name" required value={draft.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Location" htmlFor="farmer-location" hint="e.g. Paro, Bhutan"><TextInput id="farmer-location" value={draft.location} onChange={(e) => set("location", e.target.value)} /></Field>
         <Field label="Dzongkhag" htmlFor="farmer-dzongkhag">
           <select id="farmer-dzongkhag" className="min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" value={draft.dzongkhag} onChange={(e) => set("dzongkhag", e.target.value)}>
@@ -153,7 +153,7 @@ export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, priv
           </select>
         </Field>
         <Field label="Years farming" htmlFor="farmer-years" hint="e.g. 18"><TextInput id="farmer-years" type="number" min="0" value={draft.years_farming} onChange={(e) => set("years_farming", e.target.value)} /></Field>
-        <Field label="Partner since" htmlFor="farmer-partner" hint="Year, e.g. 2025"><TextInput id="farmer-partner" type="number" min="2000" max="2100" value={draft.partner_since} onChange={(e) => set("partner_since", e.target.value)} /></Field>
+        <Field label="Partner since" htmlFor="farmer-partner" hint="Full date, e.g. 12 Mar 2025"><TextInput id="farmer-partner" type="date" value={draft.partner_since} onChange={(e) => set("partner_since", e.target.value)} /></Field>
       </div>
 
       <Field label="Products (comma-separated)" htmlFor="farmer-products"><TextInput id="farmer-products" value={draft.products} onChange={(e) => set("products", e.target.value)} /></Field>
@@ -167,7 +167,7 @@ export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, priv
             <TextInput id="farmer-sort" type="number" value={String(draft.sort_order)} onChange={(e) => set("sort_order", Number(e.target.value))} />
           </Field>
           <Checkbox checked={draft.verified} onChange={(next) => set("verified", next)} label="Verified partner" />
-          <Checkbox checked={draft.published} onChange={(next) => set("published", next)} label="Published (visible on the site)" />
+          <Checkbox checked={draft.published} onChange={(next) => set("published", next)} label="Active (visible on the site). Inactive farmers are hidden from the site." />
         </div>
       </div>
 

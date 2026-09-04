@@ -69,7 +69,7 @@ function CompactMealKit({ kit }: { kit: MealKit }) {
 }
 
 export function MealKitsSection() {
-  const { blocks } = useContent();
+  const { blocks, dieticians } = useContent();
   const mealKitBlock = blocks.mealKits;
   const { items: mealKits } = mealKitBlock;
   const [featuredKit, ...supportingKits] = mealKits;
@@ -97,6 +97,19 @@ export function MealKitsSection() {
         <div>
           <h3 className="font-primary text-[clamp(1.45rem,2.4vw,2rem)] font-bold leading-[1.02] text-brand-black">{mealKitBlock.nutritionTitle}</h3>
           <p className="text-brand-black/72">{mealKitBlock.nutritionCopy}</p>
+          {dieticians.length > 0 ? (
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              {dieticians[0].image ? (
+                <img className="h-12 w-12 flex-none rounded-[48%_52%_54%_46%/52%_45%_55%_48%] border-2 border-brand-forest object-cover" src={dieticians[0].image} alt={dieticians[0].name} loading="lazy" decoding="async" />
+              ) : (
+                <div className="grid h-12 w-12 flex-none place-items-center rounded-[48%_52%_54%_46%/52%_45%_55%_48%] border-2 border-brand-forest bg-brand-yellow font-primary text-lg font-bold text-brand-black" aria-hidden="true">{dieticians[0].name.charAt(0)}</div>
+              )}
+              <div className="grid gap-0.5">
+                <span className="font-primary font-bold text-brand-black">{dieticians[0].name}</span>
+                <span className="text-sm font-bold text-brand-orange-ink">{dieticians[0].title}</span>
+              </div>
+            </div>
+          ) : null}
         </div>
         <OutlineLink href="#/meal-kit-trust">{mealKitBlock.nutritionLinkLabel}</OutlineLink>
       </aside>

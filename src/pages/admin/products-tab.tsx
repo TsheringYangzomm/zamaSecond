@@ -4,17 +4,23 @@ import {
   deleteProduct,
   inventoryTableExists,
   listInventory,
+  listInventoryItems,
+  listProductIngredients,
   listProducts,
   nextSlugId,
+  productIngredientsTableExists,
   reorderRows,
-  updateProductStock,
+  saveProductIngredients,
   upsertProduct,
+  type ProductIngredientInput,
 } from "../../admin/admin-api";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { inputClasses, selectClasses } from "./admin-fields";
-import type { InventoryRow, ProductRow } from "../../cms/types";
+import { inputClasses } from "./admin-fields";
+import { amountRangeKeyFor, buildAmountRanges, ClearFiltersButton, ColumnFilterDropdown } from "./column-filter-dropdown";
+import type { InventoryItemRow, InventoryRow, ProductRow } from "../../cms/types";
 import { blankProduct, ProductForm } from "./product-form";
+import { ProductCategoryPicker } from "./product-category-picker";
 import { StockBadge, stockInfo, stockLevel } from "./commerce-shared";
 import { useRowDragSort } from "./use-row-drag";
 
@@ -24,12 +30,15 @@ export function ProductsTab() {
   const [status, setStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [creating, setCreating] = useState(false);
+  const [choosingCategory, setChoosingCategory] = useState(false);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ProductRow | null>(null);
   const [query, setQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [stockFilter, setStockFilter] = useState("");
+  const [filters, setFilters] = useState({ category: "", stock: "", price: "", status: "" });
   const [stockAvailable, setStockAvailable] = useState(false);
+  const [ingredientsAvailable, setIngredientsAvailable] = useState(false);
+  const [editingIngredients, setEditingIngredients] = useState<ProductIngredientInput[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItemRow[]>([]);
   const [inventory, setInventory] = useState<InventoryRow[]>([]);
 
   const inventoryMap = useMemo(
@@ -42,15 +51,26 @@ export function ProductsTab() {
     return [...set].sort();
   }, [products]);
 
+  const stockOptions = [
+  { value: "in", label: "In stock" },
+  { value: "low", label: "Low stock" },
+  { value: "out", label: "Out of stock" },
+  { value: "untracked", label: "Not tracked" },
+];
+
+  const priceRanges = useMemo(() => buildAmountRanges((products ?? []).map((row) => row.price_amount ?? 0)), [products]);
+
   const filtered = useMemo(() => {
     if (!products) return [];
     const needle = query.trim().toLowerCase();
     return products.filter((row) => {
-      if (categoryFilter && row.category !== categoryFilter) return false;
-      if (stockFilter) {
-        const level = stockLevel(stockInfo(row.id, inventoryMap, stockAvailable).quantity, stockInfo(row.id, inventoryMap, stockAvailable).alertAt);
-        if (level !== stockFilter) return false;
+      if (filters.category && row.category !== filters.category) return false;
+      if (filters.stock) {
+        const info = stockInfo(row.id, inventoryMap, stockAvailable);
+        if (stockLevel(info.quantity, info.alertAt) !== filters.stock) return false;
       }
+      if (filters.price && amountRangeKeyFor(priceRanges, row.price_amount ?? 0) !== filters.price) return false;
+      if (filters.status && (row.published ? "Active" : "Inactive") !== filters.status) return false;
       if (!needle) return true;
       return (
         row.name.toLowerCase().includes(needle) ||
@@ -59,19 +79,30 @@ export function ProductsTab() {
         row.category.toLowerCase().includes(needle)
       );
     });
-  }, [products, query, categoryFilter, stockFilter, stockAvailable, inventoryMap]);
+  }, [products, query, filters, stockAvailable, inventoryMap, priceRanges]);
 
-  const reorderEnabled = products !== null && query === "" && !categoryFilter && !stockFilter;
+  const activeFilterCount = (["category", "stock", "price", "status"] as const).filter((key) => filters[key] !== "").length;
+
+  const reorderEnabled = products !== null && query === "" && activeFilterCount === 0;
 
   async function load() {
     setProducts(null);
     setError(null);
     try {
-      const [rows, hasStock] = await Promise.all([listProducts(), inventoryTableExists()]);
-      const inventoryRows = hasStock ? await listInventory() : [];
+      const [rows, hasStock, hasIngredients] = await Promise.all([
+        listProducts(),
+        inventoryTableExists(),
+        productIngredientsTableExists(),
+      ]);
+      const [inventoryRows, items] = await Promise.all([
+        hasStock ? listInventory() : Promise.resolve([]),
+        hasIngredients ? listInventoryItems() : Promise.resolve([]),
+      ]);
       setProducts(rows);
       setStockAvailable(hasStock);
+      setIngredientsAvailable(hasIngredients);
       setInventory(inventoryRows);
+      setInventoryItems(items);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load products.");
     }
@@ -89,7 +120,9 @@ export function ProductsTab() {
       const id = await nextSlugId("New product", "products");
       const maxSort = (products ?? []).reduce((max, item) => Math.max(max, item.sort_order), -1);
       setEditing({ ...blankProduct(id), sort_order: maxSort + 1 });
+      setEditingIngredients([]);
       setCreating(true);
+      setChoosingCategory(true);
     } catch (addError) {
       setError(addError instanceof Error ? addError.message : "Could not start a new product.");
     } finally {
@@ -97,17 +130,48 @@ export function ProductsTab() {
     }
   }
 
-  async function handleSave(row: ProductRow, stock: { quantity: number | null; alertAt: number | null }) {
-    await upsertProduct(row);
-    if (stockAvailable) {
-      await updateProductStock(row.id, stock.quantity, stock.alertAt);
+  function handleChooseCategory(category: string) {
+    setEditing((current) => (current ? { ...current, category } : current));
+    setChoosingCategory(false);
+  }
+
+  async function handleToggleActive(row: ProductRow) {
+  setStatus(null);
+  try {
+    await upsertProduct({ ...row, published: !row.published });
+    setProducts((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: !row.published } : item)));
+    setStatus(row.published ? `${row.name} is inactive (shows as out of stock).` : `${row.name} is now active.`);
+  } catch (toggleError) {
+    setStatus(toggleError instanceof Error ? toggleError.message : "Could not change the product status.");
+  }
+}
+
+async function handleEdit(row: ProductRow) {
+    try {
+      const ingredients = ingredientsAvailable ? await listProductIngredients(row.id) : [];
+      setEditingIngredients(ingredients);
+    } catch (editError) {
+      setStatus(editError instanceof Error ? editError.message : "Could not load the product contents.");
+      setEditingIngredients([]);
     }
-    const [next, inventoryRows] = await Promise.all([
+    setCreating(false);
+    setChoosingCategory(false);
+    setEditing(row);
+  }
+
+  async function handleSave(row: ProductRow, ingredients: ProductIngredientInput[]) {
+    await upsertProduct(row);
+    if (ingredientsAvailable) {
+      await saveProductIngredients(row.id, ingredients);
+    }
+    const [next, inventoryRows, items] = await Promise.all([
       listProducts(),
       stockAvailable ? listInventory() : Promise.resolve([]),
+      ingredientsAvailable ? listInventoryItems() : Promise.resolve([]),
     ]);
     setProducts(next);
     setInventory(inventoryRows);
+    setInventoryItems(items);
     setStatus(creating ? `Created ${row.name}.` : `Saved ${row.name}.`);
     setEditing(null);
     setCreating(false);
@@ -147,10 +211,28 @@ export function ProductsTab() {
 
   const { rowProps } = useRowDragSort(filtered, (orderedIds) => void handleReorder(orderedIds));
 
+  if (editing && choosingCategory) {
+    return (
+      <div className="grid gap-4">
+        <ProductCategoryPicker
+          onSelect={handleChooseCategory}
+          onCancel={() => { setEditing(null); setCreating(false); setChoosingCategory(false); setEditingIngredients([]); }}
+        />
+      </div>
+    );
+  }
+
   if (editing) {
     return (
       <div className="grid gap-4">
-        <ProductForm initial={editing} initialStock={inventoryMap.get(editing.id) ? { quantity: inventoryMap.get(editing.id)!.stock_quantity ?? null, alertAt: inventoryMap.get(editing.id)!.stock_alert_at ?? null } : null} onSave={handleSave} onCancel={() => { setEditing(null); setCreating(false); }} stockAvailable={stockAvailable} />
+        <ProductForm
+          initial={editing}
+          initialIngredients={editingIngredients}
+          inventoryItems={inventoryItems}
+          onSave={handleSave}
+          onCancel={() => { setEditing(null); setCreating(false); setEditingIngredients([]); }}
+          ingredientsAvailable={ingredientsAvailable}
+        />
       </div>
     );
   }
@@ -185,19 +267,15 @@ export function ProductsTab() {
 
       {products ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+          <div className="grid gap-3">
             <input className={`${inputClasses} min-w-0`} type="search" aria-label="Search products" placeholder="Search by name, ID, or SKU..." value={query} onChange={(event) => setQuery(event.target.value)} />
-            <select className={`${selectClasses} min-w-44`} aria-label="Filter by category" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-              <option value="">All categories</option>
-              {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-            </select>
-            <select className={`${selectClasses} min-w-44`} aria-label="Filter by stock" value={stockFilter} onChange={(event) => setStockFilter(event.target.value)}>
-              <option value="">All stock</option>
-              <option value="in">In stock</option>
-              <option value="low">Low stock</option>
-              <option value="out">Out of stock</option>
-              <option value="untracked">Not tracked</option>
-            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <ColumnFilterDropdown label="Category" options={categories} value={filters.category} onSelect={(v) => setFilters((f) => ({ ...f, category: v }))} />
+              <ColumnFilterDropdown label="Stock" options={stockOptions} value={filters.stock} onSelect={(v) => setFilters((f) => ({ ...f, stock: v }))} />
+              <ColumnFilterDropdown label="Price" options={priceRanges} value={filters.price} onSelect={(v) => setFilters((f) => ({ ...f, price: v }))} />
+              <ColumnFilterDropdown label="Status" options={["Active", "Inactive"]} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+              <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ category: "", stock: "", price: "", status: "" })} />
+            </div>
           </div>
 
           {products.length === 0 ? (
@@ -256,13 +334,16 @@ export function ProductsTab() {
                         <td className="px-4 py-3 text-brand-black/72">{row.price_amount == null ? "—" : `Nu. ${row.price_amount}`}</td>
                         <td className="px-4 py-3"><StockBadge level={level} quantity={stock.quantity} /></td>
                         <td className="px-4 py-3">
-                          <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-yellow text-brand-forest" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
-                            {row.published ? "Published" : "Draft"}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
+                              {row.published ? "Active" : "Inactive"}
+                            </span>
+                            <button className="min-h-7 touch-manipulation rounded-full border-2 border-brand-forest/60 px-2 py-0.5 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleToggleActive(row)}>{row.published ? "Set inactive" : "Activate"}</button>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => { setCreating(false); setEditing(row); }}>Edit</button>
+                            <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleEdit(row)}>Edit</button>
                             <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
                           </div>
                         </td>

@@ -78,6 +78,55 @@ function withHistory<T extends { history: { status: string; at: string }[] }>(ro
   return { ...row, status, history: [...row.history, { status, at: new Date().toISOString() }] };
 }
 
+function deliveryStatusToOrderStatus(status: DeliveryStatus): OrderStatus | null {
+  switch (status) {
+    case "preparing":
+    case "out_for_delivery":
+    case "delivered":
+    case "cancelled":
+      return status;
+    case "failed":
+      return null;
+  }
+}
+
+function orderStatusToDeliveryStatus(status: OrderStatus): DeliveryStatus | null {
+  switch (status) {
+    case "preparing":
+    case "out_for_delivery":
+    case "delivered":
+    case "cancelled":
+      return status;
+    case "pending":
+    case "confirmed":
+      return null;
+  }
+}
+
+async function appendOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
+  const { data, error } = await requireClient()
+    .from("orders")
+    .select("history")
+    .eq("id", orderId)
+    .single();
+  if (error) throw new Error(error.message);
+  const history = [...((data?.history ?? []) as { status: string; at: string }[])];
+  history.push({ status, at: new Date().toISOString() });
+  const { error: updateError } = await requireClient()
+    .from("orders")
+    .update({ status, history })
+    .eq("id", orderId);
+  if (updateError) throw new Error(updateError.message);
+}
+
+async function syncDeliveryFromOrder(orderId: string, status: DeliveryStatus): Promise<void> {
+  const { error } = await requireClient()
+    .from("deliveries")
+    .update({ status })
+    .eq("order_id", orderId);
+  if (error) throw new Error(error.message);
+}
+
 async function updateOrderStatusLive(orderId: string, status: OrderStatus, adminEmail: string | null): Promise<void> {
   const { data, error } = await requireClient()
     .from("orders")
@@ -112,18 +161,33 @@ async function updateSubscriptionStatusLive(subscriptionId: string, status: Subs
   const history = [...(data?.history ?? [])];
   history.push({ status, at: new Date().toISOString() });
   const { error: updateError } = await requireClient()
-    .from("subscriptions")
+    .from("orders")
     .update({ status, history })
-    .eq("id", subscriptionId);
+    .eq("id", orderId);
   if (updateError) throw new Error(updateError.message);
+
+  const deliveryStatus = orderStatusToDeliveryStatus(status);
+  if (deliveryStatus) await syncDeliveryFromOrder(orderId, deliveryStatus);
 }
 
 async function updateDeliveryStatusLive(deliveryId: string, status: DeliveryStatus, driver: string | null): Promise<void> {
+  const { data: deliveryData, error: fetchError } = await requireClient()
+    .from("deliveries")
+    .select("order_id")
+    .eq("id", deliveryId)
+    .single();
+  if (fetchError) throw new Error(fetchError.message);
+
   const { error } = await requireClient()
     .from("deliveries")
     .update({ status, driver })
     .eq("id", deliveryId);
   if (error) throw new Error(error.message);
+
+  const orderStatus = deliveryStatusToOrderStatus(status);
+  if (orderStatus && deliveryData?.order_id) {
+    await appendOrderStatus(deliveryData.order_id, orderStatus);
+  }
 }
 
 async function updateCustomerStatusLive(customerId: string, status: CustomerStatus): Promise<void> {
@@ -193,6 +257,7 @@ class CommerceDataStore {
   async updateOrderStatus(orderId: string, status: OrderStatus, adminEmail?: string | null): Promise<void> {
     if (this.state.phase !== "ready") return;
     if (this.state.mode === "dev") {
+      const deliveryStatus = orderStatusToDeliveryStatus(status);
       const data = {
         ...this.state.data,
         orders: this.state.data.orders.map((order) =>
@@ -200,6 +265,11 @@ class CommerceDataStore {
             ? withHistory(order, status)
             : order,
         ),
+        deliveries: deliveryStatus
+          ? this.state.data.deliveries.map((delivery) =>
+              delivery.order_id === orderId ? { ...delivery, status: deliveryStatus } : delivery,
+            )
+          : this.state.data.deliveries,
       };
       this.mutate(data);
       return;
@@ -229,11 +299,18 @@ class CommerceDataStore {
   async updateDeliveryStatus(deliveryId: string, status: DeliveryStatus, driver: string | null): Promise<void> {
     if (this.state.phase !== "ready") return;
     if (this.state.mode === "dev") {
+      const delivery = this.state.data.deliveries.find((item) => item.id === deliveryId);
+      const orderStatus = deliveryStatusToOrderStatus(status);
       const data = {
         ...this.state.data,
         deliveries: this.state.data.deliveries.map((delivery) =>
           delivery.id === deliveryId ? { ...delivery, status, driver } : delivery,
         ),
+        orders: orderStatus && delivery
+          ? this.state.data.orders.map((order) =>
+              order.id === delivery.order_id ? withHistory(order, orderStatus) : order,
+            )
+          : this.state.data.orders,
       };
       this.mutate(data);
       return;

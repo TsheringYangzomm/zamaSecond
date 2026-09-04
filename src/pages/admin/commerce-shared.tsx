@@ -182,6 +182,20 @@ export function CommerceError({ message, onRetry }: { message: string; onRetry: 
   );
 }
 
+export function ViewButton({ active, count, onClick, children }: { active: boolean; count: number | null; onClick: () => void; children: string }) {
+  return (
+    <button
+      className={`min-h-9 touch-manipulation rounded-full border-2 px-4 py-1.5 text-sm font-bold transition-colors duration-120 ${active ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/40 bg-brand-white text-brand-green-ink hover:border-brand-forest hover:bg-brand-warm-white"}`}
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+    >
+      {children}
+      {count !== null ? <span className={`ml-1.5 text-xs ${active ? "opacity-70" : "opacity-50"}`}>{count}</span> : null}
+    </button>
+  );
+}
+
 export function CommerceSectionHeading({ title, subtitle, children }: { title: string; subtitle: string; children?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-3">

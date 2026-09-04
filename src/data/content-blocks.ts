@@ -219,6 +219,7 @@ export type ContentBlocks = {
     backLabel: string;
     consultantHeading: string;
     dieticianHeading: string;
+    meetTheTeamHeading: string;
     healthBenefitsHeading: string;
     allergensHeading: string;
     sourcingHeading: string;
@@ -485,6 +486,7 @@ export const defaultBlocks: ContentBlocks = {
     backLabel: "← Back to meal kits",
     consultantHeading: "Consultant note",
     dieticianHeading: "Dietician note",
+    meetTheTeamHeading: "Meet the dietician",
     healthBenefitsHeading: "Health benefits",
     allergensHeading: "Allergens",
     sourcingHeading: "Sourcing",

@@ -1,6 +1,7 @@
 import { ArrowIcon } from "../ui/icons";
 import { FarmerAvatar } from "./farmer-avatar";
 import type { Farmer } from "../../data/farmers";
+import { formatPartnerSince } from "../../cms/partner-since";
 
 export function FarmerCard({ farmer, image, detailed }: { farmer: Farmer; image?: string; detailed?: boolean }) {
   return (
@@ -39,7 +40,7 @@ export function FarmerCard({ farmer, image, detailed }: { farmer: Farmer; image?
 
         <div className={`flex flex-wrap items-center gap-2 font-bold text-brand-green-ink ${detailed ? "text-sm" : "text-xs"}`}>
           <span className="inline-flex items-center gap-1 rounded-full border-2 border-brand-forest/14 bg-brand-leaf/10 px-2.5 py-0.5">✓ Verified Farmer</span>
-          <span className="text-brand-black/46">Partner since {farmer.partnerSince}</span>
+          <span className="text-brand-black/46">Partner since {formatPartnerSince(farmer.partnerSince)}</span>
         </div>
 
         {detailed && (

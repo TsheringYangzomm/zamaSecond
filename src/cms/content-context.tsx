@@ -21,6 +21,11 @@ import {
 } from "../data/farmers";
 
 import {
+  defaultDieticians,
+  type Dietician,
+} from "../data/dieticians";
+
+import {
   reviewsByProduct as defaultReviews,
   type Review,
 } from "../components/shop/reviews";
@@ -28,6 +33,7 @@ import {
 import type { ShopProduct } from "../components/shop/shop-utils";
 
 import {
+  mapDieticianRow,
   mapFarmerRow,
   mapProductRow,
   mapReviewRow,
@@ -35,13 +41,15 @@ import {
 
 import type {
   ContentBlockRow,
+  DieticianRow,
   FarmerRow,
   FarmerSeasonalUpdateRow,
   FarmerStoryRow,
-  MealKitTrustDetailRow,
   ProductRow,
   ReviewRow,
 } from "./types";
+
+import type { BoxContents } from "../components/shop/shop-utils";
 
 export type ContentStatus = "static" | "remote" | "error";
 
@@ -49,6 +57,7 @@ export type Content = {
   blocks: ContentBlocks;
   products: readonly ShopProduct[];
   farmers: readonly Farmer[];
+  dieticians: readonly Dietician[];
   reviews: Readonly<Record<string, readonly Review[]>>;
   mealKitTrustDetails: readonly MealKitTrustDetail[];
   status: ContentStatus;
@@ -58,6 +67,7 @@ type RemoteContent = {
   blocks?: Partial<ContentBlocks>;
   products?: readonly ShopProduct[];
   farmers?: readonly Farmer[];
+  dieticians?: readonly Dietician[];
   reviews?: Readonly<Record<string, readonly Review[]>>;
   mealKitTrustDetails?: readonly MealKitTrustDetail[];
   status: ContentStatus;
@@ -67,6 +77,7 @@ export const staticContent: Content = {
   blocks: defaultBlocks,
   products: shopProducts,
   farmers: defaultFarmers,
+  dieticians: defaultDieticians,
   reviews: defaultReviews,
   mealKitTrustDetails,
   status: "static",
@@ -95,6 +106,29 @@ function isBlockRow(
   );
 }
 
+function deriveTrustDetails(
+  products: readonly ShopProduct[],
+): MealKitTrustDetail[] {
+  return products
+    .filter(
+      (product) =>
+        product.category === "Meal kits" &&
+        product.active !== false,
+    )
+    .map((product) => ({
+      slug: product.id,
+      title: product.name,
+      image: product.image,
+      alt: product.alt,
+      consultantNote: product.consultantNote ?? "",
+      dieticianNote: product.dieticianNote ?? "",
+      healthBenefits: product.healthBenefits ?? [],
+      allergens: product.trustAllergens ?? [],
+      sourcing: product.sourcing ?? "",
+      storageAdvice: product.storage,
+    }));
+}
+
 async function loadRemoteContent(): Promise<RemoteContent> {
   const client = getSupabaseClient();
 
@@ -106,6 +140,7 @@ async function loadRemoteContent(): Promise<RemoteContent> {
 
   let products: readonly ShopProduct[] | undefined;
   let farmers: readonly Farmer[] | undefined;
+  let dieticians: readonly Dietician[] | undefined;
   let reviews:
     | Readonly<Record<string, readonly Review[]>>
     | undefined;
@@ -118,14 +153,23 @@ async function loadRemoteContent(): Promise<RemoteContent> {
   const [
     productResult,
     farmerResult,
+    dieticianResult,
     reviewResult,
     blockResult,
     storyResult,
     seasonalResult,
-    trustResult,
+    ingredientResult,
+    itemResult,
   ] = await Promise.all([
     client
       .from("products")
+      .select("*")
+      .order("sort_order", {
+        ascending: true,
+      }),
+
+    client
+      .from("farmers")
       .select("*")
       .eq("published", true)
       .order("sort_order", {
@@ -133,7 +177,7 @@ async function loadRemoteContent(): Promise<RemoteContent> {
       }),
 
     client
-      .from("farmers")
+      .from("dieticians")
       .select("*")
       .eq("published", true)
       .order("sort_order", {
@@ -163,12 +207,12 @@ async function loadRemoteContent(): Promise<RemoteContent> {
       }),
 
     client
-      .from("meal_kit_trust_details")
-      .select("*")
-      .eq("published", true)
-      .order("sort_order", {
-        ascending: true,
-      }),
+      .from("product_ingredients")
+      .select("product_id, item_id, quantity"),
+
+    client
+      .from("inventory_items")
+      .select("id, name, unit"),
   ]);
 
   /* ================================
@@ -180,9 +224,31 @@ async function loadRemoteContent(): Promise<RemoteContent> {
     productResult.data &&
     productResult.data.length > 0
   ) {
+    const itemById = new Map<string, { name: string; unit: string }>();
+    if (!itemResult.error && itemResult.data) {
+      for (const row of itemResult.data as { id: string; name: string; unit: string }[]) {
+        itemById.set(row.id, { name: row.name, unit: row.unit });
+      }
+    }
+
+    const contentsByProduct = new Map<string, BoxContents[]>();
+    if (!ingredientResult.error && ingredientResult.data) {
+      for (const row of ingredientResult.data as { product_id: string; item_id: string; quantity: number }[]) {
+        const item = itemById.get(row.item_id);
+        if (!item) continue;
+        const quantity = Number(row.quantity) || 0;
+        if (quantity <= 0) continue;
+        const qtyText = Number.isInteger(quantity) ? String(quantity) : quantity.toFixed(1);
+        const entry: BoxContents = { name: item.name, quantity: `${qtyText} ${item.unit}`.trim() };
+        const list = contentsByProduct.get(row.product_id);
+        if (list) list.push(entry);
+        else contentsByProduct.set(row.product_id, [entry]);
+      }
+    }
+
     products = (
       productResult.data as unknown as ProductRow[]
-    ).map(mapProductRow);
+    ).map((row) => mapProductRow(row, contentsByProduct.get(row.id) ?? []));
   } else if (productResult.error) {
     hadError = true;
   }
@@ -243,6 +309,31 @@ async function loadRemoteContent(): Promise<RemoteContent> {
   }
 
   /* ================================
+     DIETICIANS
+  ================================= */
+
+  if (
+    !dieticianResult.error &&
+    dieticianResult.data &&
+    dieticianResult.data.length > 0
+  ) {
+    const defaultDieticianById = new Map<string, Dietician>(
+      defaultDieticians.map(
+        (dietician) => [dietician.id, dietician] as [string, Dietician],
+      ),
+    );
+    dieticians = (
+      dieticianResult.data as unknown as DieticianRow[]
+    ).map((row) => {
+      const mapped = mapDieticianRow(row);
+      const fallback = defaultDieticianById.get(row.id);
+      return fallback && !mapped.image ? { ...mapped, image: fallback.image } : mapped;
+    });
+  } else if (dieticianResult.error) {
+    hadError = true;
+  }
+
+  /* ================================
      REVIEWS
   ================================= */
 
@@ -281,32 +372,17 @@ async function loadRemoteContent(): Promise<RemoteContent> {
      MEAL KIT TRUST DETAILS
   ================================= */
 
-  if (
-    !trustResult.error &&
-    trustResult.data &&
-    trustResult.data.length > 0
-  ) {
-    trustDetails = (
-      trustResult.data as unknown as MealKitTrustDetailRow[]
-    ).map((row) => ({
-      slug: row.slug,
-      title: row.title,
-      image: row.image,
-      alt: row.alt,
-      consultantNote: row.consultant_note,
-      dieticianNote: row.dietician_note,
-      healthBenefits: row.health_benefits,
-      allergens: row.allergens,
-      sourcing: row.sourcing,
-      storageAdvice: row.storage_advice,
-    }));
-  } else if (trustResult.error) {
-    hadError = true;
+  if (products !== undefined) {
+    const derived = deriveTrustDetails(products);
+    if (derived.length > 0) {
+      trustDetails = derived;
+    }
   }
 
   const usedRemote =
     products !== undefined ||
     farmers !== undefined ||
+    dieticians !== undefined ||
     reviews !== undefined ||
     blocks !== undefined ||
     trustDetails !== undefined;
@@ -314,6 +390,7 @@ async function loadRemoteContent(): Promise<RemoteContent> {
   return {
     products,
     farmers,
+    dieticians,
     reviews,
     blocks,
     mealKitTrustDetails: trustDetails,
@@ -373,6 +450,9 @@ function mergeContent(
 
     farmers:
       remote.farmers ?? base.farmers,
+
+    dieticians:
+      remote.dieticians ?? base.dieticians,
 
     reviews:
       remote.reviews ?? base.reviews,

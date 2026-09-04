@@ -4,6 +4,7 @@ import { farmerDzongkhags, farmerTagFilters, type Dzongkhag, type FarmTag, type 
 import { OutlineTag } from "../components/ui/tag";
 import { sectionShell, sectionTitle } from "../components/ui/styles";
 import { FarmerCard } from "../components/farmers/farmer-card";
+import { partnerSinceValue } from "../cms/partner-since";
 
 type SortKey = "recent" | "name" | "products";
 
@@ -23,7 +24,7 @@ function sortFarmers(list: readonly Farmer[], sort: SortKey): Farmer[] {
   const copy = [...list];
   if (sort === "name") return copy.sort((a, b) => a.name.localeCompare(b.name));
   if (sort === "products") return copy.sort((a, b) => b.products.length - a.products.length);
-  return copy.sort((a, b) => b.partnerSince - a.partnerSince || a.name.localeCompare(b.name));
+  return copy.sort((a, b) => partnerSinceValue(b.partnerSince) - partnerSinceValue(a.partnerSince) || a.name.localeCompare(b.name));
 }
 
 export function FarmersPage() {

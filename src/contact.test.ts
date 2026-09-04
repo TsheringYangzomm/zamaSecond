@@ -6,7 +6,7 @@ vi.mock("@emailjs/browser", () => ({
   default: { send: vi.fn() },
 }));
 
-const mockInsert = vi.fn().mockResolvedValue({ data: null, error: null });
+const mockInsert = vi.fn().mockReturnValue({ select: vi.fn().mockResolvedValue({ data: null, error: null }) });
 vi.mock("./supabase", () => ({
   getSupabaseClient: vi.fn(() => ({
     from: vi.fn(() => ({
@@ -21,7 +21,7 @@ describe("submitContactMessage", () => {
   afterEach(() => {
     mockSend.mockReset();
     mockInsert.mockReset();
-    mockInsert.mockResolvedValue({ data: null, error: null });
+    mockInsert.mockReturnValue({ select: vi.fn().mockResolvedValue({ data: null, error: null }) });
     vi.restoreAllMocks();
     vi.unstubAllEnvs();
   });

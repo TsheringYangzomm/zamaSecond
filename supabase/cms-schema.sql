@@ -27,6 +27,7 @@ create table if not exists public.products (
   image text not null default '',
   alt text not null default '',
   category text not null default '',
+  details jsonb not null default '{}'::jsonb,
   price_amount numeric,
   price_unit text not null default '',
   servings text not null default '',
@@ -80,6 +81,42 @@ create table if not exists public.reviews (
 );
 
 create index if not exists reviews_product_id_idx on public.reviews (product_id);
+
+-- Product composition: a parent product (meal kit, box, future bundle) is built
+-- from existing products in the catalog. No duplicate product records are
+-- created; components are referenced by relationship with their own quantity
+-- and unit (e.g. Veggie Box -> Carrot -> 1 kg).
+create table if not exists public.product_components (
+  parent_product_id text not null references public.products (id) on delete cascade,
+  component_product_id text not null references public.products (id) on delete cascade,
+  quantity numeric not null default 1,
+  unit text not null default '',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (parent_product_id, component_product_id)
+);
+
+create index if not exists product_components_parent_idx
+  on public.product_components (parent_product_id);
+
+alter table public.product_components enable row level security;
+
+drop policy if exists "product_components public read" on public.product_components;
+create policy "product_components public read" on public.product_components
+  for select using (true);
+
+drop policy if exists "product_components admin write" on public.product_components;
+create policy "product_components admin write" on public.product_components
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+-- Category-specific product details (variety, origin, cuisine, brand, ...).
+-- The column already exists for fresh installs; this keeps existing databases
+-- in sync when the script is re-run.
+alter table public.products
+  add column if not exists details jsonb not null default '{}'::jsonb;
 
 create table if not exists public.meal_kit_trust_details (
   slug text primary key,
@@ -230,6 +267,11 @@ create trigger content_blocks_set_updated_at
 drop trigger if exists meal_kit_trust_details_set_updated_at on public.meal_kit_trust_details;
 create trigger meal_kit_trust_details_set_updated_at
   before update on public.meal_kit_trust_details
+  for each row execute function public.set_updated_at();
+
+drop trigger if exists product_components_set_updated_at on public.product_components;
+create trigger product_components_set_updated_at
+  before update on public.product_components
   for each row execute function public.set_updated_at();
 
 -- ---------------------------------------------------------------------------

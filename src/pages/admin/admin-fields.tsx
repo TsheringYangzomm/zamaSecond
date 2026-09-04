@@ -1,5 +1,5 @@
 import { useRef, useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
-import { uploadCatalogImage } from "../../admin/admin-api";
+import { uploadCatalogImage, uploadFarmerDocument } from "../../admin/admin-api";
 
 export const inputClasses =
   "min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
@@ -10,12 +10,12 @@ export const textAreaClasses =
 export const selectClasses =
   "min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
 
-export function Field({ label, hint, htmlFor, children }: { label: string; hint?: string; htmlFor?: string; children: ReactNode }) {
+export function Field({ label, hint, htmlFor, children }: { label: ReactNode; hint?: string; htmlFor?: string; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
       <label htmlFor={htmlFor} className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">{label}</label>
       {children}
-      {hint ? <p className="text-xs text-brand-black/56">{hint}</p> : null}
+      {hint ? <p className="text-xs text-brand-black/40">{hint}</p> : null}
     </div>
   );
 }
@@ -45,7 +45,7 @@ type ImagePickerProps = {
   label: string;
   image: string;
   onChange: (url: string) => void;
-  folder: "products" | "farmers";
+  folder: "products" | "farmers" | "dieticians";
   id: string;
 };
 
@@ -102,6 +102,62 @@ export function ImagePicker({ label, image, onChange, folder, id }: ImagePickerP
             <img className="h-20 w-20 rounded-wobbly-md border-2 border-brand-forest bg-brand-white object-contain p-1 shadow-brand-soft" src={image} alt="" aria-hidden="true" />
           ) : null}
         </div>
+      </div>
+    </div>
+  );
+}
+
+type DocumentPickerProps = {
+  farmerId: string;
+  onUploaded: (file: File, url: string) => void;
+};
+
+export function DocumentPicker({ farmerId, onUploaded }: DocumentPickerProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await uploadFarmerDocument(file, farmerId);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      onUploaded(file, result.url);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload the document.");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="grid gap-2">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="grid gap-2">
+          <input
+            ref={inputRef}
+            className="hidden"
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,application/pdf,image/*"
+            onChange={(event) => void handleFile(event.target.files?.[0])}
+          />
+          {busy ? <p className="text-sm font-semibold text-brand-green-ink">Uploading document...</p> : null}
+          {error ? <p className="text-sm font-semibold text-brand-black" role="alert">{error}</p> : null}
+        </div>
+        <button
+          type="button"
+          className="min-h-11 touch-manipulation rounded-full border-2 border-brand-forest bg-brand-yellow px-4 py-2 text-sm font-bold text-brand-black transition-colors duration-120 ease-in-out hover:bg-brand-buff focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:opacity-50"
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+        >
+          Upload document
+        </button>
       </div>
     </div>
   );

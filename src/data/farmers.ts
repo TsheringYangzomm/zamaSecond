@@ -10,7 +10,7 @@ export type Farmer = {
   yearsFarming: number;
   bio: string;
   verified: boolean;
-  partnerSince: number;
+  partnerSince: string | null;
   image?: string;
   /** Longer evergreen narrative, shown publicly when the admin publishes it. */
   story?: string;
@@ -45,7 +45,7 @@ export const farmers = [
     yearsFarming: 18,
     bio: "Third-generation farmer committed to sustainable highland agriculture.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
     seasonalUpdate: "This season we're harvesting crisp cabbages and carrots from the terraced fields above Paro.",
     story:
       "Pema Dorji's grandfather first planted these terraced fields more than fifty years ago. Pema took over the farm in his twenties and has spent the years since rebuilding the soil with compost, rotating crops between the seasons, and keeping a small herd for natural manure. Everything he grows is harvested by hand, packed the same morning, and sent down to Paro's market the very same day.",
@@ -60,7 +60,7 @@ export const farmers = [
     yearsFarming: 12,
     bio: "Supplies fresh produce to Thimphu markets for over a decade.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
     story:
       "Yeshey Wangmo grew up helping her family on their small plot outside Thimphu. Today she runs the farm herself, growing tomatoes, chillies, and spring onions in a simple greenhouse that lets her extend the season well into the cooler months. She has trained alongside agronomists from the agriculture ministry and now mentors young farmers in her neighbourhood.",
   },
@@ -74,7 +74,7 @@ export const farmers = [
     yearsFarming: 25,
     bio: "Known for highland orchards and raw honey from Bumthang valleys.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
     seasonalUpdate: "The apple trees flowered early this year and the bees are busy across the valley.",
   },
   {
@@ -87,7 +87,7 @@ export const farmers = [
     yearsFarming: 20,
     bio: "Cultivates valley-floor grains using traditional flood-irrigation methods.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
     seasonalUpdate: "This year my main product is rice, and we are expecting a stronger harvest.",
     story:
       "Karma Lhamo farms the fertile floor of the Punakha valley, where her family has grown rice for generations. She still uses the traditional flood-irrigation channels that carry snowmelt across the terraces, and she rotates millet and buckwheat to keep the soil healthy. Each winter she hosts a small festival where neighbouring families gather to pound the new rice by hand.",
@@ -102,7 +102,7 @@ export const farmers = [
     yearsFarming: 15,
     bio: "High-altitude root crop specialist from the Haa valley.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
   },
   {
     id: "deki-yangzom",
@@ -114,7 +114,7 @@ export const farmers = [
     yearsFarming: 10,
     bio: "Runs a family citrus farm in the subtropical belt of Chhukha.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
   },
   {
     id: "jigme-tenzin",
@@ -126,7 +126,7 @@ export const farmers = [
     yearsFarming: 8,
     bio: "Specialises in forest-edge mushrooms and culinary herbs.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
   },
   {
     id: "ngawang-choden",
@@ -138,6 +138,6 @@ export const farmers = [
     yearsFarming: 22,
     bio: "Central-Bhutan grain farmer preserving heirloom crop varieties.",
     verified: true,
-    partnerSince: 2025,
+    partnerSince: "2025-03-14",
   },
 ] as const satisfies readonly Farmer[];

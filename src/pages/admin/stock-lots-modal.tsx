@@ -23,7 +23,7 @@ function formatCost(value: number | null): string {
   return ` · Nu. ${value.toLocaleString("en-GB")}/unit`;
 }
 
-function LotCard({ lot, unit }: { lot: InventoryStockLotRow; unit: string }) {
+export function LotCard({ lot, unit }: { lot: InventoryStockLotRow; unit: string }) {
   return (
     <li className="grid gap-1 rounded-wobbly-card border-3 border-brand-forest/16 bg-brand-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">

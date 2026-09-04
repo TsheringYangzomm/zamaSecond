@@ -49,6 +49,19 @@ function sampleProduct(overrides = {}) {
   };
 }
 
+function sampleInventoryItem(overrides = {}) {
+  return {
+    id: "potato",
+    name: "Potato",
+    category: "Fresh produce",
+    unit: "kg",
+    supplier: "Pema Dorji",
+    stock_quantity: 40,
+    stock_alert_at: 10,
+    ...overrides,
+  };
+}
+
 function sampleFarmer(overrides = {}) {
   return {
     id: "pema-dorji",
@@ -60,7 +73,7 @@ function sampleFarmer(overrides = {}) {
     years_farming: 18,
     bio: "Third-generation farmer.",
     verified: true,
-    partner_since: 2025,
+    partner_since: "2025-03-14",
     image: "",
     sort_order: 0,
     published: true,
@@ -68,10 +81,10 @@ function sampleFarmer(overrides = {}) {
   };
 }
 
-type Store = { products: Record<string, unknown>[]; farmers: Record<string, unknown>[]; privateInfo: Record<string, unknown>[]; stories: Record<string, unknown>[]; seasonalUpdates: Record<string, unknown>[] };
+type Store = { products: Record<string, unknown>[]; farmers: Record<string, unknown>[]; privateInfo: Record<string, unknown>[]; stories: Record<string, unknown>[]; seasonalUpdates: Record<string, unknown>[]; inventoryItems: Record<string, unknown>[]; productIngredients: Record<string, unknown>[] };
 
 async function mockCatalogAdmin(page) {
-  const store: Store = { products: [sampleProduct()], farmers: [sampleFarmer()], privateInfo: [], stories: [], seasonalUpdates: [] };
+  const store: Store = { products: [sampleProduct()], farmers: [sampleFarmer()], privateInfo: [], stories: [], seasonalUpdates: [], inventoryItems: [sampleInventoryItem()], productIngredients: [] };
 
   await page.route("**/auth/v1/token*", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(sessionBody) }),
@@ -165,7 +178,48 @@ async function mockCatalogAdmin(page) {
   await page.route("**/rest/v1/farmer_stories*", handleKeyedTable(store.stories, ["farmer_id"]));
   await page.route("**/rest/v1/farmer_seasonal_updates*", handleKeyedTable(store.seasonalUpdates, ["farmer_id", "season"]));
 
-  await page.route("**/rest/v1/inventory*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  const handleSimpleTable = (table: "inventoryItems" | "productIngredients") =>
+    async (route) => {
+      const request = route.request();
+      const method = request.method();
+      const url = new URL(request.url());
+      if (method === "GET") {
+        return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(store[table]) });
+      }
+      if (method === "PATCH" && table === "inventoryItems") {
+        const id = (url.searchParams.get("id") ?? "").replace(/^eq\./, "");
+        const parsed = JSON.parse(request.postData() ?? "{}");
+        const index = store[table].findIndex((row) => row.id === id);
+        if (index >= 0) store[table][index] = { ...store[table][index], ...parsed };
+        return route.fulfill({ status: 204, body: "" });
+      }
+      if (method === "POST" && table === "productIngredients") {
+        const parsed = JSON.parse(request.postData() ?? "[]");
+        const body = (Array.isArray(parsed) ? parsed : [parsed]) as Record<string, unknown>[];
+        for (const row of body) {
+          const index = store[table].findIndex((r) => r.product_id === row.product_id && r.item_id === row.item_id);
+          if (index >= 0) store[table][index] = { ...store[table][index], ...row };
+          else store[table].push({ ...row });
+        }
+        return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(body) });
+      }
+      if (method === "DELETE" && table === "productIngredients") {
+        const productId = (url.searchParams.get("product_id") ?? "").replace(/^eq\./, "");
+        if (productId) store[table] = store[table].filter((r) => r.product_id !== productId);
+        return route.fulfill({ status: 204, body: "" });
+      }
+      return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+    };
+
+  await page.route("**/rest/v1/product_ingredients*", handleSimpleTable("productIngredients"));
+  await page.route("**/rest/v1/inventory*", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("inventory_items")) {
+      await handleSimpleTable("inventoryItems")(route);
+      return;
+    }
+    return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
+  });
 
   await page.route("**/storage/v1/object/catalog/products/**", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ Key: "products/veg-box/1.png" }) }),
@@ -177,7 +231,7 @@ async function signInAsAdmin(page) {
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome to the Zama admin." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 }
 
 test("creates and edits a product", async ({ page }) => {
@@ -188,9 +242,17 @@ test("creates and edits a product", async ({ page }) => {
   await expect(page.getByRole("row", { name: /Vegetable Box/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Add product" }).click();
+  await expect(page.getByRole("heading", { name: "What type of product are you adding?" })).toBeVisible();
+  await page.getByRole("button", { name: /Meal Kits/ }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "New product" })).toBeVisible();
   await page.getByLabel("Name *").fill("Meal Kit");
-  await page.getByLabel("Category").selectOption("Meal kits");
+  await page.getByLabel("Cuisine *").selectOption("Bhutanese");
+  await page.getByLabel("Servings *").fill("2");
+  await page.getByLabel("Difficulty *").selectOption("Easy");
+  await page.getByRole("button", { name: "+ Add Item" }).click();
+  await page.getByRole("dialog").getByText("Potato", { exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /^Add 1 item/ }).click();
   await page.getByRole("button", { name: "Save product" }).click();
 
   await expect(page.getByText("Created Meal Kit.")).toBeVisible();
@@ -210,12 +272,11 @@ test("toggles a product to draft and deletes it", async ({ page }) => {
   await signInAsAdmin(page);
 
   await page.getByRole("button", { name: "Products" }).click();
-  await page.getByRole("row", { name: /Vegetable Box/ }).getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Published (visible on the site)").uncheck();
-  await page.getByRole("button", { name: "Save product" }).click();
+  await expect(page.getByRole("row", { name: /Vegetable Box/ })).toBeVisible();
+  await page.getByRole("row", { name: /Vegetable Box/ }).getByRole("button", { name: "Set inactive" }).click();
 
-  await expect(page.getByText("Saved Vegetable Box.")).toBeVisible();
-  await expect(page.getByRole("row", { name: /Vegetable Box/ })).toContainText("Draft");
+  await expect(page.getByText("Vegetable Box is inactive (shows as out of stock).")).toBeVisible();
+  await expect(page.getByRole("row", { name: /Vegetable Box/ })).toContainText("Inactive");
 
   await page.getByRole("row", { name: /Vegetable Box/ }).getByRole("button", { name: "Delete" }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
@@ -284,6 +345,9 @@ test("reorders products by dragging", async ({ page }) => {
 
   await page.getByRole("button", { name: "Products" }).click();
   await page.getByRole("button", { name: "Add product" }).click();
+  await expect(page.getByRole("heading", { name: "What type of product are you adding?" })).toBeVisible();
+  await page.getByRole("button", { name: /Vegetables/ }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("Name *").fill("Second Box");
   await page.getByRole("button", { name: "Save product" }).click();
   await expect(page.getByRole("row", { name: /Second Box/ })).toBeVisible();

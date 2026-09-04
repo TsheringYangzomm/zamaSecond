@@ -77,17 +77,64 @@ function toErrorMessage(error: unknown): string {
     : "We could not send your message. Please try again or email hello@zama.bt.";
 }
 
+export type AdminReplyResult = {
+  ok: boolean;
+  error?: string;
+};
+
+export async function sendAdminReply(toEmail: string, toName: string, replyMessage: string): Promise<AdminReplyResult> {
+  const config = getEmailJsConfig();
+
+  if (!config) {
+    return { ok: false, error: "EmailJS is not configured." };
+  }
+
+  try {
+    await emailjs.send(
+      config.serviceId,
+      config.autoReplyTemplateId,
+      {
+        to_email: toEmail,
+        to_name: toName,
+        reply_to: "wty6897505@gmail.com",
+        subject: "Reply from Zama",
+        name: toName || "there",
+        time: new Date().toISOString(),
+        topic: "Reply",
+        message: replyMessage,
+        email: toEmail,
+      },
+      { publicKey: config.publicKey },
+    );
+    return { ok: true };
+  } catch (err) {
+    const detail =
+      typeof err === "object" && err !== null && "text" in err && typeof err.text === "string"
+        ? err.text
+        : err instanceof Error
+          ? err.message
+          : "Unknown error";
+    return { ok: false, error: detail };
+  }
+}
+
 export async function submitContactMessage(payload: ContactPayload): Promise<ContactResult> {
   const supabase = getSupabaseClient();
 
   if (supabase) {
-    const { error: dbError } = await supabase
+    console.log("[Zama] Saving contact message to Supabase...");
+    const { data, error: dbError } = await supabase
       .from("contact_messages")
-      .insert({ name: payload.name, email: payload.email, topic: payload.topic, message: payload.message });
+      .insert({ name: payload.name, email: payload.email, topic: payload.topic, message: payload.message })
+      .select();
 
     if (dbError) {
-      console.error("Failed to save contact message to Supabase:", dbError.message);
+      console.error("[Zama] Failed to save contact message to Supabase:", dbError.message, dbError);
+    } else {
+      console.log("[Zama] Contact message saved:", data);
     }
+  } else {
+    console.warn("[Zama] Supabase client not available — message not saved to database.");
   }
 
   const config = getEmailJsConfig();

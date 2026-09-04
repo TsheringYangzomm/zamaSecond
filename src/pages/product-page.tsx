@@ -8,7 +8,7 @@ import { AddToCartIcon, SupportingShopCard } from "../components/shop/product-ca
 import { ProductDetail } from "../components/shop/product-detail";
 import { ProductFacts } from "../components/shop/product-facts";
 import { ReviewsSection } from "../components/shop/reviews-section";
-import { findProduct, productPrice, type ShopProduct } from "../components/shop/shop-utils";
+import { findProduct, isProductActive, productPrice, type ShopProduct } from "../components/shop/shop-utils";
 
 const stepperButtonClasses =
   "grid h-11 w-11 touch-manipulation place-items-center rounded-wobbly-md font-bold text-brand-forest hover:bg-brand-white focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
@@ -17,6 +17,7 @@ function PurchasePanel({ product }: { product: ShopProduct }) {
   const { cart, addToCart, changeCartQuantity, removeFromCart, openCart } = useCart();
   const [announcement, setAnnouncement] = useState("");
   const quantity = cart[product.id] ?? 0;
+  const active = isProductActive(product);
 
   function handleAdd() {
     addToCart(product.id);
@@ -37,6 +38,12 @@ function PurchasePanel({ product }: { product: ShopProduct }) {
 
   return (
     <div className="rounded-wobbly-md border-3 border-dashed border-brand-forest bg-brand-warm-white p-4 shadow-brand">
+      {!active ? (
+        <div className="grid gap-2">
+          <p className="rounded-wobbly-md border-2 border-brand-orange-ink bg-brand-orange/15 px-3 py-2 text-sm font-bold text-brand-orange-ink">Out of stock — this product is currently inactive.</p>
+          <p className="text-sm text-brand-black/64">It will be available to order again once it is reactivated.</p>
+        </div>
+      ) : (
       <div className="flex items-center justify-between gap-3">
         <div className="grid gap-0.5">
           <p className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Quantity</p>
@@ -48,6 +55,8 @@ function PurchasePanel({ product }: { product: ShopProduct }) {
           <button className={stepperButtonClasses} type="button" onClick={() => handleChange(1)} aria-label={`Increase ${product.name} quantity`}>+</button>
         </div>
       </div>
+      )}
+      {active ? (
       <div className="mt-3 grid gap-2">
         {quantity === 0 ? (
           <button className={`${btnPrimaryKit} w-full gap-2`} type="button" onClick={handleAdd} aria-label={`Add ${product.name} to cart`}>
@@ -63,6 +72,7 @@ function PurchasePanel({ product }: { product: ShopProduct }) {
           </>
         )}
       </div>
+      ) : null}
       <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
     </div>
   );
@@ -107,6 +117,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
         <div className="grid min-w-0 content-start gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <YellowTag>{product.eyebrow}</YellowTag>
+            {!isProductActive(product) ? <span className="inline-flex min-h-8 w-fit items-center rounded-full border-2 border-brand-orange-ink bg-brand-orange px-3 py-1 text-xs font-bold leading-none text-brand-white">Out of stock</span> : null}
             <span className="inline-flex min-h-8 w-fit items-center rounded-full border-2 border-brand-forest bg-brand-mint px-3 py-1 text-xs font-bold leading-none text-brand-green-ink">{product.availability}</span>
           </div>
           <h1 id="product-title" className={`${sectionTitleCompact} max-w-180 text-brand-black`}>{product.name}</h1>

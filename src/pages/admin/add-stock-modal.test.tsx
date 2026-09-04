@@ -20,8 +20,8 @@ const items: InventoryItemRow[] = [
 ];
 
 const farmers: FarmerRow[] = [
-  { id: "pema-dorji", name: "Pema Dorji", location: "Paro, Bhutan", dzongkhag: "Paro", products: [], tags: [], years_farming: 10, bio: "", verified: true, partner_since: 2025, image: "", sort_order: 0, published: true },
-  { id: "karchung", name: "Karchung", location: "Bumthang, Bhutan", dzongkhag: "Bumthang", products: [], tags: [], years_farming: 8, bio: "", verified: true, partner_since: 2024, image: "", sort_order: 1, published: true },
+  { id: "pema-dorji", name: "Pema Dorji", location: "Paro, Bhutan", dzongkhag: "Paro", products: [], tags: [], years_farming: 10, bio: "", verified: true, partner_since: "2025-03-14", image: "", sort_order: 0, published: true },
+  { id: "karchung", name: "Karchung", location: "Bumthang, Bhutan", dzongkhag: "Bumthang", products: [], tags: [], years_farming: 8, bio: "", verified: true, partner_since: "2024-05-20", image: "", sort_order: 1, published: true },
 ];
 
 const lot = (itemId: string, supplier: string, quantity: number) => ({

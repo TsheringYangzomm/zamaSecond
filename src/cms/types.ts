@@ -7,6 +7,7 @@ export type ProductRow = {
   image: string;
   alt: string;
   category: string;
+  details?: Record<string, string>;
   price_amount: number | null;
   price_unit: string;
   servings: string;
@@ -20,6 +21,11 @@ export type ProductRow = {
   nutrition: string;
   tags: string[];
   collections: string[];
+  consultant_note: string;
+  dietician_note: string;
+  health_benefits: string[];
+  trust_allergens: string[];
+  sourcing: string;
   sort_order: number;
   published: boolean;
 };
@@ -72,6 +78,16 @@ export type ProductIngredientRow = {
   created_at?: string;
 };
 
+export type ProductComponentRow = {
+  parent_product_id: string;
+  component_product_id: string;
+  quantity: number | null;
+  unit: string;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type FarmerRow = {
   id: string;
   name: string;
@@ -82,7 +98,7 @@ export type FarmerRow = {
   years_farming: number;
   bio: string;
   verified: boolean;
-  partner_since: number | null;
+  partner_since: string | null;
   image: string;
   sort_order: number;
   published: boolean;
@@ -119,6 +135,30 @@ export type FarmerSeasonalUpdateRow = {
   updated_at?: string;
 };
 
+export type FarmerDocumentRow = {
+  id: string;
+  farmer_id: string;
+  title: string;
+  file_type: string;
+  url: string;
+  size_bytes: number | null;
+  created_at?: string;
+};
+
+export type DieticianRow = {
+  id: string;
+  name: string;
+  title: string;
+  image: string;
+  bio: string;
+  qualifications: string;
+  meal_kit_notes: string;
+  sort_order: number;
+  published: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type ReviewRow = {
   id: string;
   product_id: string;
@@ -137,21 +177,6 @@ export type ContentBlockRow = {
   key: string;
   value: Record<string, unknown>;
   updated_at?: string;
-};
-
-export type MealKitTrustDetailRow = {
-  slug: string;
-  title: string;
-  image: string;
-  alt: string;
-  consultant_note: string;
-  dietician_note: string;
-  health_benefits: string[];
-  allergens: string[];
-  sourcing: string;
-  storage_advice: string;
-  sort_order: number;
-  published: boolean;
 };
 
 export type ContactMessageRow = {

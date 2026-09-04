@@ -1078,8 +1078,8 @@ body::before {
   --sidebar-foreground: var(--color-brand-warm-white);
   --sidebar-primary: var(--color-brand-yellow);
   --sidebar-primary-foreground: var(--color-brand-forest);
-  --sidebar-accent: var(--color-brand-yellow);
-  --sidebar-accent-foreground: var(--color-brand-forest);
+  --sidebar-accent: color-mix(in srgb, var(--color-brand-yellow) 18%, transparent);
+  --sidebar-accent-foreground: var(--color-brand-warm-white);
   --sidebar-border: color-mix(in srgb, var(--color-brand-warm-white) 20%, transparent);
   --sidebar-ring: var(--color-brand-yellow);
 }
@@ -1107,7 +1107,7 @@ body::before {
   --sidebar-foreground: var(--color-brand-warm-white);
   --sidebar-primary: var(--color-brand-yellow);
   --sidebar-primary-foreground: var(--color-brand-forest);
-  --sidebar-accent: var(--color-brand-leaf);
+  --sidebar-accent: color-mix(in srgb, var(--color-brand-yellow) 18%, transparent);
   --sidebar-accent-foreground: var(--color-brand-warm-white);
   --sidebar-border: color-mix(in srgb, var(--color-brand-warm-white) 18%, transparent);
   --sidebar-ring: var(--color-brand-yellow);
@@ -1149,4 +1149,35 @@ body::before {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* =========================================================
+   Zama delivery receipt printing
+   Only the #receipt-print-area element is printed; all other
+   UI (admin chrome, backdrops) is hidden.
+========================================================= */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #receipt-print-area,
+  #receipt-print-area * {
+    visibility: visible;
+  }
+
+  #receipt-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
 }

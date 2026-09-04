@@ -3,7 +3,8 @@ import { deleteReview, listProducts, listReviews, upsertReview } from "../../adm
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import type { ProductRow, ReviewRow } from "../../cms/types";
-import { inputClasses, selectClasses } from "./admin-fields";
+import { inputClasses } from "./admin-fields";
+import { ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 
 export function ReviewsTab() {
   const [reviews, setReviews] = useState<ReviewRow[] | null>(null);
@@ -12,8 +13,7 @@ export function ReviewsTab() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
-  const [productFilter, setProductFilter] = useState("");
-  const [ratingFilter, setRatingFilter] = useState("");
+  const [filters, setFilters] = useState({ product: "", rating: "", date: "", status: "" });
   const [pendingDelete, setPendingDelete] = useState<ReviewRow | null>(null);
 
   const productName = useMemo(() => {
@@ -21,11 +21,23 @@ export function ReviewsTab() {
     return (productId: string) => map.get(productId) ?? productId;
   }, [products]);
 
+  const productOptions = useMemo(() => [...new Set(products.map((product) => product.name).filter(Boolean))].sort(), [products]);
+
+  const ratingOptions = [
+    { value: "5", label: "5 stars" },
+    { value: "4", label: "4 stars" },
+    { value: "3", label: "3 stars" },
+    { value: "2", label: "2 stars" },
+    { value: "1", label: "1 star" },
+  ];
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return (reviews ?? []).filter((row) => {
-      if (productFilter && row.product_id !== productFilter) return false;
-      if (ratingFilter && row.rating !== Number(ratingFilter)) return false;
+      if (filters.product && productName(row.product_id) !== filters.product) return false;
+      if (filters.rating && row.rating !== Number(filters.rating)) return false;
+      if (filters.date && dateRangeKey(row.date) !== filters.date) return false;
+      if (filters.status && (row.published ? "Active" : "Inactive") !== filters.status) return false;
       if (!needle) return true;
       return (
         row.author.toLowerCase().includes(needle) ||
@@ -34,7 +46,9 @@ export function ReviewsTab() {
         productName(row.product_id).toLowerCase().includes(needle)
       );
     });
-  }, [reviews, query, productFilter, ratingFilter, productName]);
+  }, [reviews, query, filters, productName]);
+
+  const activeFilterCount = (["product", "rating", "date", "status"] as const).filter((key) => filters[key] !== "").length;
 
   async function load() {
     setReviews(null);
@@ -58,7 +72,7 @@ export function ReviewsTab() {
     try {
       await upsertReview({ ...row, published: !row.published });
       setReviews((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: !item.published } : item)));
-      setStatus(row.published ? `Hidden ${row.author}'s review.` : `Published ${row.author}'s review.`);
+      setStatus(row.published ? `Hidden ${row.author}'s review.` : `Activated ${row.author}'s review.`);
     } catch (toggleError) {
       setStatus(toggleError instanceof Error ? toggleError.message : "Could not update the review.");
     } finally {
@@ -91,20 +105,15 @@ export function ReviewsTab() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+      <div className="grid gap-3">
         <input className={`${inputClasses} min-w-0`} type="search" aria-label="Search reviews" placeholder="Search by reviewer, title, body, or product..." value={query} onChange={(e) => setQuery(e.target.value)} />
-        <select className={`${selectClasses} min-w-44`} aria-label="Filter by product" value={productFilter} onChange={(e) => setProductFilter(e.target.value)}>
-          <option value="">All products</option>
-          {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
-        </select>
-        <select className={`${selectClasses} min-w-36`} aria-label="Filter by rating" value={ratingFilter} onChange={(e) => setRatingFilter(e.target.value)}>
-          <option value="">All ratings</option>
-          <option value="5">5 stars</option>
-          <option value="4">4 stars</option>
-          <option value="3">3 stars</option>
-          <option value="2">2 stars</option>
-          <option value="1">1 star</option>
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ColumnFilterDropdown label="Product" options={productOptions} value={filters.product} onSelect={(v) => setFilters((f) => ({ ...f, product: v }))} />
+          <ColumnFilterDropdown label="Rating" options={ratingOptions} value={filters.rating} onSelect={(v) => setFilters((f) => ({ ...f, rating: v }))} />
+          <ColumnFilterDropdown label="Date" options={DATE_RANGES} value={filters.date} onSelect={(v) => setFilters((f) => ({ ...f, date: v }))} />
+          <ColumnFilterDropdown label="Status" options={["Active", "Inactive"]} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+          <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ product: "", rating: "", date: "", status: "" })} />
+        </div>
       </div>
 
       {error ? (
@@ -152,13 +161,13 @@ export function ReviewsTab() {
                     <td className="px-4 py-3 text-brand-black/72">{"★".repeat(row.rating)} <span className="text-brand-black/52">{row.rating}/5</span></td>
                     <td className="px-4 py-3 text-brand-black/72">{row.date}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-yellow text-brand-forest" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
-                        {row.published ? "Published" : "Draft"}
+                      <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
+                        {row.published ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" disabled={busy} onClick={() => void handleTogglePublished(row)}>{row.published ? "Hide" : "Publish"}</button>
+                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" disabled={busy} onClick={() => void handleTogglePublished(row)}>{row.published ? "Set inactive" : "Activate"}</button>
                         <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
                       </div>
                     </td>

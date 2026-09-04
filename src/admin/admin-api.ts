@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "../supabase";
-import type { ContactMessageRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, InventoryItemRow, InventoryRow, InventoryStockHistoryRow, InventoryStockLotRow, MealKitTrustDetailRow, ProductRow, ReviewRow } from "../cms/types";
+import type { ContactMessageRow, DieticianRow, FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, InventoryItemRow, InventoryRow, InventoryStockHistoryRow, InventoryStockLotRow, ProductRow, ReviewRow } from "../cms/types";
 
 export function requireClient() {
   const client = getSupabaseClient();
@@ -25,7 +25,7 @@ export function slugify(value: string): string {
 
 export async function nextSlugId(
   base: string,
-  table: "products" | "farmers" | "reviews",
+  table: "products" | "farmers" | "dieticians" | "reviews",
 ): Promise<string> {
   const slug = slugify(base);
 
@@ -200,6 +200,50 @@ export async function listInventoryItems(): Promise<InventoryItemRow[]> {
   if (error) throw new Error(error.message);
 
   return (data ?? []) as InventoryItemRow[];
+}
+
+export type ProductIngredientInput = { item_id: string; quantity: number };
+
+export async function productIngredientsTableExists(): Promise<boolean> {
+  const { error } = await requireClient()
+    .from("product_ingredients")
+    .select("product_id")
+    .limit(1);
+
+  return !error;
+}
+
+export async function listProductIngredients(productId: string): Promise<ProductIngredientInput[]> {
+  const { data, error } = await requireClient()
+    .from("product_ingredients")
+    .select("item_id, quantity")
+    .eq("product_id", productId);
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []) as ProductIngredientInput[];
+}
+
+export async function saveProductIngredients(
+  productId: string,
+  ingredients: ProductIngredientInput[],
+): Promise<void> {
+  const client = requireClient();
+
+  const { error: deleteError } = await client
+    .from("product_ingredients")
+    .delete()
+    .eq("product_id", productId);
+  if (deleteError) throw new Error(deleteError.message);
+
+  if (ingredients.length === 0) return;
+
+  const { error: insertError } = await client.from("product_ingredients").insert(
+    ingredients
+      .filter((ingredient) => ingredient.quantity > 0)
+      .map((ingredient) => ({ product_id: productId, ...ingredient })),
+  );
+  if (insertError) throw new Error(insertError.message);
 }
 
 export async function updateInventoryItemStock(
@@ -424,6 +468,57 @@ export async function upsertFarmerSeasonalUpdate(row: FarmerSeasonalUpdateRow): 
   if (error) throw new Error(error.message);
 }
 
+export async function farmerDocumentsTableExists(): Promise<boolean> {
+  const { error } = await requireClient()
+    .from("farmer_documents")
+    .select("id")
+    .limit(1);
+
+  return !error;
+}
+
+export async function listFarmerDocuments(): Promise<FarmerDocumentRow[]> {
+  const { data, error } = await requireClient()
+    .from("farmer_documents")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []) as FarmerDocumentRow[];
+}
+
+export async function upsertFarmerDocument(row: FarmerDocumentRow): Promise<FarmerDocumentRow> {
+  const payload = row.id
+    ? row
+    : {
+        farmer_id: row.farmer_id,
+        title: row.title,
+        file_type: row.file_type,
+        url: row.url,
+        size_bytes: row.size_bytes,
+      };
+
+  const { data, error } = await requireClient()
+    .from("farmer_documents")
+    .upsert(payload as FarmerDocumentRow, { onConflict: "id" })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  return data as FarmerDocumentRow;
+}
+
+export async function deleteFarmerDocument(id: string): Promise<void> {
+  const { error } = await requireClient()
+    .from("farmer_documents")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+}
+
 /* =========================================================
    DELETE PRODUCTS / FARMERS
 ========================================================= */
@@ -440,6 +535,38 @@ export async function deleteProduct(id: string): Promise<void> {
 export async function deleteFarmer(id: string): Promise<void> {
   const { error } = await requireClient()
     .from("farmers")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+}
+
+/* =========================================================
+   DIETICIANS
+========================================================= */
+
+export async function listDieticians(): Promise<DieticianRow[]> {
+  const { data, error } = await requireClient()
+    .from("dieticians")
+    .select("*")
+    .order("sort_order", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []) as DieticianRow[];
+}
+
+export async function upsertDietician(row: DieticianRow): Promise<void> {
+  const { error } = await requireClient()
+    .from("dieticians")
+    .upsert(row, { onConflict: "id" });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteDietician(id: string): Promise<void> {
+  const { error } = await requireClient()
+    .from("dieticians")
     .delete()
     .eq("id", id);
 
@@ -545,7 +672,7 @@ export async function deleteContentBlock(key: string): Promise<void> {
  * so reordering here changes the position shown on the site.
  */
 export async function reorderRows(
-  table: "products" | "farmers",
+  table: "products" | "farmers" | "dieticians",
   orderedIds: string[],
 ): Promise<void> {
   for (let index = 0; index < orderedIds.length; index++) {
@@ -569,7 +696,7 @@ export type ImageUploadResult = {
 
 export async function uploadCatalogImage(
   file: File,
-  folder: "products" | "farmers",
+  folder: "products" | "farmers" | "dieticians",
   id: string,
 ): Promise<ImageUploadResult> {
   if (!file.type.startsWith("image/")) {
@@ -617,37 +744,116 @@ export async function uploadCatalogImage(
   };
 }
 
+const documentAllowedExtensions = new Set([
+  "pdf",
+  "doc",
+  "docx",
+  "xls",
+  "xlsx",
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+]);
+
+const documentMimeTypes = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
+
+export async function uploadFarmerDocument(
+  file: File,
+  farmerId: string,
+): Promise<ImageUploadResult> {
+  const extension = (file.name.split(".").pop() ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  if (!documentAllowedExtensions.has(extension) || !documentMimeTypes.has(file.type)) {
+    return {
+      url: "",
+      error: "Only PDF, Word, Excel, or image files are allowed.",
+    };
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    return {
+      url: "",
+      error: "Document must be 10 MB or smaller.",
+    };
+  }
+
+  const client = requireClient();
+
+  const path = `farmer-docs/${farmerId}/${Date.now()}.${extension}`;
+
+  let uploadError: unknown = null;
+  try {
+    const result = await client.storage
+      .from("farmer-docs")
+      .upload(path, file, {
+        upsert: true,
+      });
+    uploadError = result.error;
+  } catch (storageError) {
+    return {
+      url: "",
+      error: storageError instanceof Error ? storageError.message : "Could not upload the document.",
+    };
+  }
+
+  if (uploadError) {
+    const message = "message" in (uploadError as object) ? (uploadError as { message: string }).message : "unknown";
+    if (/not found|does not exist|bucket/i.test(message)) {
+      return {
+        url: "",
+        error: "The document storage bucket isn't ready. Run supabase/farmer-document-schema.sql in the Supabase SQL editor to create the farmer-docs bucket.",
+      };
+    }
+    return {
+      url: "",
+      error: message,
+    };
+  }
+
+  const { data } = client.storage
+    .from("farmer-docs")
+    .getPublicUrl(path);
+
+  return {
+    url: data.publicUrl,
+    error: null,
+  };
+}
+
+export async function getFarmerDocumentSignedUrl(docUrl: string): Promise<string> {
+  const client = requireClient();
+
+  const target = "object/public/farmer-docs/";
+  const index = docUrl.indexOf(target);
+  if (index === -1) return docUrl;
+
+  const path = docUrl.slice(index + target.length).split("?")[0];
+  if (!path) return docUrl;
+
+  const { data, error } = await client.storage
+    .from("farmer-docs")
+    .createSignedUrl(path, 3600);
+
+  if (error || !data.signedUrl) return docUrl;
+
+  return data.signedUrl;
+}
+
 /* =========================================================
-   MEAL KIT TRUST DETAILS
+   CONTACT MESSAGES
 ========================================================= */
-
-export async function listMealKitTrustDetails(): Promise<MealKitTrustDetailRow[]> {
-  const { data, error } = await requireClient()
-    .from("meal_kit_trust_details")
-    .select("*")
-    .order("sort_order", { ascending: true });
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? []) as MealKitTrustDetailRow[];
-}
-
-export async function upsertMealKitTrustDetail(row: MealKitTrustDetailRow): Promise<void> {
-  const { error } = await requireClient()
-    .from("meal_kit_trust_details")
-    .upsert(row, { onConflict: "slug" });
-
-  if (error) throw new Error(error.message);
-}
-
-export async function deleteMealKitTrustDetail(slug: string): Promise<void> {
-  const { error } = await requireClient()
-    .from("meal_kit_trust_details")
-    .delete()
-    .eq("slug", slug);
-
-  if (error) throw new Error(error.message);
-}
 
 export async function listContactMessages(): Promise<ContactMessageRow[]> {
   const { data, error } = await requireClient()

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { deleteContactMessage, listContactMessages, type ContactMessageRow } from "../../admin/admin-api";
+import { sendAdminReply } from "../../contact";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { inputClasses, selectClasses } from "./admin-fields";
+import { inputClasses } from "./admin-fields";
+import { ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 import { formatDate } from "./commerce-shared";
 
 const topicLabels: Record<string, string> = {
@@ -15,10 +17,14 @@ export function MessagesTab() {
   const [messages, setMessages] = useState<ContactMessageRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [topicFilter, setTopicFilter] = useState("");
+  const [filters, setFilters] = useState({ topic: "", date: "" });
   const [status, setStatus] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ContactMessageRow | null>(null);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replyBusy, setReplyBusy] = useState(false);
+  const [replyStatus, setReplyStatus] = useState<string | null>(null);
 
   const topics = useMemo(() => {
     const set = new Set((messages ?? []).map((m) => m.topic).filter(Boolean));
@@ -43,7 +49,8 @@ export function MessagesTab() {
     if (!messages) return [];
     const q = query.trim().toLowerCase();
     return messages.filter((msg) => {
-      if (topicFilter && msg.topic !== topicFilter) return false;
+      if (filters.topic && msg.topic !== filters.topic) return false;
+      if (filters.date && dateRangeKey(msg.created_at) !== filters.date) return false;
       if (!q) return true;
       return (
         msg.name.toLowerCase().includes(q) ||
@@ -51,7 +58,7 @@ export function MessagesTab() {
         msg.message.toLowerCase().includes(q)
       );
     });
-  }, [messages, query, topicFilter]);
+  }, [messages, query, filters.topic, filters.date]);
 
   async function handleDelete(msg: ContactMessageRow) {
     setStatus(null);
@@ -68,6 +75,32 @@ export function MessagesTab() {
 
   function handleToggle(id: string) {
     setExpanded((current) => (current === id ? null : id));
+    if (expanded !== id) {
+      setReplyingTo(null);
+      setReplyText("");
+      setReplyStatus(null);
+    }
+  }
+
+  function handleStartReply(msg: ContactMessageRow) {
+    setReplyingTo(msg.id);
+    setReplyText("");
+    setReplyStatus(null);
+  }
+
+  async function handleSendReply(msg: ContactMessageRow) {
+    if (!replyText.trim()) return;
+    setReplyBusy(true);
+    setReplyStatus(null);
+    const result = await sendAdminReply(msg.email, msg.name, replyText.trim());
+    setReplyBusy(false);
+    if (result.ok) {
+      setReplyStatus("Reply sent.");
+      setReplyText("");
+      setTimeout(() => setReplyingTo(null), 1500);
+    } else {
+      setReplyStatus(result.error ?? "Failed to send reply.");
+    }
   }
 
   return (
@@ -82,7 +115,7 @@ export function MessagesTab() {
         <button className={btnOutlineSm} type="button" onClick={() => void load()} disabled={!messages}>Refresh</button>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3">
         <input
           type="search"
           value={query}
@@ -91,10 +124,11 @@ export function MessagesTab() {
           aria-label="Search messages"
           className={inputClasses}
         />
-        <select className={`${selectClasses} min-w-40`} aria-label="Filter by topic" value={topicFilter} onChange={(e) => setTopicFilter(e.target.value)}>
-          <option value="">All topics</option>
-          {topics.map((topic) => <option key={topic} value={topic}>{topicLabels[topic] ?? topic}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ColumnFilterDropdown label="Topic" options={topics.map((topic) => ({ value: topic, label: topicLabels[topic] ?? topic }))} value={filters.topic} onSelect={(v) => setFilters((f) => ({ ...f, topic: v }))} />
+          <ColumnFilterDropdown label="Date" options={DATE_RANGES} value={filters.date} onSelect={(v) => setFilters((f) => ({ ...f, date: v }))} />
+          <ClearFiltersButton count={(filters.topic ? 1 : 0) + (filters.date ? 1 : 0)} onClear={() => setFilters({ topic: "", date: "" })} />
+        </div>
       </div>
 
       {error ? (
@@ -109,7 +143,7 @@ export function MessagesTab() {
       {messages ? (
         filtered.length === 0 ? (
           <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">
-            {query || topicFilter ? "No messages match the current search or filters." : "No messages yet."}
+            {query || filters.topic || filters.date ? "No messages match the current search or filters." : "No messages yet."}
           </p>
         ) : (
           <div className="grid gap-2">
@@ -136,7 +170,7 @@ export function MessagesTab() {
                   <div className="grid gap-3 border-t-2 border-dashed border-brand-forest/20 px-4 pb-4 pt-3">
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-black">{msg.message}</p>
                     <div className="flex items-center gap-2">
-                      <a className={btnOutlineSm} href={`mailto:${msg.email}`}>Reply</a>
+                      <button className={btnOutlineSm} type="button" onClick={() => handleStartReply(msg)}>Reply</button>
                       <button
                         className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink bg-brand-white px-3 py-1 text-xs font-bold text-brand-black transition-colors duration-120 ease-in-out hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
                         type="button"
@@ -145,6 +179,29 @@ export function MessagesTab() {
                         Delete
                       </button>
                     </div>
+                    {replyingTo === msg.id ? (
+                      <div className="grid gap-2">
+                        <textarea
+                          className="min-h-24 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-3 text-sm text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
+                          placeholder={`Reply to ${msg.name}...`}
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          disabled={replyBusy}
+                        />
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="min-h-10 touch-manipulation rounded-full border-2 border-brand-forest bg-brand-forest px-4 py-2 text-sm font-bold text-brand-white transition-colors duration-120 ease-in-out hover:bg-brand-green-ink disabled:cursor-not-allowed disabled:opacity-50"
+                            type="button"
+                            disabled={replyBusy || !replyText.trim()}
+                            onClick={() => void handleSendReply(msg)}
+                          >
+                            {replyBusy ? "Sending..." : "Send reply"}
+                          </button>
+                          <button className={btnOutlineSm} type="button" onClick={() => setReplyingTo(null)} disabled={replyBusy}>Cancel</button>
+                        </div>
+                        {replyStatus ? <p className="text-sm font-semibold text-brand-green-ink" role="status">{replyStatus}</p> : null}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
               </div>

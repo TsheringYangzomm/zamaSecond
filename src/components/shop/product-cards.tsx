@@ -2,7 +2,7 @@ import { btnPrimaryKit } from "../ui/styles";
 import { YellowTag } from "../ui/tag";
 import { ProductDetail } from "./product-detail";
 import { ProductFacts } from "./product-facts";
-import { productDetailHref, productPrice, type ShopProduct } from "./shop-utils";
+import { isProductActive, productDetailHref, productPrice, type ShopProduct } from "./shop-utils";
 
 function AddToCartIcon() {
   return (
@@ -17,6 +17,14 @@ function AddToCartIcon() {
 export { AddToCartIcon };
 
 export function AddToCartButton({ product, onAdd }: { product: ShopProduct; onAdd: (product: ShopProduct) => void }) {
+  if (!isProductActive(product)) {
+    return (
+      <button className={`${btnPrimaryKit} w-full gap-2 cursor-not-allowed opacity-50`} type="button" disabled aria-label={`${product.name} is out of stock`}>
+        <AddToCartIcon />
+        Out of stock
+      </button>
+    );
+  }
   return (
     <button className={`${btnPrimaryKit} w-full gap-2`} type="button" onClick={() => onAdd(product)} aria-label={`Add ${product.name} to cart`}>
       <AddToCartIcon />
@@ -43,6 +51,7 @@ export function FeaturedShopCard({ product, onAdd, onViewDetail, preview = false
       <a className={`brand-pattern relative grid min-h-72 place-items-center overflow-hidden rounded-wobbly-card border-2 border-dashed border-brand-forest/36 p-4 md:min-h-110 ${cardLinkFocus}`} href={detailHref} aria-label={`View ${product.name} details`}>
         <img className="h-64 w-full object-contain md:h-auto md:max-h-100" src={product.image} alt={product.alt} loading="lazy" decoding="async" width="420" height="340" />
         <span className="absolute left-3 top-3 rounded-full border-2 border-brand-forest bg-brand-yellow px-2 py-1 text-xs font-bold text-brand-black">Today’s field pick</span>
+        {!isProductActive(product) ? <span className="absolute right-3 top-3 rounded-full border-2 border-brand-orange-ink bg-brand-orange px-2 py-1 text-xs font-bold text-brand-white">Out of stock</span> : null}
         <span className={`absolute right-3 bottom-3 rounded-full border-2 border-brand-forest px-2 py-1 text-xs font-bold ${categoryBadge(product)}`}>{product.category}</span>
       </a>
       <div className="grid min-w-0 content-start gap-3">
@@ -104,6 +113,7 @@ export function SupportingShopCard({ product, onAdd, onViewDetail, preview = fal
     <article className={`shop-note-card grid self-start content-start grid-cols-[96px_minmax(0,1fr)] gap-3 rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRail(product)} bg-brand-white p-3 shadow-brand-soft transition-shadow duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand sm:grid-cols-[112px_minmax(0,1fr)]`} id={product.id} aria-labelledby={headingId}>
       <a className={`brand-pattern relative grid min-h-34 place-items-center overflow-hidden rounded-wobbly-md border-2 border-dashed border-brand-forest/30 p-2 ${cardLinkFocus}`} href={detailHref} aria-label={`View ${product.name} details`}>
         <img className="h-28 w-full object-contain" src={product.image} alt={product.alt} loading="lazy" decoding="async" width="210" height="170" />
+        {!isProductActive(product) ? <span className="absolute left-1.5 top-1.5 rounded-full border-2 border-brand-orange-ink bg-brand-orange px-1.5 py-0.5 text-[0.6rem] font-bold text-brand-white">Out of stock</span> : null}
         <span className={`absolute right-1.5 bottom-1.5 rounded-full border-2 border-brand-forest px-2 py-1 text-[0.65rem] font-bold ${categoryBadge(product)}`}>{product.category}</span>
       </a>
       <div className="grid min-w-0 content-start gap-1.5">

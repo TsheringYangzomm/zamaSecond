@@ -3,7 +3,7 @@ import { commerceStore } from "../../admin/commerce-api";
 import { subscriptionStatuses, type Subscription, type SubscriptionStatus } from "../../admin/commerce-types";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import { selectClasses } from "./admin-fields";
+import { amountRangeKeyFor, buildAmountRanges, ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 import {
   CommerceError,
   CommerceLoading,
@@ -22,7 +22,7 @@ type PendingChange = { subscription: Subscription; status: SubscriptionStatus };
 export function SubscriptionsTab() {
   const state = useCommerceStore();
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [filters, setFilters] = useState({ customer: "", status: "", plan: "", price: "", start: "" });
   const [selected, setSelected] = useState<Subscription | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,11 +36,29 @@ export function SubscriptionsTab() {
     return customer?.name ?? customerId;
   }, [data]);
 
+  const customers = useMemo(() => {
+    if (!data) return [];
+    return [...new Set(data.subscriptions.map((subscription) => customerLabel(subscription.customer_id)).filter(Boolean))].sort();
+  }, [data, customerLabel]);
+
+  const plans = useMemo(() => {
+    if (!data) return [];
+    return [...new Set(data.subscriptions.map((subscription) => subscription.plan).filter(Boolean))].sort();
+  }, [data]);
+
+  const priceRanges = useMemo(() => buildAmountRanges((data?.subscriptions ?? []).map((subscription) => subscription.price)), [data]);
+
+  const activeFilterCount = (["customer", "status", "plan", "price", "start"] as const).filter((key) => filters[key] !== "").length;
+
   const filtered = useMemo(() => {
     if (!data) return [];
     const needle = query.trim().toLowerCase();
     return data.subscriptions.filter((subscription) => {
-      if (statusFilter && subscription.status !== statusFilter) return false;
+      if (filters.customer && customerLabel(subscription.customer_id) !== filters.customer) return false;
+      if (filters.status && subscription.status !== filters.status) return false;
+      if (filters.plan && subscription.plan !== filters.plan) return false;
+      if (filters.price && amountRangeKeyFor(priceRanges, subscription.price) !== filters.price) return false;
+      if (filters.start && dateRangeKey(subscription.start_date) !== filters.start) return false;
       if (!needle) return true;
       return (
         subscription.id.toLowerCase().includes(needle) ||
@@ -48,7 +66,7 @@ export function SubscriptionsTab() {
         customerLabel(subscription.customer_id).toLowerCase().includes(needle)
       );
     });
-  }, [data, query, statusFilter, customerLabel]);
+  }, [data, query, filters, customerLabel, priceRanges]);
 
   async function applyStatusChange() {
     if (!pendingChange) return;
@@ -152,7 +170,7 @@ export function SubscriptionsTab() {
 
       {!writable ? <DevDataNotice /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <div className="grid gap-3">
         <input
           className="min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
           type="search"
@@ -161,10 +179,14 @@ export function SubscriptionsTab() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <select className={`${selectClasses} min-w-44`} aria-label="Filter by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option value="">All statuses</option>
-          {subscriptionStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <ColumnFilterDropdown label="Customer" options={customers} value={filters.customer} onSelect={(v) => setFilters((f) => ({ ...f, customer: v }))} />
+          <ColumnFilterDropdown label="Status" options={subscriptionStatuses} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+          <ColumnFilterDropdown label="Plan" options={plans} value={filters.plan} onSelect={(v) => setFilters((f) => ({ ...f, plan: v }))} />
+          <ColumnFilterDropdown label="Price" options={priceRanges} value={filters.price} onSelect={(v) => setFilters((f) => ({ ...f, price: v }))} />
+          <ColumnFilterDropdown label="Start" options={DATE_RANGES} value={filters.start} onSelect={(v) => setFilters((f) => ({ ...f, start: v }))} allLabel="Any date" />
+          <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ customer: "", status: "", plan: "", price: "", start: "" })} />
+        </div>
       </div>
 
       {data === null ? (
