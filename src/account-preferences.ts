@@ -10,9 +10,10 @@ export type CustomerPreferences = {
   points: number;
   reviewedOrderIds: string[];
   reviews: Record<string, CustomerReview>;
+  checkInDates: string[];
 };
 
-const emptyPreferences: CustomerPreferences = { wishlist: [], history: [], points: 0, reviewedOrderIds: [], reviews: {} };
+const emptyPreferences: CustomerPreferences = { wishlist: [], history: [], points: 0, reviewedOrderIds: [], reviews: {}, checkInDates: [] };
 
 function storageKey(email: string): string {
   return `zama-account-preferences:${email.trim().toLowerCase()}`;
@@ -37,6 +38,7 @@ export function loadCustomerPreferences(email: string): CustomerPreferences {
       points: typeof parsed.points === "number" && Number.isFinite(parsed.points) ? Math.max(0, Math.round(parsed.points)) : 0,
       reviewedOrderIds: Array.isArray(parsed.reviewedOrderIds) ? parsed.reviewedOrderIds.filter((id): id is string => typeof id === "string") : [],
       reviews,
+      checkInDates: Array.isArray(parsed.checkInDates) ? parsed.checkInDates.filter((date): date is string => typeof date === "string") : [],
     };
   } catch {
     return emptyPreferences;

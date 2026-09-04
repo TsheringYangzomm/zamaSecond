@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
-  ArrowRight,
   BadgeCheck,
+  CalendarCheck,
   ChevronRight,
   CircleHelp,
   Clock3,
@@ -34,6 +34,8 @@ import { isProductActive, productDetailHref, productPrice, type ShopProduct } fr
 type OrderFilter = "all" | "unpaid" | "processing" | "shipped" | "review" | "returns";
 type LibraryTab = "wishlist" | "history" | "following";
 
+const dailyCheckInRewards = [1, 5, 5, 10, 10, 15, 15] as const;
+
 const orderFilterLabels: { key: Exclude<OrderFilter, "all">; label: string; icon: typeof ShoppingBag }[] = [
   { key: "unpaid", label: "Unpaid", icon: WalletCards },
   { key: "processing", label: "Processing", icon: Clock3 },
@@ -56,6 +58,32 @@ function formatDate(date: string): string {
 
 function formatMoney(amount: number): string {
   return `Nu. ${new Intl.NumberFormat("en-BT").format(amount)}`;
+}
+
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date: Date, amount: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function checkInStreak(checkInDates: string[], now = new Date()): number {
+  const checkedDates = new Set(checkInDates);
+  const cursor = new Date(now);
+  cursor.setHours(12, 0, 0, 0);
+  if (!checkedDates.has(localDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (checkedDates.has(localDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 }
 
 function orderLabel(order: Order): string {
@@ -183,6 +211,7 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
   const [reviewNotice, setReviewNotice] = useState<string | null>(null);
+  const [checkInNotice, setCheckInNotice] = useState<string | null>(null);
   const [libraryTab, setLibraryTab] = useState<LibraryTab>("wishlist");
   const [profileEditing, setProfileEditing] = useState(false);
   const [profileForm, setProfileForm] = useState<CustomerProfileUpdate>(() => ({
@@ -219,6 +248,17 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   const historyProducts = useMemo(() => preferences.history.map((id) => productById.get(id)).filter((product): product is ShopProduct => Boolean(product)), [preferences.history, productById]);
   const featuredProducts = useMemo(() => products.filter(isProductActive).slice(0, 4), [products]);
   const visibleOrders = useMemo(() => (orders ?? []).filter((order) => matchesOrder(order, orderFilter)), [orders, orderFilter]);
+  const checkInNow = new Date();
+  const todayKey = localDateKey(checkInNow);
+  const checkedInToday = preferences.checkInDates.includes(todayKey);
+  const currentCheckInStreak = checkInStreak(preferences.checkInDates, checkInNow);
+  const firstCheckInDay = Math.max(1, Math.min(checkedInToday ? currentCheckInStreak : currentCheckInStreak + 1, dailyCheckInRewards.length));
+  const todayCheckInReward = dailyCheckInRewards[firstCheckInDay - 1];
+  const checkInDays = Array.from({ length: dailyCheckInRewards.length }, (_, index) => {
+    const date = addDays(checkInNow, index);
+    const dayNumber = Math.min(firstCheckInDay + index, dailyCheckInRewards.length);
+    return { dateKey: localDateKey(date), label: `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`, dayNumber, reward: dailyCheckInRewards[dayNumber - 1] };
+  });
 
   function focusSection(id: string) {
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -254,6 +294,20 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
     saveCustomerPreferences(profile.email, next);
     setReviewingOrder(null);
     setReviewNotice("Thanks for sharing! 20 points were added to your account.");
+  }
+
+  function claimDailyCheckIn() {
+    const today = localDateKey(new Date());
+    if (preferences.checkInDates.includes(today)) return;
+    const reward = dailyCheckInRewards[Math.min(checkInStreak(preferences.checkInDates), dailyCheckInRewards.length - 1)];
+    const next: CustomerPreferences = {
+      ...preferences,
+      points: preferences.points + reward,
+      checkInDates: [...new Set([...preferences.checkInDates, today])].sort().slice(-180),
+    };
+    setPreferences(next);
+    saveCustomerPreferences(profile.email, next);
+    setCheckInNotice(`Daily check-in complete! +${reward} points added.`);
   }
 
   function toggleWishlist(productId: string) {
@@ -334,9 +388,19 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
         })}
       </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-4 shadow-brand-soft">
-        <div className="flex items-center gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-brand-forest bg-brand-yellow text-brand-green-ink"><Sparkles className="h-5 w-5" /></span><div className="grid gap-0.5"><strong className="text-brand-green-ink">Fresh rewards are on the way</strong><span className="text-sm text-brand-black/68">Shop Zama and your account will keep your orders, favorites, and future perks together.</span></div></div>
-        <a className="inline-flex min-h-10 items-center gap-1 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 py-2 text-sm font-bold text-brand-green-ink hover:bg-brand-yellow" href="#/shop">Explore shop <ArrowRight className="h-4 w-4" /></a>
+      <section id="daily-check-in" className="grid gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-5 shadow-brand-soft" aria-labelledby="daily-check-in-title">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-brand-forest bg-brand-yellow text-brand-green-ink"><CalendarCheck className="h-6 w-6" /></span><div className="grid min-w-0 gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Daily check-in</span><h2 id="daily-check-in-title" className="font-primary text-2xl font-bold text-brand-green-ink">Collect points every day</h2><p className="text-sm text-brand-black/68">{currentCheckInStreak > 0 ? `${currentCheckInStreak} day streak — keep it going for bigger rewards.` : "Check in today to start your points streak."}</p></div></div>
+          <button className={checkedInToday ? btnOutlineSm : btnPrimarySm} type="button" disabled={checkedInToday} onClick={claimDailyCheckIn}>{checkedInToday ? "Checked in today" : `Check in · +${todayCheckInReward} pts`}</button>
+        </div>
+        <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+          {checkInDays.map((day, index) => {
+            const completed = preferences.checkInDates.includes(day.dateKey);
+            const isToday = index === 0;
+            return <div className={`grid min-h-24 content-center justify-items-center gap-1 rounded-wobbly-md border-2 p-2 text-center ${completed ? "border-brand-forest bg-brand-mint text-brand-green-ink" : isToday ? "border-brand-orange-ink bg-brand-yellow/55 text-brand-black" : "border-brand-forest/10 bg-brand-warm-white text-brand-black/48"}`} key={day.dateKey}><span className="text-[0.65rem] font-bold uppercase tracking-[0.08em]">Day {day.dayNumber}</span><strong className="font-primary text-xl">+{day.reward}</strong><span className="text-xs">{isToday ? "Today" : day.label}</span>{completed ? <CalendarCheck className="h-4 w-4" aria-label="Collected" /> : null}</div>;
+          })}
+        </div>
+        {checkInNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{checkInNotice}</p> : null}
       </section>
 
       <section id="my-orders" className="grid gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-5 shadow-brand-soft" aria-labelledby="my-orders-title">
