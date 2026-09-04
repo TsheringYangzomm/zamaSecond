@@ -20,6 +20,7 @@ import {
 } from "./commerce-shared";
 
 import { DeliveriesTab } from "./deliveries-tab";
+import { PaymentsTab } from "./payments-tab";
 import { ReceiptView } from "./receipt-view";
 
 type PendingChange = { order: Order; status: OrderStatus };
@@ -38,7 +39,7 @@ type ColumnFilter = {
 export function OrdersTab() {
   const { email: adminEmail } = useAdminAuth();
   const state = useCommerceStore();
-  const [view, setView] = useState<"orders" | "deliveries">("orders");
+  const [view, setView] = useState<"orders" | "deliveries" | "payments">("orders");
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ColumnFilter>({ status: "", payment: "", location: "", customer: "", amount: "", placed: "", items: "", notes: "" });
   const [selected, setSelected] = useState<Order | null>(null);
@@ -258,6 +259,7 @@ const [receiptOpen, setReceiptOpen] = useState(false);
       <div className="flex flex-wrap items-center gap-2">
         <ViewButton active={view === "orders"} count={data ? data.orders.length : null} onClick={() => setView("orders")}>Orders</ViewButton>
         <ViewButton active={view === "deliveries"} count={data ? data.deliveries.length : null} onClick={() => setView("deliveries")}>Deliveries</ViewButton>
+        <ViewButton active={view === "payments"} count={data ? data.payments.length : null} onClick={() => setView("payments")}>Payments</ViewButton>
       </div>
 
       {view === "orders" ? (
@@ -387,8 +389,10 @@ const [receiptOpen, setReceiptOpen] = useState(false);
         </div>
       ) : null}
         </>
-      ) : (
+      ) : view === "deliveries" ? (
         <DeliveriesTab />
+      ) : (
+        <PaymentsTab />
       )}
     </div>
   );

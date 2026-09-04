@@ -91,7 +91,10 @@ function MobileNav({ onSelect, onAuth, isOpen }: { onSelect: () => void; onAuth:
         {partnerLabel}
       </SmallOutlineLink>
       {status === "signed-in" ? (
-        <button className={`${btnOutlineSm} mt-1 w-full`} type="button" onClick={handleSignOut}>Sign out</button>
+        <>
+          <a className={`${btnOutlineSm} mt-1 w-full`} href="#/account" onClick={onSelect}>My account</a>
+          <button className={`${btnOutlineSm} mt-1 w-full`} type="button" onClick={handleSignOut}>Sign out</button>
+        </>
       ) : (
         <button className={`${btnPrimarySm} mt-1 w-full`} type="button" onClick={onAuth}>Sign in</button>
       )}
@@ -138,6 +141,9 @@ export function SiteHeader() {
         <div className="header-actions hidden items-center gap-x-2 md:flex md:justify-end xl:gap-x-3" aria-label="Primary actions">
           {status === "signed-in" ? (
             <>
+              <span className="hidden shrink-0 md:inline-flex">
+                <a className={ghostActionClass} href="#/account">My account</a>
+              </span>
               <span className="hidden shrink-0 md:inline-flex lg:hidden xl:inline-flex">
                 <a className={ghostActionClass} href="#b2b">
                   {partnerLabel}

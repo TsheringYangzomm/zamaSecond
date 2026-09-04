@@ -97,6 +97,11 @@ create table if not exists public.payments (
   created_at timestamptz not null default now()
 );
 
+alter table public.payments
+  add column if not exists refund_method text;
+
+notify pgrst, 'reload schema';
+
 create index if not exists payments_order_id_idx on public.payments (order_id);
 
 -- ---------------------------------------------------------------------------

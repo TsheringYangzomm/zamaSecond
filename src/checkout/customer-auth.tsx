@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getSupabaseClient } from "../supabase";
 import {
   clearDevSession,
@@ -14,6 +14,14 @@ import {
 
 export type CustomerAuthStatus = "bootstrapping" | "signed-out" | "signed-in";
 
+export type CustomerProfileUpdate = {
+  name: string;
+  phone: string;
+  area: string;
+  dzongkhag: string;
+  address: string;
+};
+
 export type CustomerAuthValue = {
   mode: "live" | "dev";
   status: CustomerAuthStatus;
@@ -21,6 +29,7 @@ export type CustomerAuthValue = {
   error: string | null;
   signUp: (input: { name: string; email: string; password: string; phone?: string }) => Promise<{ ok: boolean; error: string | null; needsConfirmation?: boolean }>;
   signIn: (input: { email: string; password: string }) => Promise<{ ok: boolean; error: string | null }>;
+  updateProfile: (input: CustomerProfileUpdate) => Promise<{ ok: boolean; error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -159,6 +168,31 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     return { ok: true, error: null };
   }
 
+  const updateProfile = useCallback(async (input: CustomerProfileUpdate) => {
+    setError(null);
+    if (!profile) {
+      const message = "Sign in to update your account.";
+      setError(message);
+      return { ok: false, error: message };
+    }
+    const nextProfile: CustomerProfile = {
+      ...profile,
+      name: input.name.trim(),
+      phone: input.phone.trim(),
+      area: input.area.trim(),
+      dzongkhag: input.dzongkhag.trim(),
+      address: input.address.trim(),
+    };
+    const result = await ensureCustomer(nextProfile);
+    if (!result.ok) {
+      const message = result.error ?? "Could not update your account.";
+      setError(message);
+      return { ok: false, error: message };
+    }
+    setProfile(nextProfile);
+    return { ok: true, error: null };
+  }, [profile]);
+
   async function signOut() {
     const client = getSupabaseClient();
     if (client) {
@@ -171,8 +205,8 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ mode, status, profile, error, signUp, signIn, signOut }),
-    [mode, status, profile, error],
+    () => ({ mode, status, profile, error, signUp, signIn, updateProfile, signOut }),
+    [mode, status, profile, error, updateProfile],
   );
 
   return <CustomerAuthContext.Provider value={value}>{children}</CustomerAuthContext.Provider>;
@@ -184,4 +218,8 @@ export function useCustomerAuth() {
     throw new Error("useCustomerAuth must be used inside <CustomerAuthProvider>.");
   }
   return value;
+}
+
+export function useOptionalCustomerAuth() {
+  return useContext(CustomerAuthContext);
 }

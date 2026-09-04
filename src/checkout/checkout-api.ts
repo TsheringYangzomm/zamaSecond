@@ -188,6 +188,17 @@ export async function fetchCustomerProfile(email: string): Promise<CustomerProfi
   return profileFromCustomer(result.customer);
 }
 
+export async function fetchCustomerOrders(email: string): Promise<Order[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    const customer = getDevCustomerByEmail(email);
+    return customer ? loadDevOrders().filter((order) => order.customer_id === customer.id) : [];
+  }
+  const { data, error } = await client.rpc("get_customer_orders", { p_email: email });
+  if (error || !Array.isArray(data)) return [];
+  return data as Order[];
+}
+
 function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number): Order {
   const existing = readDevCommerce().orders;
   const year = new Date().getFullYear();

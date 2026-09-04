@@ -3,7 +3,6 @@ import {
   Apple,
   Boxes,
   ClipboardList,
-  CreditCard,
   FileText,
   LayoutDashboard,
   ListChecks,
@@ -29,7 +28,6 @@ import { ContentTab } from "./content-tab";
 import { OrdersTab } from "./orders-tab";
 import { CustomersTab } from "./customers-tab";
 import { SubscriptionsTab } from "./subscriptions-tab";
-import { PaymentsTab } from "./payments-tab";
 import { MessagesTab } from "./messages-tab";
 import {
   Sidebar,
@@ -50,7 +48,7 @@ import {
 } from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
 
-type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "farmers" | "dieticians" | "customers" | "waitlist" | "reviews" | "messages" | "subscriptions" | "payments" | "content";
+type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "farmers" | "dieticians" | "customers" | "waitlist" | "reviews" | "messages" | "subscriptions" | "content";
 
 type NavItem = { key: AdminTab; label: string; icon: ReactNode };
 
@@ -80,7 +78,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { key: "reviews", label: "Reviews", icon: <Star /> },
       { key: "messages", label: "Messages", icon: <FileText /> },
       { key: "subscriptions", label: "Subscriptions", icon: <Repeat /> },
-      { key: "payments", label: "Payments", icon: <CreditCard /> },
     ],
   },
   {
@@ -128,7 +125,6 @@ function AdminShell() {
             {tab === "reviews" ? <ReviewsTab /> : null}
             {tab === "messages" ? <MessagesTab /> : null}
             {tab === "subscriptions" ? <SubscriptionsTab /> : null}
-            {tab === "payments" ? <PaymentsTab /> : null}
             {tab === "content" ? <ContentTab /> : null}
           </main>
         </SidebarInset>

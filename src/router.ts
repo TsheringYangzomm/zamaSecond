@@ -1,9 +1,11 @@
 import { categorySlugs } from "./components/shop/shop-utils";
 
-export type Route = "home" | "contact" | "shop" | "product" | "category" | "farmers" | "customize" | "launch-updates" | "membership" | "admin" | "meal-kit-trust";
+export type Route = "home" | "contact" | "shop" | "product" | "category" | "farmers" | "customize" | "launch-updates" | "membership" | "account" | "account-orders" | "admin" | "meal-kit-trust";
 
 export function getRoute(hash: string): Route {
   if (hash.startsWith("#/admin")) return "admin";
+  if (hash.startsWith("#/account/orders")) return "account-orders";
+  if (hash.startsWith("#/account")) return "account";
   if (hash.startsWith("#/contact")) return "contact";
   if (hash.startsWith("#/customize")) return "customize";
   if (hash.startsWith("#/farmers")) return "farmers";

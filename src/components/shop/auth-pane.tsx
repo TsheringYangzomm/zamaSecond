@@ -190,10 +190,13 @@ function SignedInPanel({ profile, onClose }: { profile: CustomerProfile; onClose
       <div>
         <h3 className="font-primary text-2xl font-bold text-brand-black">You're signed in</h3>
         <p className="mx-auto mt-1 max-w-72 text-sm leading-snug text-brand-black/68">
-          Welcome, <span className="font-bold text-brand-green-ink">{profile.name || profile.email}</span>. Add a fresh box or meal kit to your cart, then head to checkout.
+          Welcome, <span className="font-bold text-brand-green-ink">{profile.name || profile.email}</span>. Your Zama account is ready — keep your orders, delivery details, and saved products together.
         </p>
       </div>
-      <button className={`${btnPrimaryLg} w-full`} type="button" onClick={onClose}>Done</button>
+      <div className="grid w-full gap-2">
+        <a className={`${btnPrimaryLg} w-full`} href="#/account" onClick={onClose}>Open my account</a>
+        <button className={`${btnOutlineSm} w-full`} type="button" onClick={onClose}>Continue shopping</button>
+      </div>
     </div>
   );
 }

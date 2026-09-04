@@ -200,6 +200,24 @@ async function updatePaymentStatusLive(paymentId: string, status: PaymentStatus)
   if (error) throw new Error(error.message);
 }
 
+async function updatePaymentMethodsLive(paymentId: string, method: string, refundMethod: string | null): Promise<void> {
+  const client = requireClient();
+  const { error } = await client.from("payments").update({ method, refund_method: refundMethod }).eq("id", paymentId);
+  if (!error) return;
+
+  const message = error.message.toLowerCase();
+  const missingRefundMethod = message.includes("refund_method") && (message.includes("schema cache") || message.includes("column"));
+  if (missingRefundMethod && refundMethod === null) {
+    const fallback = await client.from("payments").update({ method }).eq("id", paymentId);
+    if (!fallback.error) return;
+    throw new Error(fallback.error.message);
+  }
+  if (missingRefundMethod) {
+    throw new Error("The live payments table is missing the refund_method column. Run supabase/commerce-schema.sql in Supabase, then retry.");
+  }
+  throw new Error(error.message);
+}
+
 export type CommerceLoadState =
   | { phase: "idle" }
   | { phase: "loading" }
@@ -348,6 +366,22 @@ class CommerceDataStore {
       return;
     }
     await updatePaymentStatusLive(paymentId, status);
+    await this.load(true);
+  }
+
+  async updatePaymentMethods(paymentId: string, method: string, refundMethod: string | null): Promise<void> {
+    if (this.state.phase !== "ready") return;
+    if (this.state.mode === "dev") {
+      const data = {
+        ...this.state.data,
+        payments: this.state.data.payments.map((payment) =>
+          payment.id === paymentId ? { ...payment, method, refund_method: refundMethod } : payment,
+        ),
+      };
+      this.mutate(data);
+      return;
+    }
+    await updatePaymentMethodsLive(paymentId, method, refundMethod);
     await this.load(true);
   }
 }

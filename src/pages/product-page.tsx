@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "../cart-context";
 import { useContent } from "../cms/content-context";
+import { useOptionalCustomerAuth } from "../checkout/customer-auth";
+import { recordProductView } from "../account-preferences";
 import { OutlineLink } from "../components/ui/action-link";
 import { OutlineTag, YellowTag } from "../components/ui/tag";
 import { btnPrimaryKit, sectionShell, sectionTitleCompact } from "../components/ui/styles";
@@ -81,10 +83,15 @@ function PurchasePanel({ product }: { product: ShopProduct }) {
 function ProductDetails({ product }: { product: ShopProduct }) {
   const { cartQuantity, addToCart } = useCart();
   const { products, blocks } = useContent();
+  const auth = useOptionalCustomerAuth();
   const page = blocks.productPage;
   const [relatedAnnouncement, setRelatedAnnouncement] = useState("");
   const related = products.filter((candidate) => candidate.id !== product.id && candidate.category === product.category).slice(0, 3);
   const suggestions = products.filter((candidate) => candidate.id !== product.id && candidate.category !== product.category).slice(0, 3);
+
+  useEffect(() => {
+    if (auth?.profile?.email) recordProductView(auth.profile.email, product.id);
+  }, [auth?.profile?.email, product.id]);
 
   function handleAddRelated(candidate: ShopProduct) {
     addToCart(candidate.id);

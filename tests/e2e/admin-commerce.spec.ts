@@ -258,8 +258,6 @@ test("every admin section renders in dev mode without crashing", async ({ page }
     ["Waitlist", "Waitlist"],
     ["Reviews", "Reviews"],
     ["Subscriptions", "Subscriptions"],
-    ["Deliveries", "Deliveries"],
-    ["Payments", "Payments"],
     ["Content", "Content blocks"],
   ];
 
@@ -269,6 +267,12 @@ test("every admin section renders in dev mode without crashing", async ({ page }
     }
     await expect(page.getByRole("heading", { name: heading })).toBeVisible();
   }
+
+  await page.getByRole("button", { name: "Orders", exact: true }).click();
+  await page.getByRole("button", { name: /^Deliveries/ }).click();
+  await expect(page.getByRole("heading", { name: "Deliveries" })).toBeVisible();
+  await page.getByRole("button", { name: /^Payments/ }).click();
+  await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible();
 });
 
 test("sidebar collapses to an icon rail with tooltips and expands back", async ({ page }) => {

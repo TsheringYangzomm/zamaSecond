@@ -22,6 +22,7 @@ import { FarmersPage } from "./pages/farmers-page";
 import { LaunchUpdatesPage } from "./pages/launch-updates-page";
 import { MembershipPage } from "./pages/membership-page";
 import { MealKitTrustPage } from "./pages/meal-kit-trust-page";
+import { AccountOrdersPage, AccountPage } from "./pages/account-page";
 import { AdminPage } from "./pages/admin/admin-page";
 import { AdminAuthProvider } from "./admin/admin-auth";
 import { CustomerAuthProvider } from "./checkout/customer-auth";
@@ -119,6 +120,14 @@ function App() {
       ) : route === "meal-kit-trust" ? (
         <main id="top" tabIndex={-1}>
           <MealKitTrustPage />
+        </main>
+      ) : route === "account" ? (
+        <main id="top" tabIndex={-1}>
+          <AccountPage />
+        </main>
+      ) : route === "account-orders" ? (
+        <main id="top" tabIndex={-1}>
+          <AccountOrdersPage />
         </main>
       ) : route === "category" ? (
         <main id="top" tabIndex={-1}>

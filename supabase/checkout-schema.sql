@@ -80,6 +80,35 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------------
+-- Fetch the signed-in customer's order history for the account page.
+-- ---------------------------------------------------------------------------
+create or replace function public.get_customer_orders(p_email text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_customer_id text;
+begin
+  select id into v_customer_id
+  from public.customers
+  where lower(email) = lower(trim(coalesce(p_email, '')));
+
+  if v_customer_id is null then
+    return '[]'::jsonb;
+  end if;
+
+  return coalesce(
+    (select jsonb_agg(to_jsonb(o) order by o.created_at desc)
+     from public.orders o
+     where o.customer_id = v_customer_id),
+    '[]'::jsonb
+  );
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- Place an order for a customer. Also records a payment (COD / bank transfer)
 -- and, when a delivery date is supplied, a delivery record so the order shows
 -- up across the admin Orders, Payments, and Deliveries sections.
@@ -159,8 +188,10 @@ $$;
 
 revoke all on function public.upsert_customer(text, text, text, text, text, text) from public;
 revoke all on function public.get_customer(text) from public;
+revoke all on function public.get_customer_orders(text) from public;
 revoke all on function public.place_order(text, jsonb, numeric, text, text, text, text) from public;
 
 grant execute on function public.upsert_customer(text, text, text, text, text, text) to anon, authenticated;
 grant execute on function public.get_customer(text) to anon, authenticated;
+grant execute on function public.get_customer_orders(text) to authenticated;
 grant execute on function public.place_order(text, jsonb, numeric, text, text, text, text) to anon, authenticated;

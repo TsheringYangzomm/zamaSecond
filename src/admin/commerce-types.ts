@@ -83,6 +83,7 @@ export type Payment = {
   date: string;
   reference: string;
   method: string;
+  refund_method?: string | null;
 };
 
 export const orderStatuses: OrderStatus[] = [

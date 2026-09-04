@@ -338,6 +338,7 @@ const payments: Payment[] = [
     date: "2026-07-28",
     reference: "PAY-2026-00146",
     method: "Card",
+    refund_method: "Original Card",
   },
   {
     id: "PAY-2026-00143",
