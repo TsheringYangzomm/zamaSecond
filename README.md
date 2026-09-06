@@ -85,6 +85,12 @@ Notes:
 - Product and farmer images upload to the `catalog` bucket; the schema makes those files public-read.
 - The public site merges `content_blocks` over its built-in copy, so deleting a block just restores the built-in text. The landing site does not send confirmation emails to waitlist signups.
 
+### Coupons
+
+Coupons are managed in the admin portal under **Commerce → Coupons** and are shown publicly at `#/coupons`. To enable live coupon storage and checkout validation, run `supabase/coupons-schema.sql` in the Supabase SQL editor after `supabase/cms-schema.sql`, `supabase/commerce-schema.sql`, and `supabase/checkout-schema.sql`.
+
+Admins can create percentage or fixed campaigns, choose product/category targets, set dates and usage limits, and deactivate campaigns without removing redemption history. Customers can browse active coupons, sign in to collect them, and apply one coupon during checkout. The order-placement RPC recalculates the discount and total server-side.
+
 ## Quality Checks
 
 ```bash

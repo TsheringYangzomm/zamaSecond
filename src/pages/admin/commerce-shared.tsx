@@ -91,6 +91,12 @@ export function formatDateTime(value: string | null | undefined): string {
   }).format(new Date(value));
 }
 
+export function formatCompactDateTime(value: string | null | undefined): string {
+  if (!value) return "—";
+  const date = new Date(value);
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" }).format(date);
+}
+
 const statusToneClasses: Record<string, string> = {
   active: "border-brand-forest bg-brand-mint text-brand-green-ink",
   paid: "border-brand-forest bg-brand-mint text-brand-green-ink",
@@ -112,10 +118,10 @@ export function humanizeStatus(status: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function CommerceStatusBadge({ status }: { status: string }) {
+export function CommerceStatusBadge({ status, compact = false }: { status: string; compact?: boolean }) {
   const tone = statusToneClasses[status] ?? statusToneClasses.pending;
   return (
-    <span className={`inline-flex min-h-7 w-fit items-center rounded-full border-2 px-2.5 py-0.5 text-xs font-bold leading-none ${tone}`}>
+    <span className={`${compact ? "min-h-6 px-1.5 text-[0.68rem]" : "min-h-7 px-2.5 text-xs"} inline-flex w-fit max-w-full items-center overflow-hidden rounded-full border-2 font-bold leading-none ${tone}`}>
       {humanizeStatus(status)}
     </span>
   );
@@ -147,16 +153,17 @@ export function useCommerceStore(): CommerceLoadState {
   return state;
 }
 
-export function StatusChangeSelect({ value, options, writable, busy, onChange }: {
+export function StatusChangeSelect({ value, options, writable, busy, onChange, compact = false }: {
   value: string;
   options: readonly string[];
   writable: boolean;
   busy: boolean;
   onChange: (next: string) => void;
+  compact?: boolean;
 }) {
   return (
     <select
-      className="min-h-10 min-w-36 rounded-full border-2 border-brand-forest bg-brand-white px-3 py-1 text-xs font-bold text-brand-black outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-55"
+      className={`${compact ? "min-h-8 w-24 min-w-0 max-w-full px-1.5 text-[0.65rem]" : "min-h-10 min-w-36 px-3 text-xs"} rounded-full border-2 border-brand-forest bg-brand-white py-1 font-bold text-brand-black outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-55`}
       value={value}
       disabled={!writable || busy}
       aria-label="Change status"

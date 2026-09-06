@@ -147,6 +147,15 @@ test("opens a farmer story from the landing carousel", async ({ page }) => {
   await expect(page.getByText(/Pema Dorji's grandfather/)).toBeVisible();
 });
 
+test("opens the contact page from the partnership CTA", async ({ page }) => {
+  await page.goto("/#b2b");
+
+  await page.getByRole("link", { name: "Start a partnership conversation" }).click();
+
+  await expect(page).toHaveURL(/#\/contact/);
+  await expect(page.getByRole("heading", { name: /ask a question or share feedback/i })).toBeVisible();
+});
+
 test("farmers page search filters by name and location", async ({ page }) => {
   await page.goto("/#/farmers");
   await expect(page.getByRole("heading", { name: /Meet the people growing your food/ })).toBeVisible();

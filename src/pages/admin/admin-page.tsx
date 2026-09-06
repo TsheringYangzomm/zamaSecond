@@ -12,6 +12,8 @@ import {
   ShoppingBag,
   Sprout,
   Star,
+  Sparkles,
+  TicketPercent,
   Users,
 } from "lucide-react";
 import { useAdminAuth } from "../../admin/admin-auth";
@@ -29,6 +31,8 @@ import { OrdersTab } from "./orders-tab";
 import { CustomersTab } from "./customers-tab";
 import { SubscriptionsTab } from "./subscriptions-tab";
 import { MessagesTab } from "./messages-tab";
+import { CouponsTab } from "./coupons-tab";
+import { AccountsRewardsTab } from "./accounts-rewards-tab";
 import {
   Sidebar,
   SidebarContent,
@@ -48,7 +52,7 @@ import {
 } from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
 
-type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "farmers" | "dieticians" | "customers" | "waitlist" | "reviews" | "messages" | "subscriptions" | "content";
+type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "coupons" | "farmers" | "dieticians" | "customers" | "accounts-rewards" | "waitlist" | "reviews" | "messages" | "subscriptions" | "content";
 
 type NavItem = { key: AdminTab; label: string; icon: ReactNode };
 
@@ -61,6 +65,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { key: "products", label: "Products", icon: <Package /> },
       { key: "inventory", label: "Inventory", icon: <Boxes /> },
       { key: "meal-kit-notes", label: "Meal Kit Notes", icon: <ClipboardList /> },
+      { key: "coupons", label: "Coupons", icon: <TicketPercent /> },
     ],
   },
   {
@@ -69,6 +74,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { key: "farmers", label: "Farmers", icon: <Sprout /> },
       { key: "dieticians", label: "Dieticians", icon: <Apple /> },
       { key: "customers", label: "Customers", icon: <Users /> },
+      { key: "accounts-rewards", label: "Accounts & rewards", icon: <Sparkles /> },
       { key: "waitlist", label: "Waitlist", icon: <ListChecks /> },
     ],
   },
@@ -118,9 +124,11 @@ function AdminShell() {
             {tab === "products" ? <ProductsTab /> : null}
             {tab === "inventory" ? <InventoryTab /> : null}
             {tab === "meal-kit-notes" ? <MealKitNotesTab /> : null}
+            {tab === "coupons" ? <CouponsTab /> : null}
             {tab === "farmers" ? <FarmersTab /> : null}
             {tab === "dieticians" ? <DieticiansTab /> : null}
             {tab === "customers" ? <CustomersTab /> : null}
+            {tab === "accounts-rewards" ? <AccountsRewardsTab /> : null}
             {tab === "waitlist" ? <WaitlistTab /> : null}
             {tab === "reviews" ? <ReviewsTab /> : null}
             {tab === "messages" ? <MessagesTab /> : null}

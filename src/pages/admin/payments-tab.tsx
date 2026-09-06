@@ -386,7 +386,7 @@ export function PaymentsTab() {
             >
               Edit methods
             </button>
-            {!writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
+            {state.phase === "ready" && !writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
           </div>
         </div>
 
@@ -446,7 +446,7 @@ export function PaymentsTab() {
         <button className={btnOutlineSm} type="button" onClick={() => void commerceStore.load(true)} disabled={!data}>Refresh</button>
       </CommerceSectionHeading>
 
-      {!writable ? <DevDataNotice /> : null}
+      {state.phase === "ready" && !writable ? <DevDataNotice /> : null}
 
       <PaymentDashboard payments={data.payments} customerLabel={customerLabel} onSelect={selectPayment} />
     </div>

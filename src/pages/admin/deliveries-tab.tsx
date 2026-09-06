@@ -169,7 +169,7 @@ const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
               onChange={(event) => setDriverDraft(event.target.value)}
             />
             <button className={btnOutlineSm} type="button" disabled={!writable || busy} onClick={() => void handleSaveDriver()}>Save driver</button>
-            {!writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
+            {state.phase === "ready" && !writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Update status</span>
@@ -212,7 +212,7 @@ const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
         <button className={btnOutlineSm} type="button" onClick={() => void commerceStore.load(true)} disabled={!data}>Refresh</button>
       </CommerceSectionHeading>
 
-      {!writable ? <DevDataNotice /> : null}
+      {state.phase === "ready" && !writable ? <DevDataNotice /> : null}
 
       <div className="grid gap-3">
         <input

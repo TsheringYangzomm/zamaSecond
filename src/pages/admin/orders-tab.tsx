@@ -13,6 +13,7 @@ import {
   DevDataNotice,
   StatusChangeSelect,
   ViewButton,
+  formatCompactDateTime,
   formatDate,
   formatDateTime,
   formatMoney,
@@ -47,7 +48,7 @@ export function OrdersTab() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   const data = state.phase === "ready" ? state.data : null;
   const writable = state.phase === "ready" && state.writable;
@@ -159,6 +160,8 @@ const [receiptOpen, setReceiptOpen] = useState(false);
           </div>
           <div className="grid gap-1 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft">
             <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Total</span>
+            {selected.subtotal != null && selected.subtotal !== selected.total ? <span className="text-sm text-brand-black/60">Subtotal {formatMoney(selected.subtotal)}</span> : null}
+            {selected.coupon_code && (selected.coupon_discount ?? 0) > 0 ? <span className="text-sm font-bold text-brand-green-ink">Coupon {selected.coupon_code} · − {formatMoney(selected.coupon_discount ?? 0)}</span> : null}
             <span className="font-primary text-2xl font-bold text-brand-green-ink">{formatMoney(selected.total)}</span>
             <span className="text-xs text-brand-black/56">Paid via {selected.payment_method || "—"}</span>
           </div>
@@ -224,7 +227,7 @@ const [receiptOpen, setReceiptOpen] = useState(false);
                 setPendingChange({ order: selected, status: next as OrderStatus });
               }}
             />
-            {!writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
+            {state.phase === "ready" && !writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
           </div>
         </div>
 
@@ -268,7 +271,7 @@ const [receiptOpen, setReceiptOpen] = useState(false);
             <button className={btnOutlineSm} type="button" onClick={() => void commerceStore.load(true)} disabled={!data}>Refresh</button>
           </CommerceSectionHeading>
 
-          {!writable ? <DevDataNotice /> : null}
+          {state.phase === "ready" && !writable ? <DevDataNotice /> : null}
 
       <div className="grid gap-3">
         <input
@@ -287,7 +290,7 @@ const [receiptOpen, setReceiptOpen] = useState(false);
           <ColumnFilterDropdown label="Amount" options={amountRanges} value={filters.amount} onSelect={(v) => setFilter("amount", v)} />
           <ColumnFilterDropdown label="Placed" options={DATE_RANGES} value={filters.placed} onSelect={(v) => setFilter("placed", v)} allLabel="Any date" />
           <ColumnFilterDropdown label="Items" options={COUNT_RANGES} value={filters.items} onSelect={(v) => setFilter("items", v)} />
-          <ColumnFilterDropdown label="Notes" options={[{ value: "has", label: "Has notes" }, { value: "none", label: "No notes" }]} value={filters.notes} onSelect={(v) => setFilter("notes", v)} />
+          <ColumnFilterDropdown label="Notes" options={[{ value: "has", label: "Has notes" }, { value: "none", label: "No notes" }]} value={filters.notes} onSelect={(v) => setFilter("notes", v)} align="right" />
           <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ status: "", payment: "", location: "", customer: "", amount: "", placed: "", items: "", notes: "" })} />
         </div>
       </div>
@@ -298,8 +301,20 @@ const [receiptOpen, setReceiptOpen] = useState(false);
         <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">No orders match the current search or filter.</p>
       ) : (
         <div className="w-full max-w-full overflow-x-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white shadow-brand-soft">
-          <table className="w-full min-w-[640px] border-collapse text-left text-xs sm:text-sm">
+          <table className="w-full min-w-[1080px] table-fixed border-collapse text-left text-xs sm:text-sm xl:min-w-0">
             <caption className="sr-only">Orders</caption>
+            <colgroup>
+              <col style={{ width: "7.25rem" }} />
+              <col style={{ width: "8rem" }} />
+              <col style={{ width: "4.75rem" }} />
+              <col style={{ width: "7.75rem" }} />
+              <col style={{ width: "5rem" }} />
+              <col style={{ width: "7rem" }} />
+              <col style={{ width: "5.25rem" }} />
+              <col style={{ width: "7.5rem" }} />
+              <col style={{ width: "5.25rem" }} />
+              <col style={{ width: "10.5rem" }} />
+            </colgroup>
             <thead>
               <tr className="border-b-3 border-dashed border-brand-forest/30 bg-brand-warm-white text-[0.65rem] font-bold uppercase tracking-[0.08em] text-brand-green-ink">
                 <th className="whitespace-nowrap px-2.5 py-2.5 sm:px-3">Order</th>
@@ -311,7 +326,7 @@ const [receiptOpen, setReceiptOpen] = useState(false);
                 <th className="hidden md:table-cell whitespace-nowrap px-2.5 py-2.5 sm:px-3">Payment</th>
                 <th className="whitespace-nowrap px-2.5 py-2.5 sm:px-3">Order Status</th>
                 <th className="hidden lg:table-cell truncate px-2.5 py-2.5 sm:px-3">Notes</th>
-                <th className="px-2.5 py-2.5 sm:px-3">
+                <th className="px-2.5 py-2.5 text-right sm:px-3">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
@@ -320,14 +335,14 @@ const [receiptOpen, setReceiptOpen] = useState(false);
               {filtered.map((order) => (
                 <tr className="border-b-2 border-dashed border-brand-forest/16 last:border-b-0" key={order.id}>
                   <td className="whitespace-nowrap px-2.5 py-2.5 sm:px-3 font-bold text-brand-black">{order.id}</td>
-                  <td className="whitespace-nowrap px-2.5 py-2.5 sm:px-3 text-brand-black/72 truncate">{customerName(data.customers, order.customer_id)}</td>
-                  <td className="hidden md:table-cell whitespace-nowrap px-2.5 py-2.5 sm:px-3 text-brand-black/72 truncate">{order.delivery_area || "—"}</td>
-                  <td className="hidden lg:table-cell px-2.5 py-2.5 sm:px-3 text-brand-black/72 truncate" title={order.items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}>{order.items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}</td>
+                  <td className="max-w-0 overflow-hidden whitespace-nowrap px-2.5 py-2.5 text-brand-black/72 sm:px-3"><span className="block truncate">{customerName(data.customers, order.customer_id)}</span></td>
+                  <td className="hidden max-w-0 overflow-hidden whitespace-nowrap px-2.5 py-2.5 text-brand-black/72 md:table-cell sm:px-3"><span className="block truncate">{order.delivery_area || "—"}</span></td>
+                  <td className="hidden max-w-0 overflow-hidden px-2.5 py-2.5 text-brand-black/72 lg:table-cell sm:px-3" title={order.items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}><span className="block truncate">{order.items.map((item) => `${item.quantity}× ${item.name}`).join(", ")}</span></td>
                   <td className="whitespace-nowrap px-2.5 py-2.5 sm:px-3 font-bold text-brand-black">{formatMoney(order.total)}</td>
-                  <td className="hidden sm:table-cell whitespace-nowrap px-2.5 py-2.5 sm:px-3 text-brand-black/72">{formatDateTime(order.created_at)}</td>
-                  <td className="hidden md:table-cell whitespace-nowrap px-2.5 py-2.5 sm:px-3"><CommerceStatusBadge status={order.payment_status} /></td>
-                  <td className="whitespace-nowrap px-2.5 py-2.5 sm:px-3"><CommerceStatusBadge status={order.status} /></td>
-                  <td className="hidden lg:table-cell max-w-28 px-2.5 py-2.5 sm:px-3 text-brand-black/72" title={order.notes || ""}>
+                  <td className="hidden whitespace-nowrap px-2.5 py-2.5 text-xs text-brand-black/72 sm:table-cell sm:px-3">{formatCompactDateTime(order.created_at)}</td>
+                  <td className="hidden whitespace-nowrap px-2.5 py-2.5 sm:px-3 md:table-cell"><CommerceStatusBadge status={order.payment_status} compact /></td>
+                  <td className="whitespace-nowrap px-2.5 py-2.5 sm:px-3"><CommerceStatusBadge status={order.status} compact /></td>
+                  <td className="hidden max-w-0 overflow-hidden px-2.5 py-2.5 text-brand-black/72 lg:table-cell sm:px-3" title={order.notes || ""}>
                     {order.notes ? (
                       <span className="flex items-start gap-1">
                         <span className="min-w-0 truncate">{order.notes}</span>
@@ -347,6 +362,7 @@ const [receiptOpen, setReceiptOpen] = useState(false);
                         options={orderStatuses}
                         writable={writable}
                         busy={busy}
+                        compact
                         onChange={(next) => {
                           setActionError(null);
                           setPendingChange({ order, status: next as OrderStatus });

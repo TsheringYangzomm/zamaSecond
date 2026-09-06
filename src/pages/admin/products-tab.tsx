@@ -250,7 +250,7 @@ async function handleEdit(row: ProductRow) {
         </div>
       </div>
 
-      {!stockAvailable ? (
+      {products && !stockAvailable ? (
         <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
           Showing example stock levels. Run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the inventory table.
         </p>

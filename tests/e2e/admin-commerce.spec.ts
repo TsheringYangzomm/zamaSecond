@@ -91,6 +91,11 @@ type Store = {
   subscriptions: Record<string, unknown>[];
   deliveries: Record<string, unknown>[];
   payments: Record<string, unknown>[];
+  coupons: Record<string, unknown>[];
+  coupon_product_targets: Record<string, unknown>[];
+  coupon_category_targets: Record<string, unknown>[];
+  coupon_claims: Record<string, unknown>[];
+  coupon_redemptions: Record<string, unknown>[];
 };
 
 async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
@@ -105,6 +110,11 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
     subscriptions: [sampleOrder({ id: "SUB-1", customer_id: "cus-karma", status: "active", items: [], total: 500, subscription: true })],
     deliveries: [sampleOrder({ id: "DEL-1", customer_id: "cus-karma", status: "preparing", items: [], total: 0, delivery: true })],
     payments: [sampleOrder({ id: "PAY-1", customer_id: "cus-karma", status: "paid", items: [], total: 400, payment: true })],
+    coupons: [{ id: "coupon-fresh-10", code: "FRESH10", title: "Fresh start", description: "Save 10% on fresh boxes.", discount_type: "percentage", discount_value: 10, maximum_discount_amount: 300, minimum_order_amount: 500, starts_at: "2026-01-01T00:00:00.000Z", expires_at: "2027-01-01T00:00:00.000Z", usage_limit: 100, per_customer_limit: 1, active: true, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }],
+    coupon_product_targets: [],
+    coupon_category_targets: [{ coupon_id: "coupon-fresh-10", category: "Fresh boxes" }],
+    coupon_claims: [{ coupon_id: "coupon-fresh-10" }, { coupon_id: "coupon-fresh-10" }],
+    coupon_redemptions: [{ coupon_id: "coupon-fresh-10", status: "redeemed" }],
   };
 
   await page.route("**/auth/v1/token*", (route) =>
@@ -116,6 +126,29 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
   await page.route("**/rest/v1/rpc/is_admin", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: "true" }),
   );
+  await page.route("**/rest/v1/rpc/get_admin_account_snapshot", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      status: "ok",
+      customer: sampleCustomer(),
+      snapshot: {
+        customer_id: "cus-karma",
+        points_balance: 25,
+        current_streak: 2,
+        points_ledger: [],
+        check_ins: [{ customer_id: "cus-karma", check_in_date: "2026-08-28", streak_day: 2, points_awarded: 5, created_at: "2026-08-28T00:00:00Z" }],
+        saved_items: [],
+        redemptions: [],
+        wallet_balance: 0,
+        wallet_ledger: [],
+        bank_accounts: [],
+        withdrawals: [],
+        reviews: [],
+        settings: { id: "default", daily_check_in_rewards: [1, 5, 5, 10, 10, 15, 15], review_reward_points: 20, points_per_ngultrum: 10, minimum_redemption_points: 100 },
+      },
+    }),
+  }));
 
   const table = (name: keyof Store) =>
     async (route) => {
@@ -123,14 +156,12 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
       const method = request.method();
       const url = new URL(request.url());
 
-      if (name === "inventory" || name === "customers" || name === "orders" || name === "subscriptions" || name === "deliveries" || name === "payments") {
-        if (!commerceLive) {
-          return route.fulfill({
-            status: 404,
-            contentType: "application/json",
-            body: JSON.stringify({ message: `relation "${name}" does not exist` }),
-          });
-        }
+      if (name !== "products" && !commerceLive) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ message: `relation "${name}" does not exist` }),
+        });
       }
 
       if (method === "GET") {
@@ -147,7 +178,7 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
       return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
     };
 
-  for (const name of ["products", "inventory", "customers", "orders", "subscriptions", "deliveries", "payments"] as const) {
+  for (const name of ["products", "inventory", "customers", "orders", "subscriptions", "deliveries", "payments", "coupons", "coupon_product_targets", "coupon_category_targets", "coupon_claims", "coupon_redemptions"] as const) {
     await page.route(`**/rest/v1/${name}*`, table(name));
   }
   await page.route("**/rest/v1/reviews*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
@@ -166,7 +197,7 @@ async function signInAsAdmin(page) {
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome to the Zama admin." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 }
 
 test("overview shows live commerce stats without the dev notice", async ({ page }) => {
@@ -217,6 +248,33 @@ test("orders tab falls back to dev data with writes disabled", async ({ page }) 
   await expect(page.getByText("Meal Kit Box")).toBeVisible();
 });
 
+test("orders table keeps actions visible and filters open by click", async ({ page }) => {
+  await mockAdmin(page, { commerceLive: true });
+  await signInAsAdmin(page);
+
+  await page.getByRole("button", { name: "Orders", exact: true }).click();
+  await expect(page.getByRole("columnheader", { name: "Order", exact: true })).toBeVisible();
+  const firstOrder = page.getByRole("row", { name: /ZAM-2026-0200/ });
+  await expect(firstOrder.getByRole("button", { name: "View" })).toBeVisible();
+  await expect(firstOrder.getByLabel("Change status")).toBeVisible();
+
+  await page.locator('button[aria-haspopup="menu"]').filter({ hasText: "Payment" }).click();
+  const paymentMenu = page.locator('[role="menu"]').filter({ hasText: "All payments" });
+  await expect(paymentMenu.getByRole("button", { name: "All payments" })).toBeVisible();
+  await paymentMenu.getByRole("button", { name: "pending" }).click();
+  await expect(page.locator('button[aria-haspopup="menu"]').filter({ hasText: "Payment" })).toHaveAttribute("aria-expanded", "false");
+
+  await page.locator('button[aria-haspopup="menu"]').filter({ hasText: "Customer" }).click();
+  const customerMenu = page.locator('[role="menu"]').filter({ hasText: "All customers" });
+  await customerMenu.getByRole("button", { name: "Karma Wangdi" }).click();
+  await page.getByRole("button", { name: "Clear Customer filter" }).click();
+  await expect(page.getByRole("button", { name: "Clear Customer filter" })).toHaveCount(0);
+
+  await page.locator('button[aria-haspopup="menu"]').filter({ hasText: "Notes" }).click();
+  const notesMenu = page.locator('[role="menu"]').filter({ hasText: "All notes" });
+  await expect(notesMenu.getByRole("button", { name: "All notes" })).toBeVisible();
+});
+
 test("products fall back to example stock levels without the stock columns", async ({ page }) => {
   await mockAdmin(page, { commerceLive: false });
   await signInAsAdmin(page);
@@ -245,12 +303,40 @@ test("customers tab derives order stats and subscription status", async ({ page 
   await expect(page.getByRole("row", { name: /ZAM-2026-0200/ })).toBeVisible();
 });
 
+test("coupons tab shows live campaign usage and edit controls", async ({ page }) => {
+  await mockAdmin(page, { commerceLive: true });
+  await signInAsAdmin(page);
+
+  await page.getByRole("button", { name: "Coupons", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Coupons" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Fresh start.*FRESH10/ })).toContainText("2 collected");
+  await expect(page.getByRole("row", { name: /Fresh start.*FRESH10/ })).toContainText("1 / 100 redeemed");
+
+  await page.getByRole("row", { name: /Fresh start.*FRESH10/ }).getByRole("button", { name: "Edit" }).click();
+  await expect(page.getByRole("heading", { name: "Edit coupon" })).toBeVisible();
+  await expect(page.getByLabel("Coupon code")).toHaveValue("FRESH10");
+});
+
+test("accounts and rewards tab loads customer controls", async ({ page }) => {
+  await mockAdmin(page, { commerceLive: true });
+  await signInAsAdmin(page);
+
+  await page.getByRole("button", { name: "Accounts & rewards", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Accounts & rewards" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Karma Wangdi/ })).toContainText("25");
+
+  await page.getByRole("row", { name: /Karma Wangdi/ }).getByRole("button", { name: "Manage" }).click();
+  await expect(page.getByRole("heading", { name: "Karma Wangdi" })).toBeVisible();
+  await expect(page.getByText("2 day check-in streak")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Reward settings" })).toBeVisible();
+});
+
 test("every admin section renders in dev mode without crashing", async ({ page }) => {
   await mockAdmin(page, { commerceLive: false });
   await signInAsAdmin(page);
 
   const sections: [string, string][] = [
-    ["Overview", "Welcome to the Zama admin."],
+    ["Overview", "Dashboard"],
     ["Orders", "Orders"],
     ["Products", "Products"],
     ["Farmers", "Farmers"],
@@ -258,6 +344,7 @@ test("every admin section renders in dev mode without crashing", async ({ page }
     ["Waitlist", "Waitlist"],
     ["Reviews", "Reviews"],
     ["Subscriptions", "Subscriptions"],
+    ["Coupons", "Coupons"],
     ["Content", "Content blocks"],
   ];
 

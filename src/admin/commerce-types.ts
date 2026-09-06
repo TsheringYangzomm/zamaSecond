@@ -34,6 +34,10 @@ export type Order = {
   status: OrderStatus;
   items: OrderItem[];
   total: number;
+  subtotal?: number;
+  coupon_id?: string | null;
+  coupon_code?: string | null;
+  coupon_discount?: number;
   payment_status: PaymentStatus;
   payment_method: string;
   payment_reference: string | null;

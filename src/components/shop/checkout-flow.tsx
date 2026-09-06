@@ -1,8 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCart } from "../../cart-context";
 import { useCustomerAuth } from "../../checkout/customer-auth";
 import { submitOrder, type CustomerProfile } from "../../checkout/checkout-api";
-import { btnPrimaryLg } from "../ui/styles";
+import { listMyCoupons, previewCoupon } from "../../coupons/coupons-api";
+import type { CouponPreview, CustomerCoupon } from "../../coupons/coupon-types";
+import { btnOutlineSm, btnPrimaryLg } from "../ui/styles";
 import { PackageIcon } from "../ui/icons";
 import { numberFormatter } from "./shop-utils";
 import type { CartLine } from "./cart-lines";
@@ -136,8 +138,45 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
   const [deliveryDate, setDeliveryDate] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponPreview | null>(null);
+  const [availableCoupons, setAvailableCoupons] = useState<CustomerCoupon[]>([]);
+  const [couponBusy, setCouponBusy] = useState(false);
 
   const hasCompletePricing = items.length > 0 && items.every((line) => line.kind === "product" && line.product.priceAmount !== null);
+  const couponLines = useMemo(() => items.flatMap((line) => line.kind === "product" ? [{
+    productId: line.product.id,
+    category: line.product.category,
+    quantity: line.quantity,
+    unitPrice: line.product.priceAmount ?? 0,
+  }] : []), [items]);
+
+  useEffect(() => {
+    let active = true;
+    void listMyCoupons(profile.email).then((coupons) => {
+      if (active) setAvailableCoupons(coupons.filter((coupon) => coupon.canUse));
+    });
+    return () => {
+      active = false;
+    };
+  }, [profile.email]);
+
+  async function applyCoupon(nextCode = couponCode) {
+    const code = nextCode.trim().toUpperCase();
+    if (!code || !hasCompletePricing) return;
+    setCouponBusy(true);
+    const result = await previewCoupon(code, couponLines, profile.email);
+    setCouponBusy(false);
+    setCouponCode(code);
+    setAppliedCoupon(result);
+    onError(result.ok ? null : result.error ?? "That coupon could not be applied.");
+  }
+
+  function removeCoupon() {
+    setCouponCode("");
+    setAppliedCoupon(null);
+    onError(null);
+  }
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -158,6 +197,7 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
           ? {
               productId: line.product.id,
               name: line.product.name,
+              category: line.product.category,
               quantity: line.quantity,
               price: line.product.priceAmount ?? 0,
             }
@@ -171,6 +211,7 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
       paymentMethod,
       deliveryDate: deliveryDate || null,
       notes: notes.trim(),
+      couponCode: appliedCoupon?.ok ? appliedCoupon.coupon?.code ?? couponCode : null,
     });
     setBusy(false);
     if (!result.ok) {
@@ -189,6 +230,30 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
       </div>
 
       <OrderSummary items={items} />
+
+      <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft">
+        <div className="grid gap-1">
+          <h4 className={`${labelClasses} text-brand-orange-ink`}>Coupon</h4>
+          <p className="text-sm text-brand-black/62">Use one coupon per order. Discounts apply only to eligible products.</p>
+        </div>
+        {availableCoupons.length > 0 ? (
+          <div className="grid gap-2">
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Your collected coupons</span>
+            {availableCoupons.map((coupon) => (
+              <button className="flex items-center gap-3 rounded-wobbly-md border-2 border-dashed border-brand-forest/35 bg-brand-yellow/30 p-3 text-left hover:bg-brand-yellow disabled:opacity-55" type="button" key={coupon.id} disabled={couponBusy || !hasCompletePricing} onClick={() => void applyCoupon(coupon.code)}>
+                <span className="grid min-w-18 place-items-center rounded-full border-2 border-brand-forest bg-brand-forest px-2 py-1 text-xs font-bold text-brand-white">{coupon.code}</span>
+                <span className="min-w-0 flex-1"><strong className="block text-sm text-brand-green-ink">{coupon.title}</strong><span className="text-xs text-brand-black/58">{coupon.description}</span></span>
+                <span className="text-xs font-bold text-brand-orange-ink">Use</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input className={inputClasses} aria-label="Coupon code" value={couponCode} onChange={(event) => { setCouponCode(event.target.value.toUpperCase()); setAppliedCoupon(null); }} placeholder="Enter coupon code" disabled={!hasCompletePricing} />
+          {appliedCoupon?.ok ? <button className={btnOutlineSm} type="button" onClick={removeCoupon}>Remove</button> : <button className={btnOutlineSm} type="button" onClick={() => void applyCoupon()} disabled={couponBusy || !hasCompletePricing || !couponCode.trim()}>{couponBusy ? "Checking..." : "Apply"}</button>}
+        </div>
+        {appliedCoupon?.ok ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{appliedCoupon.coupon?.code} applied — you saved Nu. {numberFormatter.format(appliedCoupon.discountAmount)}.</p> : null}
+      </section>
 
       <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft">
         <h4 className={`${labelClasses} text-brand-orange-ink`}>Delivery details</h4>
@@ -231,12 +296,13 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
       {!hasCompletePricing ? <FlowNotice>Some items don't have final prices yet. We'll confirm the total before payment.</FlowNotice> : null}
 
       <div className="rounded-wobbly-card border-3 border-brand-forest bg-brand-yellow p-4 shadow-brand-soft">
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-bold text-brand-black"><span className="tabular-nums">{items.length}</span> item{items.length === 1 ? "" : "s"}</p>
-          <p className="text-right font-bold text-brand-orange-ink">{hasCompletePricing ? `Nu. ${numberFormatter.format(subtotal)}` : "Pricing pending"}</p>
+        <div className="grid gap-1 text-sm">
+          <div className="flex items-center justify-between gap-3"><p className="font-bold text-brand-black"><span className="tabular-nums">{items.length}</span> item{items.length === 1 ? "" : "s"}</p><p className="text-right font-bold text-brand-black/65">{hasCompletePricing ? `Nu. ${numberFormatter.format(subtotal)}` : "Pricing pending"}</p></div>
+          {appliedCoupon?.ok ? <div className="flex items-center justify-between gap-3 text-brand-green-ink"><span>Coupon discount</span><strong>− Nu. {numberFormatter.format(appliedCoupon.discountAmount)}</strong></div> : null}
+          {appliedCoupon?.ok ? <div className="mt-1 flex items-center justify-between gap-3 border-t-2 border-dashed border-brand-forest/25 pt-2"><span className="font-bold text-brand-black">Total</span><strong className="text-lg text-brand-orange-ink">Nu. {numberFormatter.format(appliedCoupon.finalTotal)}</strong></div> : null}
         </div>
         <button className={`${btnPrimaryLg} mt-3 w-full`} type="submit" disabled={busy || !hasCompletePricing}>
-          {busy ? "Placing order..." : `Place order · ${hasCompletePricing ? `Nu. ${numberFormatter.format(subtotal)}` : "pending"}`}
+          {busy ? "Placing order..." : `Place order · ${hasCompletePricing ? `Nu. ${numberFormatter.format(appliedCoupon?.ok ? appliedCoupon.finalTotal : subtotal)}` : "pending"}`}
         </button>
         <p className="mt-2 text-xs text-brand-black/58">Orders appear in the admin Orders section as "pending" once placed.</p>
       </div>

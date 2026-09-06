@@ -1,3 +1,8 @@
+import { useEffect, useState } from "react";
+import { Heart } from "lucide-react";
+import { fetchAccountRewards, toggleSavedItem } from "../../account-rewards/account-rewards-api";
+import { useCart } from "../../cart-context";
+import { useOptionalCustomerAuth } from "../../checkout/customer-auth";
 import { btnPrimaryKit } from "../ui/styles";
 import { YellowTag } from "../ui/tag";
 import { ProductDetail } from "./product-detail";
@@ -15,6 +20,48 @@ function AddToCartIcon() {
 }
 
 export { AddToCartIcon };
+
+const saveButtonClasses =
+  "inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-wobbly-md border-2 border-brand-forest/35 bg-brand-white px-3 py-2 text-sm font-bold text-brand-green-ink transition-colors hover:border-brand-forest hover:bg-brand-mint focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2";
+
+export function WishlistButton({ product }: { product: ShopProduct }) {
+  const auth = useOptionalCustomerAuth();
+  const { openAuth } = useCart();
+  const email = auth?.profile?.email ?? null;
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!email) {
+      setSaved(false);
+      return () => { active = false; };
+    }
+    void fetchAccountRewards(email).then((snapshot) => {
+      if (active) setSaved(snapshot.savedItems.some((item) => item.kind === "wishlist" && item.productId === product.id));
+    }).catch(() => {
+      if (active) setSaved(false);
+    });
+    return () => { active = false; };
+  }, [email, product.id]);
+
+  async function toggleSaved() {
+    if (!email) {
+      openAuth();
+      return;
+    }
+    if (busy) return;
+    setBusy(true);
+    try {
+      const snapshot = await toggleSavedItem(email, product.id, "wishlist");
+      setSaved(snapshot.savedItems.some((item) => item.kind === "wishlist" && item.productId === product.id));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <button className={saveButtonClasses} type="button" disabled={busy} aria-pressed={saved} aria-label={`${saved ? "Remove" : "Save"} ${product.name} ${saved ? "from" : "to"} wishlist`} onClick={() => void toggleSaved()}><Heart className={`h-4 w-4 ${saved ? "fill-brand-orange text-brand-orange-ink" : ""}`} />{busy ? "Saving..." : saved ? "Saved" : "Save"}</button>;
+}
 
 export function AddToCartButton({ product, onAdd }: { product: ShopProduct; onAdd: (product: ShopProduct) => void }) {
   if (!isProductActive(product)) {
@@ -75,6 +122,7 @@ export function FeaturedShopCard({ product, onAdd, onViewDetail, preview = false
               View box contents ({product.contents.length} items)
             </button>
           ) : null}
+          <WishlistButton product={product} />
           <AddToCartButton product={product} onAdd={onAdd} />
           <a className={detailsLinkClasses} href={detailHref}>View full details →</a>
         </div>
@@ -132,6 +180,7 @@ export function SupportingShopCard({ product, onAdd, onViewDetail, preview = fal
       </div>
       {!preview ? <div className="col-span-full"><ProductFacts product={product} compact /></div> : null}
       {!preview ? <div className="col-span-full"><ProductDetail product={product} short /></div> : null}
+      <div className="col-span-full"><WishlistButton product={product} /></div>
       <div className="col-span-full"><AddToCartButton product={product} onAdd={onAdd} /></div>
     </article>
   );

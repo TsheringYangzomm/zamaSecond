@@ -145,7 +145,7 @@ export function SubscriptionsTab() {
               busy={busy}
               onChange={(next) => setPendingChange({ subscription: selected, status: next as SubscriptionStatus })}
             />
-            {!writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
+            {state.phase === "ready" && !writable ? <span className="text-xs text-brand-black/52">Writes need the live tables.</span> : null}
           </div>
         </div>
 
@@ -168,7 +168,7 @@ export function SubscriptionsTab() {
         <button className={btnOutlineSm} type="button" onClick={() => void commerceStore.load(true)} disabled={!data}>Refresh</button>
       </CommerceSectionHeading>
 
-      {!writable ? <DevDataNotice /> : null}
+      {state.phase === "ready" && !writable ? <DevDataNotice /> : null}
 
       <div className="grid gap-3">
         <input

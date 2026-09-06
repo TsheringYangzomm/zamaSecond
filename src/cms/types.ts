@@ -171,6 +171,12 @@ export type ReviewRow = {
   verified: boolean;
   sort_order: number;
   published: boolean;
+  customer_id?: string | null;
+  order_id?: string | null;
+  source?: "cms" | "customer";
+  moderation_status?: "pending" | "approved" | "rejected";
+  points_awarded?: number;
+  submitted_at?: string | null;
 };
 
 export type ContentBlockRow = {

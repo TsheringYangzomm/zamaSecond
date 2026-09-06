@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { deleteReview, listProducts, listReviews, upsertReview } from "../../admin/admin-api";
+import { updateCustomerReviewStatus } from "../../account-rewards/account-rewards-api";
+import { useAdminAuth } from "../../admin/admin-auth";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import type { ProductRow, ReviewRow } from "../../cms/types";
@@ -7,6 +9,7 @@ import { inputClasses } from "./admin-fields";
 import { ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 
 export function ReviewsTab() {
+  const { email: adminEmail } = useAdminAuth();
   const [reviews, setReviews] = useState<ReviewRow[] | null>(null);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -37,13 +40,16 @@ export function ReviewsTab() {
       if (filters.product && productName(row.product_id) !== filters.product) return false;
       if (filters.rating && row.rating !== Number(filters.rating)) return false;
       if (filters.date && dateRangeKey(row.date) !== filters.date) return false;
-      if (filters.status && (row.published ? "Active" : "Inactive") !== filters.status) return false;
+      const statusLabel = row.source === "customer" ? `customer_${row.moderation_status ?? (row.published ? "approved" : "pending")}` : row.published ? "Active" : "Inactive";
+      if (filters.status && statusLabel !== filters.status) return false;
       if (!needle) return true;
       return (
         row.author.toLowerCase().includes(needle) ||
         row.title.toLowerCase().includes(needle) ||
         row.body.toLowerCase().includes(needle) ||
-        productName(row.product_id).toLowerCase().includes(needle)
+        productName(row.product_id).toLowerCase().includes(needle) ||
+        String(row.customer_id ?? "").toLowerCase().includes(needle) ||
+        String(row.order_id ?? "").toLowerCase().includes(needle)
       );
     });
   }, [reviews, query, filters, productName]);
@@ -70,9 +76,16 @@ export function ReviewsTab() {
     setStatus(null);
     setBusy(true);
     try {
-      await upsertReview({ ...row, published: !row.published });
-      setReviews((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: !item.published } : item)));
-      setStatus(row.published ? `Hidden ${row.author}'s review.` : `Activated ${row.author}'s review.`);
+      if (row.source === "customer") {
+        const nextStatus = row.moderation_status === "approved" ? "pending" : "approved";
+        await updateCustomerReviewStatus(row.id, nextStatus, adminEmail ?? "admin");
+        setReviews((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: nextStatus === "approved", moderation_status: nextStatus } : item)));
+        setStatus(nextStatus === "approved" ? `Approved ${row.author}'s customer review.` : `Moved ${row.author}'s customer review back to pending.`);
+      } else {
+        await upsertReview({ ...row, published: !row.published });
+        setReviews((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: !item.published } : item)));
+        setStatus(row.published ? `Hidden ${row.author}'s review.` : `Activated ${row.author}'s review.`);
+      }
     } catch (toggleError) {
       setStatus(toggleError instanceof Error ? toggleError.message : "Could not update the review.");
     } finally {
@@ -111,7 +124,7 @@ export function ReviewsTab() {
           <ColumnFilterDropdown label="Product" options={productOptions} value={filters.product} onSelect={(v) => setFilters((f) => ({ ...f, product: v }))} />
           <ColumnFilterDropdown label="Rating" options={ratingOptions} value={filters.rating} onSelect={(v) => setFilters((f) => ({ ...f, rating: v }))} />
           <ColumnFilterDropdown label="Date" options={DATE_RANGES} value={filters.date} onSelect={(v) => setFilters((f) => ({ ...f, date: v }))} />
-          <ColumnFilterDropdown label="Status" options={["Active", "Inactive"]} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+          <ColumnFilterDropdown label="Status" options={["Active", "Inactive", { value: "customer_pending", label: "Customer pending" }, { value: "customer_approved", label: "Customer approved" }, { value: "customer_rejected", label: "Customer rejected" }]} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
           <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ product: "", rating: "", date: "", status: "" })} />
         </div>
       </div>
@@ -135,9 +148,10 @@ export function ReviewsTab() {
             <table className="w-full min-w-180 border-collapse text-left">
               <caption className="sr-only">Reviews</caption>
               <thead>
-                <tr className="border-b-3 border-dashed border-brand-forest/30 bg-brand-warm-white text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">
-                  <th className="px-4 py-3">Product</th>
-                  <th className="px-4 py-3">Reviewer</th>
+              <tr className="border-b-3 border-dashed border-brand-forest/30 bg-brand-warm-white text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">
+                <th className="px-4 py-3">Product</th>
+                <th className="px-4 py-3">Reviewer</th>
+                <th className="px-4 py-3">Source / order</th>
                   <th className="px-4 py-3">Rating</th>
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Status</th>
@@ -158,16 +172,17 @@ export function ReviewsTab() {
                       </div>
                       {row.body ? <p className="mt-1 max-w-100 text-xs leading-[1.4] text-brand-black/64">{row.body}</p> : null}
                     </td>
+                    <td className="px-4 py-3 text-xs text-brand-black/68"><div className="grid gap-1"><span className="font-bold capitalize text-brand-green-ink">{row.source === "customer" ? "Customer" : "CMS"}</span>{row.order_id ? <a className="font-semibold text-brand-green-ink underline decoration-dashed underline-offset-2" href={`#/account/orders?order=${encodeURIComponent(row.order_id)}`}>Order {row.order_id}</a> : null}{row.customer_id ? <span>Customer {row.customer_id}</span> : null}</div></td>
                     <td className="px-4 py-3 text-brand-black/72">{"★".repeat(row.rating)} <span className="text-brand-black/52">{row.rating}/5</span></td>
                     <td className="px-4 py-3 text-brand-black/72">{row.date}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
-                        {row.published ? "Active" : "Inactive"}
+                        {row.source === "customer" ? row.moderation_status ?? "pending" : row.published ? "Active" : "Inactive"}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" disabled={busy} onClick={() => void handleTogglePublished(row)}>{row.published ? "Set inactive" : "Activate"}</button>
+                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" disabled={busy} onClick={() => void handleTogglePublished(row)}>{row.source === "customer" ? row.moderation_status === "approved" ? "Set pending" : "Approve" : row.published ? "Set inactive" : "Activate"}</button>
                         <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
                       </div>
                     </td>

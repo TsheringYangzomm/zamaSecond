@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useCart } from "../cart-context";
 import { useContent } from "../cms/content-context";
 import { useOptionalCustomerAuth } from "../checkout/customer-auth";
-import { recordProductView } from "../account-preferences";
+import { recordProductHistory } from "../account-rewards/account-rewards-api";
 import { OutlineLink } from "../components/ui/action-link";
 import { OutlineTag, YellowTag } from "../components/ui/tag";
 import { btnPrimaryKit, sectionShell, sectionTitleCompact } from "../components/ui/styles";
-import { AddToCartIcon, SupportingShopCard } from "../components/shop/product-cards";
+import { AddToCartIcon, SupportingShopCard, WishlistButton } from "../components/shop/product-cards";
 import { ProductDetail } from "../components/shop/product-detail";
 import { ProductFacts } from "../components/shop/product-facts";
 import { ReviewsSection } from "../components/shop/reviews-section";
@@ -90,7 +90,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
   const suggestions = products.filter((candidate) => candidate.id !== product.id && candidate.category !== product.category).slice(0, 3);
 
   useEffect(() => {
-    if (auth?.profile?.email) recordProductView(auth.profile.email, product.id);
+    if (auth?.profile?.email) void recordProductHistory(auth.profile.email, product.id);
   }, [auth?.profile?.email, product.id]);
 
   function handleAddRelated(candidate: ShopProduct) {
@@ -136,6 +136,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
             <p className="text-xs text-brand-black/64">{product.deliveryEstimate}</p>
           </div>
 
+          <WishlistButton product={product} />
           <PurchasePanel product={product} />
           <ProductFacts product={product} />
 

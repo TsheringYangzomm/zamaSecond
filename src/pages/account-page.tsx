@@ -24,17 +24,18 @@ import {
 import type { Order } from "../admin/commerce-types";
 import { fetchCustomerOrders, type CustomerProfile } from "../checkout/checkout-api";
 import { useCustomerAuth, type CustomerProfileUpdate } from "../checkout/customer-auth";
+import { listMyCoupons } from "../coupons/coupons-api";
+import { claimDailyCheckIn, fetchAccountRewards, migrateLegacySavedItems, requestPointsRedemption, submitCustomerReview, toggleSavedItem } from "../account-rewards/account-rewards-api";
+import { addDays, checkInStreak, localThimphuDateKey, rewardForNextCheckIn } from "../account-rewards/account-rewards-rules";
+import { defaultRewardSettings, type AccountRewardsSnapshot } from "../account-rewards/account-rewards-types";
 import { useCart } from "../cart-context";
 import { useContent } from "../cms/content-context";
-import { loadCustomerPreferences, saveCustomerPreferences, type CustomerPreferences } from "../account-preferences";
 import { inputClasses } from "../components/shop/auth-pane";
 import { btnOutlineSm, btnPrimarySm } from "../components/ui/styles";
 import { isProductActive, productDetailHref, productPrice, type ShopProduct } from "../components/shop/shop-utils";
 
 type OrderFilter = "all" | "unpaid" | "processing" | "shipped" | "review" | "returns";
 type LibraryTab = "wishlist" | "history" | "following";
-
-const dailyCheckInRewards = [1, 5, 5, 10, 10, 15, 15] as const;
 
 const orderFilterLabels: { key: Exclude<OrderFilter, "all">; label: string; icon: typeof ShoppingBag }[] = [
   { key: "unpaid", label: "Unpaid", icon: WalletCards },
@@ -60,32 +61,6 @@ function formatMoney(amount: number): string {
   return `Nu. ${new Intl.NumberFormat("en-BT").format(amount)}`;
 }
 
-function localDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function addDays(date: Date, amount: number): Date {
-  const next = new Date(date);
-  next.setDate(next.getDate() + amount);
-  return next;
-}
-
-function checkInStreak(checkInDates: string[], now = new Date()): number {
-  const checkedDates = new Set(checkInDates);
-  const cursor = new Date(now);
-  cursor.setHours(12, 0, 0, 0);
-  if (!checkedDates.has(localDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
-  let streak = 0;
-  while (checkedDates.has(localDateKey(cursor))) {
-    streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
-
 function orderLabel(order: Order): string {
   return order.status.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -106,7 +81,7 @@ function matchesOrder(order: Order, filter: OrderFilter): boolean {
   return order.status === "cancelled" || order.payment_status === "refunded";
 }
 
-function OrderCard({ order, productById, detailed, reviewed, onReview }: { order: Order; productById: Map<string, ShopProduct>; detailed?: boolean; reviewed?: boolean; onReview?: () => void }) {
+function OrderCard({ order, productById, detailed, reviewed, rewardPoints = 20, onReview }: { order: Order; productById: Map<string, ShopProduct>; detailed?: boolean; reviewed?: boolean; rewardPoints?: number; onReview?: () => void }) {
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -144,7 +119,7 @@ function OrderCard({ order, productById, detailed, reviewed, onReview }: { order
           {detailed ? <span>Delivery: <strong className="text-brand-black">{order.delivery_date ? formatDate(order.delivery_date) : "Date to be confirmed"}</strong></span> : null}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
-          {onReview && order.status === "delivered" ? <button className={`rounded-wobbly-md border-2 px-3 py-1.5 text-xs font-bold ${reviewed ? "cursor-default border-brand-forest/20 bg-brand-mint text-brand-green-ink" : "border-brand-orange-ink bg-brand-yellow text-brand-black hover:bg-brand-orange"}`} type="button" disabled={reviewed} onClick={onReview}>{reviewed ? "Points earned" : "Review · +20 pts"}</button> : null}
+          {onReview && order.status === "delivered" ? <button className={`rounded-wobbly-md border-2 px-3 py-1.5 text-xs font-bold ${reviewed ? "cursor-default border-brand-forest/20 bg-brand-mint text-brand-green-ink" : "border-brand-orange-ink bg-brand-yellow text-brand-black hover:bg-brand-orange"}`} type="button" disabled={reviewed} onClick={onReview}>{reviewed ? "Points earned" : `Review · +${rewardPoints} pts`}</button> : null}
           <strong className="shrink-0 font-primary text-lg text-brand-green-ink">{formatMoney(order.total)}</strong>
         </div>
       </div>
@@ -152,7 +127,7 @@ function OrderCard({ order, productById, detailed, reviewed, onReview }: { order
   );
 }
 
-function ReviewForm({ order, onCancel, onSubmit }: { order: Order; onCancel: () => void; onSubmit: (rating: number, comment: string) => void }) {
+function ReviewForm({ order, rewardPoints, busy, onCancel, onSubmit }: { order: Order; rewardPoints: number; busy: boolean; onCancel: () => void; onSubmit: (rating: number, comment: string) => void }) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
 
@@ -175,7 +150,7 @@ function ReviewForm({ order, onCancel, onSubmit }: { order: Order; onCancel: () 
         </div>
       </fieldset>
       <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Tell us about it <textarea className={`${inputClasses} min-h-24 resize-y`} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="What did you enjoy?" /></label>
-      <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-brand-black/56">You’ll receive 20 points after submitting.</span><button className={btnPrimarySm} type="submit" disabled={rating === 0}>Submit review</button></div>
+      <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-brand-black/56">You’ll receive {rewardPoints} points after submitting.</span><button className={btnPrimarySm} type="submit" disabled={rating === 0 || busy}>{busy ? "Submitting..." : "Submit review"}</button></div>
     </form>
   );
 }
@@ -207,11 +182,18 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   const { signOut, updateProfile } = useCustomerAuth();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [preferences, setPreferences] = useState<CustomerPreferences>(() => loadCustomerPreferences(profile.email));
+  const [rewards, setRewards] = useState<AccountRewardsSnapshot | null>(null);
+  const [rewardsError, setRewardsError] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
   const [reviewNotice, setReviewNotice] = useState<string | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
   const [checkInNotice, setCheckInNotice] = useState<string | null>(null);
+  const [checkInBusy, setCheckInBusy] = useState(false);
+  const [redemptionOpen, setRedemptionOpen] = useState(false);
+  const [redemptionPoints, setRedemptionPoints] = useState(100);
+  const [redemptionNotice, setRedemptionNotice] = useState<string | null>(null);
+  const [redemptionBusy, setRedemptionBusy] = useState(false);
   const [libraryTab, setLibraryTab] = useState<LibraryTab>("wishlist");
   const [profileEditing, setProfileEditing] = useState(false);
   const [profileForm, setProfileForm] = useState<CustomerProfileUpdate>(() => ({
@@ -223,6 +205,7 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   }));
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
+  const [couponCount, setCouponCount] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -239,26 +222,46 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   }, [profile.email]);
 
   useEffect(() => {
-    setPreferences(loadCustomerPreferences(profile.email));
     setProfileForm({ name: profile.name, phone: profile.phone, area: profile.area, dzongkhag: profile.dzongkhag, address: profile.address });
+    setRewards(null);
+    setRewardsError(null);
+    void migrateLegacySavedItems(profile.email).finally(() => {
+      void fetchAccountRewards(profile.email)
+        .then(setRewards)
+        .catch((error) => setRewardsError(error instanceof Error ? error.message : "Your rewards could not be loaded."));
+    });
   }, [profile]);
 
+  useEffect(() => {
+    let active = true;
+    void listMyCoupons(profile.email).then((coupons) => {
+      if (active) setCouponCount(coupons.length);
+    });
+    return () => {
+      active = false;
+    };
+  }, [profile.email]);
+
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
-  const wishlistProducts = useMemo(() => preferences.wishlist.map((id) => productById.get(id)).filter((product): product is ShopProduct => Boolean(product)), [preferences.wishlist, productById]);
-  const historyProducts = useMemo(() => preferences.history.map((id) => productById.get(id)).filter((product): product is ShopProduct => Boolean(product)), [preferences.history, productById]);
+  const wishlistIds = useMemo(() => rewards?.savedItems.filter((item) => item.kind === "wishlist").map((item) => item.productId) ?? [], [rewards]);
+  const historyIds = useMemo(() => rewards?.savedItems.filter((item) => item.kind === "history").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).map((item) => item.productId) ?? [], [rewards]);
+  const wishlistProducts = useMemo(() => wishlistIds.map((id) => productById.get(id)).filter((product): product is ShopProduct => Boolean(product)), [wishlistIds, productById]);
+  const historyProducts = useMemo(() => historyIds.map((id) => productById.get(id)).filter((product): product is ShopProduct => Boolean(product)), [historyIds, productById]);
   const featuredProducts = useMemo(() => products.filter(isProductActive).slice(0, 4), [products]);
   const visibleOrders = useMemo(() => (orders ?? []).filter((order) => matchesOrder(order, orderFilter)), [orders, orderFilter]);
-  const checkInNow = new Date();
-  const todayKey = localDateKey(checkInNow);
-  const checkedInToday = preferences.checkInDates.includes(todayKey);
-  const currentCheckInStreak = checkInStreak(preferences.checkInDates, checkInNow);
-  const firstCheckInDay = Math.max(1, Math.min(checkedInToday ? currentCheckInStreak : currentCheckInStreak + 1, dailyCheckInRewards.length));
-  const todayCheckInReward = dailyCheckInRewards[firstCheckInDay - 1];
-  const checkInDays = Array.from({ length: dailyCheckInRewards.length }, (_, index) => {
-    const date = addDays(checkInNow, index);
-    const dayNumber = Math.min(firstCheckInDay + index, dailyCheckInRewards.length);
-    return { dateKey: localDateKey(date), label: `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`, dayNumber, reward: dailyCheckInRewards[dayNumber - 1] };
+  const rewardSettings = rewards?.settings ?? defaultRewardSettings;
+  const checkInRecords = rewards?.checkIns ?? [];
+  const todayKey = localThimphuDateKey();
+  const checkedInToday = checkInRecords.some((record) => record.checkInDate === todayKey);
+  const currentCheckInStreak = rewards?.currentStreak ?? checkInStreak(checkInRecords, todayKey);
+  const todayCheckInReward = rewardForNextCheckIn(checkInRecords, rewardSettings, todayKey);
+  const firstCheckInDay = Math.max(1, Math.min(checkedInToday ? currentCheckInStreak : currentCheckInStreak + 1, rewardSettings.dailyCheckInRewards.length));
+  const checkInDays = Array.from({ length: rewardSettings.dailyCheckInRewards.length }, (_, index) => {
+    const dateKey = addDays(todayKey, index);
+    const dayNumber = Math.min(firstCheckInDay + index, rewardSettings.dailyCheckInRewards.length);
+    return { dateKey, label: dateKey.slice(5).replace("-", "/"), dayNumber, reward: rewardSettings.dailyCheckInRewards[dayNumber - 1] ?? 0 };
   });
+  const reviewedOrderIds = useMemo(() => new Set((rewards?.reviews ?? []).map((review) => review.orderId)), [rewards]);
 
   function focusSection(id: string) {
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -272,51 +275,65 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   }
 
   function openReviewCenter() {
-    const nextOrder = (orders ?? []).find((order) => matchesOrder(order, "review") && !preferences.reviewedOrderIds.includes(order.id));
+    const nextOrder = (orders ?? []).find((order) => matchesOrder(order, "review") && !reviewedOrderIds.has(order.id));
     setOrderFilter("review");
     setReviewingOrder(nextOrder ?? null);
     setReviewNotice(null);
     focusSection("review-center");
   }
 
-  function submitReview(order: Order, rating: number, comment: string) {
-    if (preferences.reviewedOrderIds.includes(order.id)) return;
-    const next: CustomerPreferences = {
-      ...preferences,
-      points: preferences.points + 20,
-      reviewedOrderIds: [...preferences.reviewedOrderIds, order.id],
-      reviews: {
-        ...preferences.reviews,
-        [order.id]: { rating, comment, submittedAt: new Date().toISOString() },
-      },
-    };
-    setPreferences(next);
-    saveCustomerPreferences(profile.email, next);
-    setReviewingOrder(null);
-    setReviewNotice("Thanks for sharing! 20 points were added to your account.");
+  async function submitReview(order: Order, rating: number, comment: string) {
+    if (reviewedOrderIds.has(order.id) || reviewBusy) return;
+    setReviewBusy(true);
+    setReviewNotice(null);
+    try {
+      const result = await submitCustomerReview(profile.email, order.id, rating, comment);
+      setRewards(result.snapshot);
+      setReviewingOrder(null);
+      setReviewNotice(`Thanks for sharing! ${result.review.pointsAwarded} points were added to your account.`);
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : "Your review could not be submitted.");
+    } finally {
+      setReviewBusy(false);
+    }
   }
 
-  function claimDailyCheckIn() {
-    const today = localDateKey(new Date());
-    if (preferences.checkInDates.includes(today)) return;
-    const reward = dailyCheckInRewards[Math.min(checkInStreak(preferences.checkInDates), dailyCheckInRewards.length - 1)];
-    const next: CustomerPreferences = {
-      ...preferences,
-      points: preferences.points + reward,
-      checkInDates: [...new Set([...preferences.checkInDates, today])].sort().slice(-180),
-    };
-    setPreferences(next);
-    saveCustomerPreferences(profile.email, next);
-    setCheckInNotice(`Daily check-in complete! +${reward} points added.`);
+  async function handleDailyCheckIn() {
+    if (checkedInToday || checkInBusy) return;
+    setCheckInBusy(true);
+    setCheckInNotice(null);
+    try {
+      const result = await claimDailyCheckIn(profile.email);
+      setRewards(result.snapshot);
+      setCheckInNotice(result.pointsAwarded > 0 ? `Daily check-in complete! +${result.pointsAwarded} points added.` : "You have already checked in today.");
+    } catch (error) {
+      setCheckInNotice(error instanceof Error ? error.message : "Daily check-in could not be completed.");
+    } finally {
+      setCheckInBusy(false);
+    }
   }
 
-  function toggleWishlist(productId: string) {
-    const wishlist = preferences.wishlist.includes(productId)
-      ? preferences.wishlist.filter((id) => id !== productId)
-      : [productId, ...preferences.wishlist];
-    const next = { ...preferences, wishlist };
-    setPreferences(next);
-    saveCustomerPreferences(profile.email, next);
+  async function toggleWishlist(productId: string) {
+    try {
+      setRewards(await toggleSavedItem(profile.email, productId, "wishlist"));
+    } catch (error) {
+      setCheckInNotice(error instanceof Error ? error.message : "The saved item could not be updated.");
+    }
+  }
+
+  async function redeemPoints(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!rewards || redemptionBusy) return;
+    setRedemptionBusy(true);
+    setRedemptionNotice(null);
+    try {
+      setRewards(await requestPointsRedemption(profile.email, redemptionPoints));
+      setRedemptionNotice("Redemption requested. An admin will review it before wallet credit is added.");
+    } catch (error) {
+      setRedemptionNotice(error instanceof Error ? error.message : "Your points redemption could not be requested.");
+    } finally {
+      setRedemptionBusy(false);
+    }
   }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
@@ -334,9 +351,9 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   }
 
   const rewardCards = [
-    { label: "Coupons", value: "0", note: "Deals saved", icon: TicketPercent, color: "bg-brand-yellow" },
-    { label: "Points", value: String(preferences.points), note: `${preferences.reviewedOrderIds.length} review${preferences.reviewedOrderIds.length === 1 ? "" : "s"} completed`, icon: Sparkles, color: "bg-brand-mint" },
-    { label: "Wallet", value: "Nu. 0", note: "Available balance", icon: WalletCards, color: "bg-brand-buff" },
+    { label: "Coupons", value: couponCount == null ? "…" : String(couponCount), note: "Deals saved", icon: TicketPercent, color: "bg-brand-yellow", href: "#/coupons" },
+    { label: "Points", value: rewards ? String(rewards.pointsBalance) : "…", note: `${rewards?.reviews.length ?? 0} review${rewards?.reviews.length === 1 ? "" : "s"} completed`, icon: Sparkles, color: "bg-brand-mint" },
+    { label: "Wallet", value: rewards ? formatMoney(rewards.walletBalance) : "…", note: "Available balance", icon: WalletCards, color: "bg-brand-buff", href: "#/account/wallet" },
     { label: "Gift card", value: "Nu. 0", note: "No gift cards yet", icon: Gift, color: "bg-brand-lime" },
   ];
 
@@ -384,20 +401,29 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Rewards summary">
         {rewardCards.map((card) => {
           const Icon = card.icon;
-          const cardContent = <><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-brand-forest ${card.color} text-brand-green-ink`}><Icon className="h-5 w-5" /></span><span className="grid min-w-0 gap-0.5"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-black/56">{card.label}</span><strong className="font-primary text-xl leading-none text-brand-green-ink">{card.value}</strong><span className="truncate text-xs text-brand-black/56">{card.note}</span></span>{card.label === "Wallet" ? <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-brand-forest" /> : null}</>;
+          const cardContent = <><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-brand-forest ${card.color} text-brand-green-ink`}><Icon className="h-5 w-5" /></span><span className="grid min-w-0 gap-0.5"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-black/56">{card.label}</span><strong className="font-primary text-xl leading-none text-brand-green-ink">{card.value}</strong><span className="truncate text-xs text-brand-black/56">{card.note}</span></span>{card.href ? <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-brand-forest" /> : null}</>;
           const cardClass = "flex items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 text-left shadow-brand-soft";
-          return card.label === "Wallet" ? <a className={`${cardClass} hover:bg-brand-warm-white`} key={card.label} href="#/account/wallet" aria-label="Open wallet">{cardContent}</a> : <div className={cardClass} key={card.label}>{cardContent}</div>;
+          if (card.label === "Points") return <button className={`${cardClass} hover:bg-brand-warm-white`} key={card.label} type="button" onClick={() => { setRedemptionOpen((open) => !open); setRedemptionNotice(null); setRedemptionPoints(rewardSettings.minimumRedemptionPoints); }} aria-expanded={redemptionOpen}>{cardContent}<ChevronRight className={`ml-auto h-4 w-4 shrink-0 text-brand-forest transition-transform ${redemptionOpen ? "rotate-90" : ""}`} /></button>;
+          return card.href ? <a className={`${cardClass} hover:bg-brand-warm-white`} key={card.label} href={card.href} aria-label={`Open ${card.label.toLowerCase()}`}>{cardContent}</a> : <div className={cardClass} key={card.label}>{cardContent}</div>;
         })}
       </section>
+
+      {rewardsError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{rewardsError}</p> : null}
+
+      {redemptionOpen ? <form className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-5 shadow-brand-soft" onSubmit={(event) => void redeemPoints(event)}>
+        <div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Redeem points</span><h2 className="font-primary text-xl font-bold text-brand-green-ink">Turn points into wallet credit</h2><p className="text-sm text-brand-black/68">Every {rewardSettings.pointsPerNgultrum} points is worth Nu. 1. An admin will approve your request before credit is added.</p></div>
+        <div className="flex flex-wrap items-end gap-3"><label className="grid min-w-48 gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Points to redeem<input className={inputClasses} type="number" min={rewardSettings.minimumRedemptionPoints} max={rewards?.pointsBalance ?? 0} step={1} value={redemptionPoints} onChange={(event) => setRedemptionPoints(Number(event.target.value))} /></label><span className="pb-3 text-sm font-bold text-brand-green-ink">≈ {formatMoney(Math.floor(redemptionPoints / rewardSettings.pointsPerNgultrum))}</span><button className={btnPrimarySm} type="submit" disabled={!rewards || redemptionBusy}>{redemptionBusy ? "Requesting..." : "Request redemption"}</button><button className={btnOutlineSm} type="button" onClick={() => setRedemptionOpen(false)}>Cancel</button></div>
+        {redemptionNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-white p-3 text-sm font-semibold text-brand-green-ink" role="status">{redemptionNotice}</p> : null}
+      </form> : null}
 
       <section id="daily-check-in" className="grid gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-5 shadow-brand-soft" aria-labelledby="daily-check-in-title">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3"><span className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-2 border-brand-forest bg-brand-yellow text-brand-green-ink"><CalendarCheck className="h-6 w-6" /></span><div className="grid min-w-0 gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Daily check-in</span><h2 id="daily-check-in-title" className="font-primary text-2xl font-bold text-brand-green-ink">Collect points every day</h2><p className="text-sm text-brand-black/68">{currentCheckInStreak > 0 ? `${currentCheckInStreak} day streak — keep it going for bigger rewards.` : "Check in today to start your points streak."}</p></div></div>
-          <button className={checkedInToday ? btnOutlineSm : btnPrimarySm} type="button" disabled={checkedInToday} onClick={claimDailyCheckIn}>{checkedInToday ? "Checked in today" : `Check in · +${todayCheckInReward} pts`}</button>
+          <button className={checkedInToday ? btnOutlineSm : btnPrimarySm} type="button" disabled={checkedInToday || checkInBusy} onClick={() => void handleDailyCheckIn()}>{checkedInToday ? "Checked in today" : checkInBusy ? "Checking in..." : `Check in · +${todayCheckInReward} pts`}</button>
         </div>
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
           {checkInDays.map((day, index) => {
-            const completed = preferences.checkInDates.includes(day.dateKey);
+            const completed = checkInRecords.some((record) => record.checkInDate === day.dateKey);
             const isToday = index === 0;
             return <div className={`grid min-h-24 content-center justify-items-center gap-1 rounded-wobbly-md border-2 p-2 text-center ${completed ? "border-brand-forest bg-brand-mint text-brand-green-ink" : isToday ? "border-brand-orange-ink bg-brand-yellow/55 text-brand-black" : "border-brand-forest/10 bg-brand-warm-white text-brand-black/48"}`} key={day.dateKey}><span className="text-[0.65rem] font-bold uppercase tracking-[0.08em]">Day {day.dayNumber}</span><strong className="font-primary text-xl">+{day.reward}</strong><span className="text-xs">{isToday ? "Today" : day.label}</span>{completed ? <CalendarCheck className="h-4 w-4" aria-label="Collected" /> : null}</div>;
           })}
@@ -410,17 +436,17 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {orderFilterLabels.map((item) => {
             const Icon = item.icon;
-            const count = orders ? item.key === "review" ? orders.filter((order) => matchesOrder(order, item.key) && !preferences.reviewedOrderIds.includes(order.id)).length : orders.filter((order) => matchesOrder(order, item.key)).length : "…";
+            const count = orders ? item.key === "review" ? orders.filter((order) => matchesOrder(order, item.key) && !reviewedOrderIds.has(order.id)).length : orders.filter((order) => matchesOrder(order, item.key)).length : "…";
             return <button className={`grid min-h-24 content-center justify-items-center gap-2 rounded-wobbly-md border-2 p-2 text-center transition-colors ${orderFilter === item.key ? "border-brand-forest bg-brand-yellow text-brand-green-ink" : "border-brand-forest/15 bg-brand-warm-white text-brand-black/68 hover:border-brand-forest hover:bg-brand-mint"}`} key={item.key} type="button" aria-pressed={orderFilter === item.key} onClick={() => { if (item.key === "review") { openReviewCenter(); return; } setOrderFilter(item.key); setReviewingOrder(null); setReviewNotice(null); }}><Icon className="h-6 w-6" /><span className="text-xs font-bold">{item.label}</span><span className="text-xs font-bold opacity-60">{count}</span></button>;
           })}
         </div>
         {orderFilter === "review" ? <div id="review-center" className="grid gap-3 rounded-wobbly-md border-2 border-brand-orange bg-brand-yellow/15 p-4">
-          <div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Earn points</span><h3 className="font-primary text-xl font-bold text-brand-green-ink">Review your previous orders</h3><p className="text-sm text-brand-black/68">Choose a delivered order, leave a rating, and we’ll add 20 points to your Zama account.</p></div>
-          {reviewingOrder ? <ReviewForm order={reviewingOrder} onCancel={() => setReviewingOrder(null)} onSubmit={(rating, comment) => submitReview(reviewingOrder, rating, comment)} /> : <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange/70 bg-brand-white/65 p-3 text-sm text-brand-black/68">Select the “Review · +20 pts” button on a delivered order below to get started.</p>}
+          <div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Earn points</span><h3 className="font-primary text-xl font-bold text-brand-green-ink">Review your previous orders</h3><p className="text-sm text-brand-black/68">Choose a delivered order, leave a rating, and we’ll add {rewardSettings.reviewRewardPoints} points to your Zama account.</p></div>
+          {reviewingOrder ? <ReviewForm order={reviewingOrder} rewardPoints={rewardSettings.reviewRewardPoints} busy={reviewBusy} onCancel={() => setReviewingOrder(null)} onSubmit={(rating, comment) => void submitReview(reviewingOrder, rating, comment)} /> : <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange/70 bg-brand-white/65 p-3 text-sm text-brand-black/68">Select the “Review · +{rewardSettings.reviewRewardPoints} pts” button on a delivered order below to get started.</p>}
           {reviewNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{reviewNotice}</p> : null}
         </div> : null}
         {ordersError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{ordersError}</p> : null}
-        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div className="grid gap-3 md:grid-cols-2">{visibleOrders.slice(0, 6).map((order) => <OrderCard key={order.id} order={order} productById={productById} detailed={orderFilter === "review"} reviewed={preferences.reviewedOrderIds.includes(order.id)} onReview={() => openReview(order)} />)}</div>}
+        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div className="grid gap-3 md:grid-cols-2">{visibleOrders.slice(0, 6).map((order) => <OrderCard key={order.id} order={order} productById={productById} detailed={orderFilter === "review"} rewardPoints={rewardSettings.reviewRewardPoints} reviewed={reviewedOrderIds.has(order.id)} onReview={() => openReview(order)} />)}</div>}
       </section>
 
       <section className="grid gap-4" aria-labelledby="account-services-title">
@@ -438,12 +464,12 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
       <section className="grid gap-4" aria-labelledby="account-library-title">
         <div className="flex flex-wrap items-end justify-between gap-3"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Your library</span><h2 id="account-library-title" className="font-primary text-2xl font-bold text-brand-green-ink">Saved for later</h2></div><a className="text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="#/shop">Find more products →</a></div>
         <div className="grid grid-cols-3 rounded-wobbly-md border-2 border-brand-forest/20 bg-brand-warm-white p-1">
-          {([{ key: "wishlist", label: "Wishlist", count: preferences.wishlist.length, icon: Heart }, { key: "history", label: "History", count: preferences.history.length, icon: History }, { key: "following", label: "Following", count: 0, icon: Users }] as const).map((item) => { const Icon = item.icon; return <button className={`flex min-h-11 items-center justify-center gap-1.5 rounded-[12px] px-2 text-xs font-bold sm:text-sm ${libraryTab === item.key ? "bg-brand-forest text-brand-white" : "text-brand-green-ink hover:bg-brand-yellow"}`} key={item.key} type="button" aria-pressed={libraryTab === item.key} onClick={() => setLibraryTab(item.key)}><Icon className="h-4 w-4" />{item.label}<span className="opacity-65">{item.count}</span></button>; })}
+          {([{ key: "wishlist", label: "Wishlist", count: wishlistIds.length, icon: Heart }, { key: "history", label: "History", count: historyIds.length, icon: History }, { key: "following", label: "Following", count: 0, icon: Users }] as const).map((item) => { const Icon = item.icon; return <button className={`flex min-h-11 items-center justify-center gap-1.5 rounded-[12px] px-2 text-xs font-bold sm:text-sm ${libraryTab === item.key ? "bg-brand-forest text-brand-white" : "text-brand-green-ink hover:bg-brand-yellow"}`} key={item.key} type="button" aria-pressed={libraryTab === item.key} onClick={() => setLibraryTab(item.key)}><Icon className="h-4 w-4" />{item.label}<span className="opacity-65">{item.count}</span></button>; })}
         </div>
-        {libraryTab === "following" ? <div className="grid justify-items-center gap-3 rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-warm-white p-8 text-center"><Users className="h-9 w-9 text-brand-forest" /><h3 className="font-primary text-xl font-bold text-brand-green-ink">Follow the people behind your food</h3><p className="max-w-120 text-sm text-brand-black/68">Meet Zama farmers and discover the stories behind the ingredients.</p><a className={btnOutlineSm} href="#/farmers">Meet our farmers</a></div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{(libraryTab === "wishlist" ? wishlistProducts : historyProducts).length > 0 ? (libraryTab === "wishlist" ? wishlistProducts : historyProducts).map((product) => <ProductTile key={product.id} product={product} saved={preferences.wishlist.includes(product.id)} onToggle={() => toggleWishlist(product.id)} onAdd={() => addToCart(product.id)} />) : <div className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-warm-white p-6 text-center sm:col-span-2 lg:col-span-4"><Heart className="mx-auto h-8 w-8 text-brand-orange-ink" /><h3 className="font-primary text-xl font-bold text-brand-green-ink">Nothing here yet</h3><p className="text-sm text-brand-black/68">Save products you love, and they’ll be waiting in your account.</p><div><a className={btnPrimarySm} href="#/shop">Browse the market</a></div></div>}</div>}
+        {libraryTab === "following" ? <div className="grid justify-items-center gap-3 rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-warm-white p-8 text-center"><Users className="h-9 w-9 text-brand-forest" /><h3 className="font-primary text-xl font-bold text-brand-green-ink">Follow the people behind your food</h3><p className="max-w-120 text-sm text-brand-black/68">Meet Zama farmers and discover the stories behind the ingredients.</p><a className={btnOutlineSm} href="#/farmers">Meet our farmers</a></div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{(libraryTab === "wishlist" ? wishlistProducts : historyProducts).length > 0 ? (libraryTab === "wishlist" ? wishlistProducts : historyProducts).map((product) => <ProductTile key={product.id} product={product} saved={wishlistIds.includes(product.id)} onToggle={() => void toggleWishlist(product.id)} onAdd={() => addToCart(product.id)} />) : <div className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-warm-white p-6 text-center sm:col-span-2 lg:col-span-4"><Heart className="mx-auto h-8 w-8 text-brand-orange-ink" /><h3 className="font-primary text-xl font-bold text-brand-green-ink">Nothing here yet</h3><p className="text-sm text-brand-black/68">Save products you love, and they’ll be waiting in your account.</p><div><a className={btnPrimarySm} href="#/shop">Browse the market</a></div></div>}</div>}
       </section>
 
-      <section className="grid gap-4" aria-labelledby="account-picks-title"><div className="flex flex-wrap items-end justify-between gap-3"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">A little inspiration</span><h2 id="account-picks-title" className="font-primary text-2xl font-bold text-brand-green-ink">Picked for your kitchen</h2></div><span className="text-sm text-brand-black/56">Tap a product to save it or add it to your cart.</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{featuredProducts.map((product) => <ProductTile key={product.id} product={product} saved={preferences.wishlist.includes(product.id)} onToggle={() => toggleWishlist(product.id)} onAdd={() => addToCart(product.id)} />)}</div></section>
+      <section className="grid gap-4" aria-labelledby="account-picks-title"><div className="flex flex-wrap items-end justify-between gap-3"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">A little inspiration</span><h2 id="account-picks-title" className="font-primary text-2xl font-bold text-brand-green-ink">Picked for your kitchen</h2></div><span className="text-sm text-brand-black/56">Tap a product to save it or add it to your cart.</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{featuredProducts.map((product) => <ProductTile key={product.id} product={product} saved={wishlistIds.includes(product.id)} onToggle={() => void toggleWishlist(product.id)} onAdd={() => addToCart(product.id)} />)}</div></section>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t-3 border-brand-forest bg-brand-white/96 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-6px_0_color-mix(in_srgb,var(--color-brand-forest)_12%,transparent)] md:hidden" aria-label="Account navigation">
         <a className="grid min-h-12 justify-items-center gap-0.5 rounded-wobbly-md py-1 text-[0.68rem] font-bold text-brand-black/62 hover:bg-brand-yellow" href="#/"><ShoppingBag className="h-5 w-5" />Shop</a>
@@ -461,10 +487,12 @@ export function AccountOrdersPage() {
   const { products } = useContent();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [ordersError, setOrdersError] = useState<string | null>(null);
-  const [preferences, setPreferences] = useState<CustomerPreferences>(() => loadCustomerPreferences(profile?.email ?? ""));
+  const [rewards, setRewards] = useState<AccountRewardsSnapshot | null>(null);
+  const [rewardsError, setRewardsError] = useState<string | null>(null);
   const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
   const [reviewNotice, setReviewNotice] = useState<string | null>(null);
+  const [reviewBusy, setReviewBusy] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -481,13 +509,17 @@ export function AccountOrdersPage() {
     };
   }, [profile]);
 
-  useEffect(() => {
-    if (!profile) return;
-    setPreferences(loadCustomerPreferences(profile.email));
-  }, [profile]);
-
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
   const visibleOrders = useMemo(() => (orders ?? []).filter((order) => matchesOrder(order, orderFilter)), [orders, orderFilter]);
+  const reviewedOrderIds = useMemo(() => new Set((rewards?.reviews ?? []).map((review) => review.orderId)), [rewards]);
+  const rewardPoints = rewards?.settings.reviewRewardPoints ?? defaultRewardSettings.reviewRewardPoints;
+
+  useEffect(() => {
+    if (!profile) return;
+    setRewards(null);
+    setRewardsError(null);
+    void fetchAccountRewards(profile.email).then(setRewards).catch((error) => setRewardsError(error instanceof Error ? error.message : "Your rewards could not be loaded."));
+  }, [profile]);
 
   function focusSection(id: string) {
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -501,28 +533,27 @@ export function AccountOrdersPage() {
   }
 
   function chooseReviewFilter() {
-    const nextOrder = (orders ?? []).find((order) => matchesOrder(order, "review") && !preferences.reviewedOrderIds.includes(order.id));
+    const nextOrder = (orders ?? []).find((order) => matchesOrder(order, "review") && !reviewedOrderIds.has(order.id));
     setOrderFilter("review");
     setReviewingOrder(nextOrder ?? null);
     setReviewNotice(null);
     focusSection("review-center");
   }
 
-  function submitReview(order: Order, rating: number, comment: string) {
-    if (preferences.reviewedOrderIds.includes(order.id)) return;
-    const next: CustomerPreferences = {
-      ...preferences,
-      points: preferences.points + 20,
-      reviewedOrderIds: [...preferences.reviewedOrderIds, order.id],
-      reviews: {
-        ...preferences.reviews,
-        [order.id]: { rating, comment, submittedAt: new Date().toISOString() },
-      },
-    };
-    setPreferences(next);
-    if (profile) saveCustomerPreferences(profile.email, next);
-    setReviewingOrder(null);
-    setReviewNotice("Thanks for sharing! 20 points were added to your account.");
+  async function submitReview(order: Order, rating: number, comment: string) {
+    if (!profile || reviewedOrderIds.has(order.id) || reviewBusy) return;
+    setReviewBusy(true);
+    setReviewNotice(null);
+    try {
+      const result = await submitCustomerReview(profile.email, order.id, rating, comment);
+      setRewards(result.snapshot);
+      setReviewingOrder(null);
+      setReviewNotice(`Thanks for sharing! ${result.review.pointsAwarded} points were added to your account.`);
+    } catch (error) {
+      setReviewNotice(error instanceof Error ? error.message : "Your review could not be submitted.");
+    } finally {
+      setReviewBusy(false);
+    }
   }
 
   if (status === "bootstrapping") {
@@ -546,12 +577,13 @@ export function AccountOrdersPage() {
         <div className="flex flex-wrap items-end justify-between gap-3"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Order history</span><h2 id="order-history-title" className="font-primary text-2xl font-bold text-brand-green-ink">{orderFilter === "all" ? "Every order" : orderFilterLabels.find((item) => item.key === orderFilter)?.label ?? "Orders"}</h2></div><span className="text-sm text-brand-black/56">{orders ? `${visibleOrders.length} order${visibleOrders.length === 1 ? "" : "s"}` : "Loading..."}</span></div>
         <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Order filters">
           <button className={`shrink-0 rounded-full border-2 px-4 py-2 text-sm font-bold ${orderFilter === "all" ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/20 bg-brand-warm-white text-brand-green-ink hover:bg-brand-yellow"}`} type="button" role="tab" aria-selected={orderFilter === "all"} onClick={() => { setOrderFilter("all"); setReviewingOrder(null); setReviewNotice(null); }}>All orders</button>
-          {orderFilterLabels.map((item) => { const Icon = item.icon; const count = orders ? item.key === "review" ? orders.filter((order) => matchesOrder(order, item.key) && !preferences.reviewedOrderIds.includes(order.id)).length : orders.filter((order) => matchesOrder(order, item.key)).length : "…"; return <button className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 px-4 py-2 text-sm font-bold ${orderFilter === item.key ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/20 bg-brand-warm-white text-brand-green-ink hover:bg-brand-yellow"}`} key={item.key} type="button" role="tab" aria-selected={orderFilter === item.key} onClick={() => { if (item.key === "review") { chooseReviewFilter(); return; } setOrderFilter(item.key); setReviewingOrder(null); setReviewNotice(null); }}><Icon className="h-4 w-4" />{item.label}<span className="opacity-70">{count}</span></button>; })}
+          {orderFilterLabels.map((item) => { const Icon = item.icon; const count = orders ? item.key === "review" ? orders.filter((order) => matchesOrder(order, item.key) && !reviewedOrderIds.has(order.id)).length : orders.filter((order) => matchesOrder(order, item.key)).length : "…"; return <button className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 px-4 py-2 text-sm font-bold ${orderFilter === item.key ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/20 bg-brand-warm-white text-brand-green-ink hover:bg-brand-yellow"}`} key={item.key} type="button" role="tab" aria-selected={orderFilter === item.key} onClick={() => { if (item.key === "review") { chooseReviewFilter(); return; } setOrderFilter(item.key); setReviewingOrder(null); setReviewNotice(null); }}><Icon className="h-4 w-4" />{item.label}<span className="opacity-70">{count}</span></button>; })}
         </div>
 
-        {orderFilter === "review" ? <div id="review-center" className="grid gap-3 rounded-wobbly-md border-2 border-brand-orange bg-brand-yellow/15 p-4"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Earn points</span><h3 className="font-primary text-xl font-bold text-brand-green-ink">Review your previous orders</h3><p className="text-sm text-brand-black/68">Choose a delivered order, leave a rating, and we’ll add 20 points to your Zama account.</p></div>{reviewingOrder ? <ReviewForm order={reviewingOrder} onCancel={() => setReviewingOrder(null)} onSubmit={(rating, comment) => submitReview(reviewingOrder, rating, comment)} /> : <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange/70 bg-brand-white/65 p-3 text-sm text-brand-black/68">Select the “Review · +20 pts” button on a delivered order below to get started.</p>}{reviewNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{reviewNotice}</p> : null}</div> : null}
+        {rewardsError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{rewardsError}</p> : null}
+        {orderFilter === "review" ? <div id="review-center" className="grid gap-3 rounded-wobbly-md border-2 border-brand-orange bg-brand-yellow/15 p-4"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Earn points</span><h3 className="font-primary text-xl font-bold text-brand-green-ink">Review your previous orders</h3><p className="text-sm text-brand-black/68">Choose a delivered order, leave a rating, and we’ll add {rewardPoints} points to your Zama account.</p></div>{reviewingOrder ? <ReviewForm order={reviewingOrder} rewardPoints={rewardPoints} busy={reviewBusy} onCancel={() => setReviewingOrder(null)} onSubmit={(rating, comment) => void submitReview(reviewingOrder, rating, comment)} /> : <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange/70 bg-brand-white/65 p-3 text-sm text-brand-black/68">Select the “Review · +{rewardPoints} pts” button on a delivered order below to get started.</p>}{reviewNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{reviewNotice}</p> : null}</div> : null}
         {ordersError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{ordersError}</p> : null}
-        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div className="grid gap-3">{visibleOrders.map((order) => <OrderCard key={order.id} order={order} productById={productById} detailed reviewed={preferences.reviewedOrderIds.includes(order.id)} onReview={() => openReview(order)} />)}</div>}
+        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div className="grid gap-3">{visibleOrders.map((order) => <OrderCard key={order.id} order={order} productById={productById} detailed rewardPoints={rewardPoints} reviewed={reviewedOrderIds.has(order.id)} onReview={() => openReview(order)} />)}</div>}
       </section>
     </div>
   );

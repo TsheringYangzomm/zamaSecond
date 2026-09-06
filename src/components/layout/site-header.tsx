@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { Handshake, LogIn, LogOut, TicketPercent, UserRound } from "lucide-react";
 import { useCart } from "../../cart-context";
 import { useContent } from "../../cms/content-context";
 import { useCustomerAuth } from "../../checkout/customer-auth";
@@ -10,8 +11,32 @@ function navArrow(itemHref: string) {
   return itemHref.startsWith("#/") ? <ArrowIcon className="ml-1.5" /> : null;
 }
 
-const ghostActionClass =
-  "inline-flex min-h-11 items-center gap-1.5 px-1.5 font-secondary font-bold text-brand-forest transition-colors duration-120 ease-in-out hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4";
+const compactActionClass =
+  "inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-2 border-brand-forest/20 bg-brand-white/65 px-2.5 font-secondary font-bold text-brand-forest transition-[background-color,color,box-shadow] duration-120 ease-in-out hover:bg-brand-mint hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4 2xl:rounded-none 2xl:border-0 2xl:bg-transparent 2xl:px-1.5";
+
+type HeaderActionProps = {
+  label: string;
+  icon: typeof TicketPercent;
+};
+
+function HeaderLinkAction({ href, label, icon: Icon, arrow = false }: HeaderActionProps & { href: string; arrow?: boolean }) {
+  return (
+    <a className={compactActionClass} href={href} aria-label={label} title={label}>
+      <Icon className="h-4.5 w-4.5 2xl:hidden" aria-hidden="true" />
+      <span className="hidden whitespace-nowrap 2xl:inline">{label}</span>
+      {arrow ? <ArrowIcon className="hidden h-4 w-4 2xl:inline-flex" /> : null}
+    </a>
+  );
+}
+
+function HeaderButtonAction({ label, icon: Icon, onClick }: HeaderActionProps & { onClick: () => void }) {
+  return (
+    <button className={compactActionClass} type="button" onClick={onClick} aria-label={label} title={label}>
+      <Icon className="h-4.5 w-4.5 2xl:hidden" aria-hidden="true" />
+      <span className="hidden whitespace-nowrap 2xl:inline">{label}</span>
+    </button>
+  );
+}
 
 function CartIcon() {
   return (
@@ -53,11 +78,11 @@ function DesktopNav() {
 
   return (
     <nav
-      className="site-nav hidden md:flex md:flex-wrap lg:flex-nowrap md:items-center md:justify-center md:gap-[clamp(0.75rem,1.2vw,1.6rem)] md:text-[1.02rem] md:font-bold xl:gap-[clamp(1.25rem,1.8vw,2.5rem)] xl:text-[1.06rem]"
+      className="site-nav hidden min-w-0 lg:flex lg:items-center lg:justify-start lg:gap-[clamp(0.6rem,1vw,1.25rem)] lg:overflow-hidden lg:text-[0.94rem] lg:font-bold xl:gap-[clamp(1rem,1.45vw,2rem)] xl:text-[1.02rem]"
       aria-label="Main navigation"
     >
       {navItems.map((item) => (
-        <a className={navLinkClass} href={item.href} key={item.href}>
+        <a className={`${navLinkClass} shrink-0`} href={item.href} key={item.href}>
           {item.label}
           {navArrow(item.href)}
         </a>
@@ -92,6 +117,7 @@ function MobileNav({ onSelect, onAuth, isOpen }: { onSelect: () => void; onAuth:
       </SmallOutlineLink>
       {status === "signed-in" ? (
         <>
+          <a className={`${btnOutlineSm} mt-1 w-full`} href="#/coupons" onClick={onSelect}>Coupons</a>
           <a className={`${btnOutlineSm} mt-1 w-full`} href="#/account" onClick={onSelect}>My account</a>
           <button className={`${btnOutlineSm} mt-1 w-full`} type="button" onClick={handleSignOut}>Sign out</button>
         </>
@@ -125,7 +151,7 @@ export function SiteHeader() {
 
   return (
     <header className="site-header sticky top-0 z-20 w-full border-b-3 border-brand-forest">
-      <div className="mx-auto grid min-w-0 w-full max-w-[90rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[clamp(0.75rem,2vw,1.5rem)] px-[clamp(0.75rem,2.2vw,2.75rem)] py-[0.6rem] sm:py-[0.7rem] md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-x-[clamp(0.75rem,1.6vw,2rem)]">
+      <div className="mx-auto grid min-w-0 w-full max-w-[90rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[clamp(0.75rem,2vw,1.5rem)] px-[clamp(0.75rem,2.2vw,2.75rem)] py-[0.6rem] sm:py-[0.7rem] lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-x-[clamp(0.75rem,1.4vw,1.75rem)]">
         <a className="brand inline-flex shrink-0 items-center" href="#top" aria-label="Zama home">
           <img
             className="h-14 w-[5.35rem] sm:h-16 sm:w-[6.1rem] xl:h-20 xl:w-[7.65rem]"
@@ -138,40 +164,29 @@ export function SiteHeader() {
 
         <DesktopNav />
 
-        <div className="header-actions hidden items-center gap-x-2 md:flex md:justify-end xl:gap-x-3" aria-label="Primary actions">
+        <div className="header-actions hidden min-w-0 items-center justify-end gap-x-1.5 lg:flex xl:gap-x-2.5" aria-label="Primary actions">
           {status === "signed-in" ? (
             <>
-              <span className="hidden shrink-0 md:inline-flex">
-                <a className={ghostActionClass} href="#/account">My account</a>
-              </span>
-              <span className="hidden shrink-0 md:inline-flex lg:hidden xl:inline-flex">
-                <a className={ghostActionClass} href="#b2b">
-                  {partnerLabel}
-                  <ArrowIcon className="h-4 w-4" />
-                </a>
-              </span>
-              <span className="hidden shrink-0 md:inline-flex">
-                <button className={ghostActionClass} type="button" onClick={handleSignOut}>Sign out</button>
-              </span>
+              <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
+              <HeaderLinkAction href="#/account" label="My account" icon={UserRound} />
+              <HeaderLinkAction href="#b2b" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderButtonAction label="Sign out" icon={LogOut} onClick={handleSignOut} />
             </>
           ) : (
             <>
-              <span className="hidden shrink-0 md:inline-flex">
-                <a className={ghostActionClass} href="#b2b">
-                  {partnerLabel}
-                  <ArrowIcon className="h-4 w-4" />
-                </a>
-              </span>
-              <span className="hidden shrink-0 xl:inline-flex">
-                <button className={ghostActionClass} type="button" onClick={handleOpenAuth}>Sign in</button>
-              </span>
+              <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
+              <HeaderLinkAction href="#b2b" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderButtonAction label="Sign in" icon={LogIn} onClick={handleOpenAuth} />
             </>
           )}
-          <SmallPrimaryLink className="shrink-0" href="#waitlist">{joinLabel}</SmallPrimaryLink>
+          <SmallPrimaryLink className="shrink-0 px-3 2xl:px-[0.9rem]" href="#waitlist">
+            <span className="2xl:hidden">{joinShortLabel}</span>
+            <span className="hidden 2xl:inline">{joinLabel}</span>
+          </SmallPrimaryLink>
           <CartButton onOpen={handleOpenCart} />
         </div>
 
-        <div className="flex items-center justify-end gap-[0.55rem] md:hidden">
+        <div className="flex items-center justify-end gap-[0.55rem] lg:hidden">
           <SmallPrimaryLink className="px-3 text-[0.92rem]" href="#waitlist">
             {joinShortLabel}
           </SmallPrimaryLink>
@@ -202,7 +217,7 @@ export function SiteHeader() {
 
       <div
         id="mobile-menu"
-        className={`mobile-menu grid overflow-hidden transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out md:hidden ${
+        className={`mobile-menu grid overflow-hidden transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out lg:hidden ${
           menuOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
         }`}
         aria-hidden={!menuOpen}

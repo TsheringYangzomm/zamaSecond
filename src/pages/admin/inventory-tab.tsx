@@ -358,13 +358,13 @@ export function InventoryTab() {
 
       {view === "overview" ? (
         <>
-          {!stockAvailable ? (
+          {items && !stockAvailable ? (
             <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
               Showing example stock levels. Run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the inventory tables.
             </p>
           ) : null}
 
-          {!lotsAvailable ? (
+          {items && !lotsAvailable ? (
             <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
               Stock lots are not enabled yet. Re-run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the <code className="rounded bg-brand-white px-1 py-0.5 text-xs">inventory_stock_lots</code> table and enable per-supplier stock.
             </p>

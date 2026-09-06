@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type FilterOption = string | { value: string; label: string };
 
@@ -12,14 +12,17 @@ function optionLabel(option: FilterOption): string {
 
 const SEARCH_THRESHOLD = 10;
 
-export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel }: {
+export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel, align = "left" }: {
   label: string;
   options: readonly FilterOption[];
   value: string;
   onSelect: (val: string) => void;
   allLabel?: string;
+  align?: "left" | "right";
 }) {
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
   const hasActive = value !== "";
   const showSearch = options.length > SEARCH_THRESHOLD;
   const filteredOptions = useMemo(() => {
@@ -27,16 +30,52 @@ export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel
     if (!needle) return options;
     return options.filter((option) => optionLabel(option).toLowerCase().includes(needle));
   }, [options, search]);
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsidePointer(event: PointerEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
   return (
-    <div className="group relative">
-      <button
-        className={`flex items-center gap-1 rounded-full border-2 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.06em] transition-colors duration-120 ${hasActive ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/40 bg-brand-white text-brand-green-ink hover:border-brand-forest hover:bg-brand-warm-white"}`}
-        type="button"
-      >
-        {label}
-        {hasActive ? <span className="ml-0.5 text-[0.6rem] opacity-70">✕</span> : <span className="text-[0.6rem] opacity-50">▾</span>}
-      </button>
-      <div className="pointer-events-none absolute left-0 top-full z-20 -mt-1 pt-1 max-h-72 w-max max-w-80 min-w-40 overflow-y-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-2 shadow-brand opacity-0 transition-opacity duration-100 group-hover:pointer-events-auto group-hover:opacity-100">
+    <div className="group relative" ref={rootRef}>
+      <div className={`inline-flex items-center rounded-full border-2 text-xs font-bold uppercase tracking-[0.06em] transition-colors duration-120 ${hasActive ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/40 bg-brand-white text-brand-green-ink hover:border-brand-forest hover:bg-brand-warm-white"}`}>
+        <button
+          className="flex items-center gap-1 rounded-full border-0 bg-transparent px-3 py-1.5 font-bold uppercase tracking-[0.06em] outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen((current) => !current)}
+        >
+          {label}
+          <span className="ml-0.5 text-[0.6rem] opacity-70">{open ? "▴" : "▾"}</span>
+        </button>
+        {hasActive ? (
+          <button
+            className="mr-1 flex h-5 w-5 items-center justify-center rounded-full border-0 bg-transparent text-sm leading-none text-brand-white/80 outline-none hover:bg-brand-white/15 hover:text-brand-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-dashed focus-visible:outline-brand-white"
+            type="button"
+            aria-label={`Clear ${label} filter`}
+            onClick={() => {
+              setSearch("");
+              setOpen(false);
+              onSelect("");
+            }}
+          >
+            ×
+          </button>
+        ) : null}
+      </div>
+      <div className={`${align === "right" ? "left-auto right-0" : "left-0"} absolute top-full z-20 -mt-1 max-h-72 w-max max-w-[min(20rem,calc(100vw-2rem))] min-w-40 overflow-y-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-2 shadow-brand transition-opacity duration-100 ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100"}`} role="menu">
         {showSearch ? (
           <input
             className="mb-1 w-full rounded-lg border-2 border-brand-forest/25 bg-brand-warm-white px-2.5 py-1.5 text-xs font-semibold text-brand-black shadow-none outline-none placeholder:text-brand-black/44 focus-visible:border-brand-forest"
@@ -44,6 +83,7 @@ export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel
             placeholder={`Search ${label.toLowerCase()}s...`}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => { if (event.key === "Escape") setOpen(false); }}
           />
         ) : null}
         <button
@@ -52,6 +92,7 @@ export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel
           onClick={() => {
             setSearch("");
             onSelect("");
+            setOpen(false);
           }}
         >
           {allLabel ?? `All ${label.toLowerCase()}s`}
@@ -74,6 +115,7 @@ export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel
                 onClick={() => {
                   setSearch("");
                   onSelect(key);
+                  setOpen(false);
                 }}
               >
                 {text}
