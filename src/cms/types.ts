@@ -28,6 +28,8 @@ export type ProductRow = {
   sourcing: string;
   sort_order: number;
   published: boolean;
+  member_early_access_starts_at?: string | null;
+  member_early_access_ends_at?: string | null;
 };
 
 export type InventoryRow = {

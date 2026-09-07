@@ -7,6 +7,7 @@ export type CouponErrorCode =
   | "expired"
   | "usage_limit"
   | "customer_limit"
+  | "member_only"
   | "ineligible"
   | "minimum_spend"
   | "not_authenticated"
@@ -33,6 +34,7 @@ export type Coupon = {
   usageLimit: number | null;
   perCustomerLimit: number;
   active: boolean;
+  memberOnly?: boolean;
   targets: CouponTarget[];
   createdAt: string;
   updatedAt: string;

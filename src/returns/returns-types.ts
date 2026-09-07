@@ -23,7 +23,18 @@ export type NotificationType =
   | "order_status_updated"
   | "payment_status_updated"
   | "coupon_available"
-  | "product_available";
+  | "product_available"
+  | "membership_request"
+  | "membership_approved"
+  | "membership_rejected"
+  | "membership_updated"
+  | "membership_delivery_invoice"
+  | "membership_delivery_payment_submitted"
+  | "membership_delivery_paid"
+  | "membership_delivery_skipped"
+  | "membership_delivery_updated"
+  | "membership_freebie"
+  | "member_early_access";
 export type NotificationReadState = "unread" | "read";
 
 export type ReturnPickupWindow = {

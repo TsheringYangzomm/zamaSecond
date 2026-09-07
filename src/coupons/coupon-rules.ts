@@ -12,6 +12,7 @@ export const couponErrorMessages: Record<CouponErrorCode, string> = {
   expired: "That coupon has expired.",
   usage_limit: "That coupon has reached its usage limit.",
   customer_limit: "You have already used that coupon the maximum number of times.",
+  member_only: "This offer is reserved for active Zama+ members.",
   ineligible: "This coupon is only valid on selected products or categories. Check the coupon details to see what qualifies.",
   minimum_spend: "Your eligible items do not meet the minimum spend for this coupon.",
   not_authenticated: "Sign in to use coupons.",

@@ -1,7 +1,20 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { commerceStore } from "../../admin/commerce-api";
 import { subscriptionStatuses, type Subscription, type SubscriptionStatus } from "../../admin/commerce-types";
-import { btnOutlineSm } from "../../components/ui/styles";
+import { useAdminAuth } from "../../admin/admin-auth";
+import {
+  archiveMembershipPlan,
+  createMembershipPlan,
+  fetchAdminMembershipPlans,
+  fetchAdminMembershipRequests,
+  getMembershipProofUrl,
+  reviewMembershipRequest,
+  updateMembershipPlan,
+} from "../../membership/membership-api";
+import type { AdminMembershipRequest, MembershipPlan, MembershipPlanDraft } from "../../membership/membership-types";
+import { defaultMembershipDeliveryTiers } from "../../membership/membership-rules";
+import { MembershipBenefitsAdminPanel } from "./membership-benefits-admin-panel";
+import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import { amountRangeKeyFor, buildAmountRanges, ClearFiltersButton, ColumnFilterDropdown, DATE_RANGES, dateRangeKey } from "./column-filter-dropdown";
 import {
@@ -19,16 +32,154 @@ import {
 
 type PendingChange = { subscription: Subscription; status: SubscriptionStatus };
 
+const membershipInputClasses = "min-h-10 w-full rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 py-2 text-sm text-brand-black outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
+const membershipTextAreaClasses = membershipInputClasses + " min-h-20";
+
+function emptyMembershipDraft(): MembershipPlanDraft {
+  return {
+    name: "",
+    description: "",
+    price: 0,
+    cadence: "monthly",
+    benefits: [],
+    discountPercent: 0,
+    deliveryTiers: defaultMembershipDeliveryTiers.map((tier) => ({ ...tier })),
+    scheduledDeliveryEnabled: true,
+    earlyAccessEnabled: true,
+    freebieEnabled: true,
+    status: "draft",
+    displayOrder: 0,
+  };
+}
+
+function membershipDraftFromPlan(plan: MembershipPlan): MembershipPlanDraft {
+  return {
+    name: plan.name,
+    description: plan.description,
+    price: plan.price,
+    cadence: plan.cadence,
+    benefits: plan.benefits,
+    discountPercent: plan.discountPercent,
+    deliveryTiers: plan.deliveryTiers.map((tier) => ({ ...tier })),
+    scheduledDeliveryEnabled: plan.scheduledDeliveryEnabled,
+    earlyAccessEnabled: plan.earlyAccessEnabled,
+    freebieEnabled: plan.freebieEnabled,
+    status: plan.status,
+    displayOrder: plan.displayOrder,
+  };
+}
+
+function membershipRequestLabel(status: AdminMembershipRequest["status"]): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
 export function SubscriptionsTab() {
+  const { email: adminEmail } = useAdminAuth();
   const state = useCommerceStore();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({ customer: "", status: "", plan: "", price: "", start: "" });
   const [selected, setSelected] = useState<Subscription | null>(null);
   const [pendingChange, setPendingChange] = useState<PendingChange | null>(null);
   const [busy, setBusy] = useState(false);
+  const [membershipPlans, setMembershipPlans] = useState<MembershipPlan[]>([]);
+  const [membershipRequests, setMembershipRequests] = useState<AdminMembershipRequest[]>([]);
+  const [membershipLoading, setMembershipLoading] = useState(true);
+  const [membershipBusy, setMembershipBusy] = useState(false);
+  const [membershipError, setMembershipError] = useState<string | null>(null);
+  const [membershipNotice, setMembershipNotice] = useState<string | null>(null);
+  const [editingMembershipPlan, setEditingMembershipPlan] = useState<string | null>(null);
+  const [membershipDraft, setMembershipDraft] = useState<MembershipPlanDraft>(emptyMembershipDraft);
+  const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
+  const [proofUrls, setProofUrls] = useState<Record<string, string>>({});
 
   const data = state.phase === "ready" ? state.data : null;
   const writable = state.phase === "ready" && state.writable;
+
+  const loadMembership = useCallback(async () => {
+    setMembershipLoading(true);
+    setMembershipError(null);
+    try {
+      const [plans, requests] = await Promise.all([fetchAdminMembershipPlans(), fetchAdminMembershipRequests()]);
+      setMembershipPlans(plans);
+      setMembershipRequests(requests);
+    } catch (error) {
+      setMembershipError(error instanceof Error ? error.message : "Membership data could not be loaded.");
+    } finally {
+      setMembershipLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadMembership();
+  }, [loadMembership]);
+
+  async function saveMembershipPlan() {
+    if (!membershipDraft.name.trim()) {
+      setMembershipError("Enter a membership plan name.");
+      return;
+    }
+    setMembershipBusy(true);
+    setMembershipError(null);
+    setMembershipNotice(null);
+    try {
+      if (editingMembershipPlan) await updateMembershipPlan(editingMembershipPlan, membershipDraft);
+      else await createMembershipPlan(membershipDraft);
+      setEditingMembershipPlan(null);
+      setMembershipDraft(emptyMembershipDraft());
+      setMembershipNotice("Membership plan saved.");
+      await loadMembership();
+    } catch (error) {
+      setMembershipError(error instanceof Error ? error.message : "The membership plan could not be saved.");
+    } finally {
+      setMembershipBusy(false);
+    }
+  }
+
+  async function archivePlan(plan: MembershipPlan) {
+    setMembershipBusy(true);
+    setMembershipError(null);
+    try {
+      await archiveMembershipPlan(plan.id);
+      setMembershipNotice(`${plan.name} was archived.`);
+      await loadMembership();
+    } catch (error) {
+      setMembershipError(error instanceof Error ? error.message : "The membership plan could not be archived.");
+    } finally {
+      setMembershipBusy(false);
+    }
+  }
+
+  async function handleMembershipReview(request: AdminMembershipRequest, status: "approved" | "rejected") {
+    const reason = rejectionReasons[request.id]?.trim() ?? "";
+    if (status === "rejected" && !reason) {
+      setMembershipError("Add a rejection reason before rejecting a membership request.");
+      return;
+    }
+    setMembershipBusy(true);
+    setMembershipError(null);
+    setMembershipNotice(null);
+    try {
+      await reviewMembershipRequest(request.id, status, adminEmail ?? "admin", reason);
+      setMembershipNotice(status === "approved" ? "Membership approved and activated." : "Membership request rejected.");
+      await loadMembership();
+    } catch (error) {
+      setMembershipError(error instanceof Error ? error.message : "The membership request could not be updated.");
+    } finally {
+      setMembershipBusy(false);
+    }
+  }
+
+  async function openMembershipProof(request: AdminMembershipRequest) {
+    if (!request.proofPath) return;
+    setMembershipBusy(true);
+    try {
+      const url = await getMembershipProofUrl(request.proofPath);
+      if (url) setProofUrls((current) => ({ ...current, [request.id]: url }));
+      else setMembershipError("The private proof image is not available in this environment.");
+    } finally {
+      setMembershipBusy(false);
+    }
+  }
 
   const customerLabel = useCallback((customerId: string): string => {
     if (!data) return customerId;
@@ -169,6 +320,49 @@ export function SubscriptionsTab() {
       </CommerceSectionHeading>
 
       {state.phase === "ready" && !writable ? <DevDataNotice /> : null}
+
+      <section className="grid gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-4 shadow-brand-soft sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="grid gap-1">
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Zama+ Membership</span>
+            <h2 className="font-primary text-2xl font-bold text-brand-green-ink">Plans & payment requests</h2>
+            <p className="max-w-160 text-sm text-brand-black/68">Publish plans, verify bank-transfer references, and activate memberships from one place.</p>
+          </div>
+          <span className="rounded-full border-2 border-brand-forest bg-brand-white px-3 py-1 text-xs font-bold text-brand-green-ink">{membershipRequests.filter((request) => request.status === "pending").length} pending</span>
+        </div>
+
+        {membershipError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-yellow/60 p-3 text-sm font-semibold text-brand-black" role="alert">{membershipError}</p> : null}
+        {membershipNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-white p-3 text-sm font-semibold text-brand-green-ink" role="status">{membershipNotice}</p> : null}
+
+        <div className="grid gap-3 rounded-wobbly-md border-2 border-dashed border-brand-forest/35 bg-brand-white p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-primary text-xl font-bold text-brand-green-ink">{editingMembershipPlan ? "Edit plan" : "Create a plan"}</h3>{editingMembershipPlan ? <button className={btnOutlineSm} type="button" onClick={() => { setEditingMembershipPlan(null); setMembershipDraft(emptyMembershipDraft()); }}>Cancel edit</button> : null}</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Plan name<input className={membershipInputClasses} value={membershipDraft.name} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, name: event.target.value }))} placeholder="Zama+ Membership" /></label>
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Price<input className={membershipInputClasses} type="number" min="0" step="0.01" value={membershipDraft.price} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, price: Number(event.target.value) }))} /></label>
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Cadence<select className={membershipInputClasses} value={membershipDraft.cadence} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, cadence: event.target.value as MembershipPlanDraft["cadence"] }))}><option value="monthly">Monthly</option><option value="annual">Annual</option><option value="one_time">One-time</option></select></label>
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Automatic discount %<input className={membershipInputClasses} type="number" min="0" max="100" step="0.1" value={membershipDraft.discountPercent} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, discountPercent: Number(event.target.value) }))} /></label>
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink sm:col-span-2">Description<textarea className={membershipTextAreaClasses} value={membershipDraft.description} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, description: event.target.value }))} placeholder="Explain the value of this plan." /></label>
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink sm:col-span-2">Benefits <span className="font-normal normal-case tracking-normal text-brand-black/55">One benefit per line. Add more detail after a pipe: Benefit title | Short description.</span><textarea className={membershipTextAreaClasses} value={membershipDraft.benefits.map((benefit) => benefit.description ? `${benefit.title} | ${benefit.description}` : benefit.title).join("\n")} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, benefits: event.target.value.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => { const [title, ...description] = line.split("|"); return { title: title.trim(), description: description.join("|").trim() }; }) }))} placeholder="Automatic savings\nMember-only offers" /></label>
+            <fieldset className="grid gap-2 rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-3 sm:col-span-2"><legend className="px-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Zama+ service benefits</legend><div className="flex flex-wrap gap-3 text-sm text-brand-black"><label className="flex items-center gap-2"><input type="checkbox" checked={membershipDraft.scheduledDeliveryEnabled} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, scheduledDeliveryEnabled: event.target.checked }))} /> Saved-box delivery</label><label className="flex items-center gap-2"><input type="checkbox" checked={membershipDraft.earlyAccessEnabled} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, earlyAccessEnabled: event.target.checked }))} /> Early product access</label><label className="flex items-center gap-2"><input type="checkbox" checked={membershipDraft.freebieEnabled} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, freebieEnabled: event.target.checked }))} /> One freebie per paid cycle</label></div><div className="grid gap-2 md:grid-cols-3">{membershipDraft.deliveryTiers.map((tier, index) => <div className="grid gap-1 rounded-wobbly-md border-2 border-brand-forest/18 bg-brand-white p-2" key={tier.id}><label className="flex items-center gap-2 text-xs font-bold text-brand-green-ink"><input type="checkbox" checked={tier.enabled} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, deliveryTiers: draft.deliveryTiers.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: event.target.checked } : item) }))} /> {tier.label}</label><label className="text-xs text-brand-black/60">Fee (Nu.)<input className={membershipInputClasses + " mt-1"} type="number" min="0" value={tier.fee} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, deliveryTiers: draft.deliveryTiers.map((item, itemIndex) => itemIndex === index ? { ...item, fee: Math.max(0, Number(event.target.value)) } : item) }))} /></label></div>)}</div><p className="text-xs text-brand-black/55">Priority delivery is fulfilled first when capacity allows; standard and low-cost delivery use the fees configured above.</p></fieldset>
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Status<select className={membershipInputClasses} value={membershipDraft.status} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, status: event.target.value as MembershipPlanDraft["status"] }))}><option value="active">Active</option><option value="draft">Draft</option><option value="archived">Archived</option></select></label>
+            <label className="grid gap-1 text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">Display order<input className={membershipInputClasses} type="number" min="0" step="1" value={membershipDraft.displayOrder} onChange={(event) => setMembershipDraft((draft) => ({ ...draft, displayOrder: Number(event.target.value) }))} /></label>
+          </div>
+          <button className={btnPrimarySm} type="button" disabled={membershipBusy} onClick={() => void saveMembershipPlan()}>{membershipBusy ? "Saving..." : editingMembershipPlan ? "Save plan" : "Create plan"}</button>
+        </div>
+
+        {membershipLoading ? <p className="text-sm text-brand-black/60">Loading membership plans and requests...</p> : <>
+          <div className="grid gap-2">
+            <h3 className="font-primary text-xl font-bold text-brand-green-ink">Published plans</h3>
+            {membershipPlans.length === 0 ? <p className="text-sm text-brand-black/60">No membership plans yet.</p> : <div className="grid gap-2 sm:grid-cols-2">{membershipPlans.map((plan) => <div className="flex items-start justify-between gap-3 rounded-wobbly-md border-2 border-brand-forest/20 bg-brand-white p-3" key={plan.id}><div className="grid min-w-0 gap-1"><strong className="text-brand-green-ink">{plan.name}</strong><span className="text-sm text-brand-black/68">{formatMoney(plan.price)} · {plan.discountPercent}% discount · {plan.status}</span><span className="text-xs text-brand-black/55">{plan.benefits.length} benefit{plan.benefits.length === 1 ? "" : "s"}</span></div><div className="flex shrink-0 flex-wrap justify-end gap-1.5"><button className={btnOutlineSm} type="button" disabled={membershipBusy} onClick={() => { setEditingMembershipPlan(plan.id); setMembershipDraft(membershipDraftFromPlan(plan)); }}>Edit</button>{plan.status !== "archived" ? <button className="min-h-9 rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-orange-ink" type="button" disabled={membershipBusy} onClick={() => void archivePlan(plan)}>Archive</button> : null}</div></div>)}</div>}
+          </div>
+          <div className="grid gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-primary text-xl font-bold text-brand-green-ink">Payment verification queue</h3><span className="text-sm text-brand-black/55">Newest first</span></div>
+            {membershipRequests.length === 0 ? <p className="text-sm text-brand-black/60">No membership requests yet.</p> : <div className="grid gap-2">{membershipRequests.map((request) => <article className="grid gap-3 rounded-wobbly-md border-2 border-brand-forest/20 bg-brand-white p-3" key={request.id}><div className="flex flex-wrap items-start justify-between gap-3"><div className="grid gap-1"><strong className="text-brand-green-ink">{request.customerName || "Customer"}</strong><span className="text-sm text-brand-black/65">{request.customerEmail} · {request.plan?.name ?? request.planId}</span><span className="text-xs text-brand-black/55">Submitted {formatDateTime(request.submittedAt)} · {request.paymentMethod}</span></div><span className={`rounded-full border-2 px-2 py-1 text-xs font-bold ${request.status === "approved" ? "border-brand-forest bg-brand-mint text-brand-green-ink" : request.status === "pending" ? "border-brand-orange-ink bg-brand-yellow text-brand-orange-ink" : "border-brand-black/25 bg-brand-warm-white text-brand-black/60"}`}>{membershipRequestLabel(request.status)}</span></div><div className="grid gap-1 text-sm"><span><strong>Transfer reference:</strong> {request.paymentReference}</span>{request.proofPath ? <span className="flex flex-wrap items-center gap-2 text-brand-black/60"><strong>Proof:</strong> attached privately {proofUrls[request.id] ? <a className="font-bold text-brand-green-ink underline" href={proofUrls[request.id]} target="_blank" rel="noreferrer">Open image</a> : <button className="font-bold text-brand-green-ink underline" type="button" disabled={membershipBusy} onClick={() => void openMembershipProof(request)}>View proof</button>}</span> : <span className="text-brand-black/55">No proof image attached</span>}{request.rejectionReason ? <span className="text-brand-orange-ink"><strong>Reason:</strong> {request.rejectionReason}</span> : null}</div>{request.status === "pending" ? <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]"><input className={membershipInputClasses} value={rejectionReasons[request.id] ?? ""} onChange={(event) => setRejectionReasons((current) => ({ ...current, [request.id]: event.target.value }))} placeholder="Required only when rejecting" aria-label={`Rejection reason for ${request.customerName || request.customerEmail}`} /><button className={btnOutlineSm} type="button" disabled={membershipBusy} onClick={() => void handleMembershipReview(request, "rejected")}>Reject</button><button className={btnPrimarySm} type="button" disabled={membershipBusy} onClick={() => void handleMembershipReview(request, "approved")}>Approve</button></div> : null}</article>)}</div>}
+          </div>
+        </>}
+      </section>
+
+      <MembershipBenefitsAdminPanel plans={membershipPlans} adminEmail={adminEmail ?? "admin"} />
 
       <div className="grid gap-3">
         <input

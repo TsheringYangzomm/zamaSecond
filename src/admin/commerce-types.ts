@@ -38,6 +38,10 @@ export type Order = {
   coupon_id?: string | null;
   coupon_code?: string | null;
   coupon_discount?: number;
+  membership_discount?: number;
+  membership_plan_id?: string | null;
+  membership_delivery_cycle_id?: string | null;
+  membership_delivery_fee?: number;
   points_redeemed?: number;
   points_discount?: number;
   payment_status: PaymentStatus;
@@ -62,10 +66,13 @@ export type Subscription = {
   id: string;
   customer_id: string;
   plan: string;
+  plan_id?: string | null;
   price: number;
   status: SubscriptionStatus;
   start_date: string;
   next_delivery_date: string | null;
+  payment_method?: string;
+  payment_reference?: string | null;
   history: SubscriptionHistoryEntry[];
 };
 

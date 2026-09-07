@@ -18,6 +18,7 @@ create table if not exists public.coupons (
   usage_limit integer check (usage_limit is null or usage_limit > 0),
   per_customer_limit integer not null default 1 check (per_customer_limit > 0),
   active boolean not null default true,
+  member_only boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint coupons_date_order check (expires_at is null or expires_at > starts_at),
@@ -25,6 +26,9 @@ create table if not exists public.coupons (
   constraint coupons_percentage_cap check (maximum_discount_amount is null or (discount_type = 'percentage' and maximum_discount_amount > 0)),
   constraint coupons_percentage_value check (discount_type <> 'percentage' or discount_value <= 100)
 );
+
+alter table public.coupons
+  add column if not exists member_only boolean not null default false;
 
 create unique index if not exists coupons_code_upper_unique_idx on public.coupons (upper(code));
 
@@ -134,6 +138,7 @@ as $$
     'usage_limit', c.usage_limit,
     'per_customer_limit', c.per_customer_limit,
     'active', c.active,
+    'member_only', c.member_only,
     'created_at', c.created_at,
     'updated_at', c.updated_at,
     'targets',
@@ -151,6 +156,36 @@ as $$
   )
   from public.coupons c
   where c.id = p_coupon_id;
+$$;
+
+-- This helper is safe before the membership migration is applied. Once the
+-- membership tables exist it becomes the single server-side membership check
+-- used by member-only coupons.
+create or replace function public.coupon_customer_is_member(p_customer_id text)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_member boolean := false;
+begin
+  if p_customer_id is null or to_regclass('public.membership_plans') is null or to_regclass('public.subscriptions') is null then
+    return false;
+  end if;
+  execute 'select exists (
+    select 1
+    from public.subscriptions subscription
+    join public.membership_plans plan on plan.id = subscription.plan_id
+    where subscription.customer_id = $1
+      and subscription.status = ''active''
+      and plan.status = ''active''
+  )' using p_customer_id into v_member;
+  return coalesce(v_member, false);
+exception when undefined_column then
+  return false;
+end;
 $$;
 
 create or replace function public.coupon_public_available(p_coupon_id text)
@@ -240,6 +275,7 @@ begin
         ),
         'can_use', (
           public.coupon_public_available(c.id)
+          and (not c.member_only or public.coupon_customer_is_member(v_customer_id))
           and (
             select count(*) from public.coupon_redemptions r
             where r.coupon_id = c.id and r.customer_id = v_customer_id and r.status = 'redeemed'
@@ -278,6 +314,11 @@ begin
 
   if not public.coupon_public_available(p_coupon_id) then
     return jsonb_build_object('status', 'unavailable', 'error', 'That coupon is no longer available.');
+  end if;
+
+  if exists (select 1 from public.coupons where id = p_coupon_id and member_only)
+     and not public.coupon_customer_is_member(v_customer_id) then
+    return jsonb_build_object('status', 'member_only', 'error', 'This offer is reserved for active Zama+ members.');
   end if;
 
   if exists (select 1 from public.coupon_claims where coupon_id = p_coupon_id and customer_id = v_customer_id) then
@@ -331,6 +372,9 @@ begin
   end if;
   if v_coupon.expires_at is not null and v_coupon.expires_at <= now() then
     return jsonb_build_object('status', 'invalid', 'error_code', 'expired', 'error', 'That coupon has expired.');
+  end if;
+  if v_coupon.member_only and not public.coupon_customer_is_member(p_customer_id) then
+    return jsonb_build_object('status', 'invalid', 'error_code', 'member_only', 'error', 'This offer is reserved for active Zama+ members.');
   end if;
 
   select count(*) into v_total_redemptions
@@ -586,6 +630,7 @@ create trigger payments_restore_coupon_redemption
 
 revoke all on function public.coupon_payload(text) from public;
 revoke all on function public.coupon_public_available(text) from public;
+revoke all on function public.coupon_customer_is_member(text) from public;
 revoke all on function public.calculate_coupon(text, text, jsonb) from public;
 revoke all on function public.list_public_coupons() from public;
 revoke all on function public.get_my_coupons() from public;

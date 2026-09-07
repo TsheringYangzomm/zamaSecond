@@ -2,11 +2,15 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
 
 import { getSupabaseClient } from "../supabase";
+import { useOptionalCustomerAuth } from "../checkout/customer-auth";
+import { fetchMyMembership } from "../membership/membership-api";
+import { isMemberEarlyAccessWindow } from "../membership/membership-rules";
 
 import {
   defaultBlocks,
@@ -471,6 +475,14 @@ function mergeContent(
   };
 }
 
+function withMembershipProductVisibility(content: Content, canAccessEarlyProducts: boolean): Content {
+  if (canAccessEarlyProducts) return content;
+  return {
+    ...content,
+    products: content.products.filter((product) => !isMemberEarlyAccessWindow(product)),
+  };
+}
+
 /* =========================================================
    CONTEXT
 ========================================================= */
@@ -489,6 +501,24 @@ export function ContentProvider({
 }) {
   const [content, setContent] =
     useState<Content>(staticContent);
+  const auth = useOptionalCustomerAuth();
+  const [canAccessEarlyProducts, setCanAccessEarlyProducts] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (auth?.status !== "signed-in" || !auth.profile) {
+      setCanAccessEarlyProducts(false);
+      return () => { cancelled = true; };
+    }
+    void fetchMyMembership(auth.profile.email)
+      .then((snapshot) => {
+        if (!cancelled) setCanAccessEarlyProducts(snapshot.status === "active" && snapshot.plan?.earlyAccessEnabled === true);
+      })
+      .catch(() => {
+        if (!cancelled) setCanAccessEarlyProducts(false);
+      });
+    return () => { cancelled = true; };
+  }, [auth?.profile, auth?.status]);
 
   useEffect(() => {
     let cancelled = false;
@@ -507,10 +537,15 @@ export function ContentProvider({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [canAccessEarlyProducts]);
+
+  const visibleContent = useMemo(
+    () => withMembershipProductVisibility(content, canAccessEarlyProducts),
+    [canAccessEarlyProducts, content],
+  );
 
   return (
-    <ContentContext.Provider value={content}>
+    <ContentContext.Provider value={visibleContent}>
       {children}
     </ContentContext.Provider>
   );

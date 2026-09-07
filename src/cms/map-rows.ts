@@ -31,6 +31,8 @@ export function mapProductRow(row: ProductRow, contents: readonly BoxContents[] 
     collections: row.collections,
     contents,
     active: row.published,
+    memberEarlyAccessStartsAt: row.member_early_access_starts_at ?? null,
+    memberEarlyAccessEndsAt: row.member_early_access_ends_at ?? null,
     consultantNote: row.consultant_note,
     dieticianNote: row.dietician_note,
     healthBenefits: row.health_benefits,

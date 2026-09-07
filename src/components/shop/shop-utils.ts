@@ -35,6 +35,9 @@ export type ShopProduct = {
   contents: readonly BoxContents[];
   /** Whether the product is active/visible to buy. Inactive products show as out of stock. */
   active?: boolean;
+  /** A temporary Zama+ member-only sales window, managed by an admin. */
+  memberEarlyAccessStartsAt?: string | null;
+  memberEarlyAccessEndsAt?: string | null;
   consultantNote?: string;
   dieticianNote?: string;
   healthBenefits?: readonly string[];

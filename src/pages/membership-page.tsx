@@ -1,14 +1,27 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState, type ChangeEvent, type FormEvent } from "react";
+import { BadgeCheck, Crown } from "lucide-react";
+import { useCart } from "../cart-context";
+import { useCustomerAuth } from "../checkout/customer-auth";
+import { fetchMembershipPlans } from "../membership/membership-api";
+import { cadenceLabel } from "../membership/membership-rules";
+import type { MembershipPlan } from "../membership/membership-types";
 import { PrimaryButton } from "../components/ui/action-link";
 import { OutlineTag } from "../components/ui/tag";
 import { btnPrimaryLg, sectionShell, sectionTitle } from "../components/ui/styles";
 import { submitMembershipInterest } from "../launch-interest";
 
-const whyItems = [
-  { label: "Simpler weekly groceries", copy: "Make regular grocery shopping easier." },
-  { label: "Fresh local food", copy: "Better access to produce from local farmers." },
-  { label: "Meal planning", copy: "Make deciding what to eat less stressful." },
-  { label: "Member benefits", copy: "Useful perks that will be clearly explained before enrollment." },
+const launchPreviewBenefits = [
+  "Explore the Zama shop and planned range",
+  "Save products that interest you",
+  "Get launch and new-product updates",
+  "No payment or order is created",
+] as const;
+
+const plannedMembershipBenefits = [
+  "Benefits published before enrollment",
+  "Pricing and billing terms shown first",
+  "Pause and cancellation rules made clear",
+  "Member support details shared up front",
 ] as const;
 
 const interestOptions = [
@@ -186,7 +199,99 @@ function MembershipForm() {
   );
 }
 
+function scrollToMembershipUpdates() {
+  document.getElementById("membership-updates")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function LaunchPreviewCard() {
+  return (
+    <article className="grid content-start gap-5 rounded-wobbly-card border-3 border-brand-black bg-brand-white p-5 shadow-brand sm:p-6">
+      <OutlineTag>Available now</OutlineTag>
+      <div className="grid gap-2">
+        <h2 className="font-primary text-[clamp(1.8rem,3vw,2.5rem)] font-bold leading-[1.04] text-brand-black">Launch Preview</h2>
+        <p className="font-primary text-[clamp(2rem,4vw,3.25rem)] font-bold leading-none text-brand-orange-ink">Free</p>
+      </div>
+      <ul className="grid gap-2 text-sm leading-relaxed text-brand-black/70 sm:text-base">
+        {launchPreviewBenefits.map((benefit) => (
+          <li className="flex items-start gap-2" key={benefit}>
+            <span aria-hidden="true" className="font-bold text-brand-green-ink">+</span>
+            <span>{benefit}</span>
+          </li>
+        ))}
+      </ul>
+      <button className={`${btnOutlineLg} mt-auto w-full`} type="button" onClick={scrollToMembershipUpdates}>
+        Join launch updates <span aria-hidden="true">→</span>
+      </button>
+    </article>
+  );
+}
+
+function membershipBenefits(plan: MembershipPlan | null): string[] {
+  if (!plan) return [...plannedMembershipBenefits];
+
+  return [
+    ...plan.benefits.map((benefit) => benefit.title),
+    plan.scheduledDeliveryEnabled ? "Scheduled saved-box delivery" : null,
+    plan.earlyAccessEnabled ? "Early access to selected new products" : null,
+    plan.freebieEnabled ? "A freebie with each paid scheduled delivery" : null,
+  ].filter((benefit): benefit is string => Boolean(benefit)).slice(0, 4);
+}
+
+function MembershipPlanCard({ plan, loading, signedIn, onSignIn }: {
+  plan: MembershipPlan | null;
+  loading: boolean;
+  signedIn: boolean;
+  onSignIn: () => void;
+}) {
+  const benefits = membershipBenefits(plan);
+
+  return (
+    <article className="relative grid content-start gap-5 overflow-hidden rounded-wobbly-card border-3 border-brand-forest bg-brand-yellow p-5 shadow-brand sm:p-6">
+      <span aria-hidden="true" className="pointer-events-none absolute -right-7 -top-7 h-24 w-24 rounded-full border-3 border-dashed border-brand-orange-ink/70" />
+      <OutlineTag>{loading ? "Loading plan" : plan ? "Available now" : "Planned after launch"}</OutlineTag>
+      <div className="relative grid gap-2">
+        <div className="flex items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-brand-forest bg-brand-white text-brand-green-ink"><Crown className="h-5 w-5" /></span>
+          <h2 className="font-primary text-[clamp(1.8rem,3vw,2.5rem)] font-bold leading-[1.04] text-brand-black">{plan?.name ?? "Zama+ Membership"}</h2>
+        </div>
+        {loading ? <p className="min-h-10 text-sm font-bold text-brand-black/60">Loading membership details…</p> : plan ? <><p className="font-primary text-[clamp(1.7rem,3.6vw,3rem)] font-bold leading-none text-brand-orange-ink">Nu. {new Intl.NumberFormat("en-BT").format(plan.price)}</p><p className="text-sm font-semibold text-brand-black/68">{cadenceLabel(plan.cadence)} · {plan.discountPercent}% member savings</p></> : <p className="font-primary text-[clamp(1.7rem,3.6vw,3rem)] font-bold leading-none text-brand-orange-ink">Coming later</p>}
+      </div>
+      {!loading ? <ul className="relative grid gap-2 text-sm leading-relaxed text-brand-black/72 sm:text-base">
+        {benefits.map((benefit) => <li className="flex items-start gap-2" key={benefit}><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-green-ink" /><span>{benefit}</span></li>)}
+      </ul> : <div className="min-h-28" aria-hidden="true" />}
+      {loading ? <div className={`${btnPrimaryLg} mt-auto w-full opacity-55`}>Loading…</div> : plan && signedIn ? <a className={`${btnPrimaryLg} mt-auto w-full`} href="#/account/membership">Manage Zama+ <span aria-hidden="true">→</span></a> : plan ? <button className={`${btnPrimaryLg} mt-auto w-full`} type="button" onClick={onSignIn}>Sign in to join Zama+ <span aria-hidden="true">→</span></button> : <button className={`${btnPrimaryLg} mt-auto w-full`} type="button" onClick={scrollToMembershipUpdates}>Get membership updates <span aria-hidden="true">→</span></button>}
+    </article>
+  );
+}
+
+function AdditionalPlanCard({ plan, signedIn, onSignIn }: { plan: MembershipPlan; signedIn: boolean; onSignIn: () => void }) {
+  return (
+    <article className="grid content-start gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-5 shadow-brand-soft">
+      <div className="flex flex-wrap items-start justify-between gap-3"><div className="grid gap-1"><h3 className="font-primary text-xl font-bold text-brand-green-ink">{plan.name}</h3><p className="text-sm font-bold text-brand-black">Nu. {new Intl.NumberFormat("en-BT").format(plan.price)} {cadenceLabel(plan.cadence)}</p></div><span className="rounded-full border-2 border-brand-forest/20 bg-brand-mint px-2 py-1 text-xs font-bold text-brand-green-ink">{plan.discountPercent}% savings</span></div>
+      <p className="text-sm leading-relaxed text-brand-black/68">{plan.description}</p>
+      <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href={signedIn ? "#/account/membership" : undefined} onClick={signedIn ? undefined : (event) => { event.preventDefault(); onSignIn(); }}>{signedIn ? "Manage this plan" : "Sign in to choose this plan"} <span aria-hidden="true">→</span></a>
+    </article>
+  );
+}
+
 export function MembershipPage() {
+  const { status } = useCustomerAuth();
+  const { openAuth } = useCart();
+  const [plans, setPlans] = useState<MembershipPlan[]>([]);
+  const [loading, setLoading] = useState(true);
+  const signedIn = status === "signed-in";
+
+  useEffect(() => {
+    let active = true;
+    void fetchMembershipPlans().then((nextPlans) => {
+      if (active) setPlans(nextPlans);
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  const featuredPlan = plans[0] ?? null;
+  const additionalPlans = plans.slice(1);
+
   return (
     <section className="full-bleed-safe relative overflow-hidden" aria-labelledby="membership-title">
       <div className={`relative z-[1] grid gap-7 py-[clamp(2.5rem,5vw,4.5rem)] ${sectionShell}`}>
@@ -198,28 +303,22 @@ export function MembershipPage() {
           </ol>
         </nav>
 
-        <div className="grid max-w-170 gap-3">
-          <OutlineTag>Zama+ Membership</OutlineTag>
-          <h1 id="membership-title" className={`${sectionTitle} max-w-170 text-brand-green-ink`}>Zama+ is coming later.</h1>
-          <p className="max-w-150 text-[1.05rem] leading-[1.5] text-brand-black/72">Be the first to know when Zama+ membership opens.</p>
-          <p className="max-w-170 text-[1.05rem] leading-[1.5] text-brand-black/72">Zama+ isn&apos;t open for enrollment yet. We&apos;re working out the benefits, pricing, and membership rules before asking anyone to join.</p>
+        <div className="grid max-w-220 gap-3">
+          <OutlineTag>Launch access and Zama+ membership</OutlineTag>
+          <h1 id="membership-title" className={`${sectionTitle} max-w-220 text-brand-green-ink`}>Start with the preview. Choose membership when you&apos;re ready.</h1>
+          <p className="max-w-170 text-[1.05rem] leading-[1.5] text-brand-black/72">Browse Zama today, then join Zama+ when you want member savings, scheduled deliveries, early access, and member-only extras.</p>
         </div>
 
-        <div className="grid gap-4">
-          <div className="grid gap-2">
-            <h2 className="font-primary text-[clamp(1.4rem,2.4vw,1.9rem)] font-bold text-brand-black">Why we&apos;re building it</h2>
-          </div>
-          <div className="grid content-start items-start gap-4 sm:grid-cols-2">
-            {whyItems.map((item) => (
-              <div className="grid content-start gap-1.5 rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-warm-white p-5 shadow-brand-soft" key={item.label}>
-                <h3 className="font-primary text-[clamp(1.15rem,2vw,1.45rem)] font-bold text-brand-green-ink">{item.label}</h3>
-                <p className="text-sm leading-[1.42] text-brand-black/72">{item.copy}</p>
-              </div>
-            ))}
-          </div>
+        <div className="grid items-stretch gap-5 lg:grid-cols-2">
+          <LaunchPreviewCard />
+          <MembershipPlanCard plan={featuredPlan} loading={loading} signedIn={signedIn} onSignIn={openAuth} />
         </div>
 
-        <MembershipForm />
+        {!loading && additionalPlans.length > 0 ? <section className="grid gap-4" aria-labelledby="more-membership-plans"><div className="grid gap-1"><p className="text-xs font-bold uppercase tracking-[0.12em] text-brand-orange-ink">More ways to join</p><h2 id="more-membership-plans" className="font-primary text-[clamp(1.5rem,3vw,2.25rem)] font-bold text-brand-green-ink">Choose the plan that fits your kitchen.</h2></div><div className="grid gap-4 sm:grid-cols-2">{additionalPlans.map((plan) => <AdditionalPlanCard key={plan.id} plan={plan} signedIn={signedIn} onSignIn={openAuth} />)}</div></section> : null}
+
+        <div id="membership-updates" className="scroll-mt-6">
+          <MembershipForm />
+        </div>
       </div>
     </section>
   );

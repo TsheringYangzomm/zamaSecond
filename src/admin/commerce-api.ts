@@ -125,14 +125,6 @@ async function appendOrderStatus(orderId: string, status: OrderStatus): Promise<
   if (updateError) throw new Error(updateError.message);
 }
 
-async function syncDeliveryFromOrder(orderId: string, status: DeliveryStatus): Promise<void> {
-  const { error } = await requireClient()
-    .from("deliveries")
-    .update({ status })
-    .eq("order_id", orderId);
-  if (error) throw new Error(error.message);
-}
-
 async function updateOrderStatusLive(orderId: string, status: OrderStatus, adminEmail: string | null): Promise<void> {
   const { data, error } = await requireClient()
     .from("orders")
@@ -171,13 +163,10 @@ async function updateSubscriptionStatusLive(subscriptionId: string, status: Subs
   const history = [...(data?.history ?? [])];
   history.push({ status, at: new Date().toISOString() });
   const { error: updateError } = await requireClient()
-    .from("orders")
+    .from("subscriptions")
     .update({ status, history })
-    .eq("id", orderId);
+    .eq("id", subscriptionId);
   if (updateError) throw new Error(updateError.message);
-
-  const deliveryStatus = orderStatusToDeliveryStatus(status);
-  if (deliveryStatus) await syncDeliveryFromOrder(orderId, deliveryStatus);
 }
 
 async function updateDeliveryStatusLive(deliveryId: string, status: DeliveryStatus, driver: string | null): Promise<void> {
@@ -322,6 +311,7 @@ class CommerceDataStore {
   async updateSubscriptionStatus(subscriptionId: string, status: SubscriptionStatus): Promise<void> {
     if (this.state.phase !== "ready") return;
     if (this.state.mode === "dev") {
+      const subscription = this.state.data.subscriptions.find((item) => item.id === subscriptionId);
       const data = {
         ...this.state.data,
         subscriptions: this.state.data.subscriptions.map((subscription) =>
@@ -331,6 +321,18 @@ class CommerceDataStore {
         ),
       };
       this.mutate(data);
+      if (subscription?.plan === "Zama+ Membership") {
+        createDevCustomerNotification({
+          customerId: subscription.customer_id,
+          returnId: null,
+          orderId: null,
+          type: "membership_updated",
+          title: "Membership status updated",
+          message: `Your Zama+ membership is now ${status.replaceAll("_", " ")}.`,
+          status,
+          link: "#/account/membership",
+        });
+      }
       return;
     }
     await updateSubscriptionStatusLive(subscriptionId, status);

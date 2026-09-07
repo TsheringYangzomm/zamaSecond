@@ -3,6 +3,8 @@ import type { Customer, Order } from "../admin/commerce-types";
 import { recordDevAdminNotification } from "../admin/admin-notifications-api";
 import { previewCoupon, recordDevRedemption } from "../coupons/coupons-api";
 import type { CouponErrorCode } from "../coupons/coupon-types";
+import { shopProducts } from "../data/landing";
+import { chooseBestDiscount, isMemberEarlyAccessWindow, membershipDiscount } from "../membership/membership-rules";
 
 export type CustomerProfile = {
   email: string;
@@ -218,7 +220,7 @@ export async function fetchCustomerOrders(email: string): Promise<Order[]> {
   return data as Order[];
 }
 
-function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number, subtotal: number, couponDiscount: number, couponId: string | null, pointsRedeemed = 0, pointsDiscount = 0): Order {
+function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number, subtotal: number, couponDiscount: number, couponId: string | null, pointsRedeemed = 0, pointsDiscount = 0, membershipDiscountAmount = 0, membershipPlanId: string | null = null): Order {
   const existing = readDevCommerce().orders;
   const year = new Date().getFullYear();
   const sequence = 5000 + existing.length + 1;
@@ -236,8 +238,10 @@ function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number
     subtotal,
     total,
     coupon_id: couponId,
-    coupon_code: input.couponCode?.trim().toUpperCase() || null,
+    coupon_code: couponId ? input.couponCode?.trim().toUpperCase() || null : null,
     coupon_discount: couponDiscount,
+    membership_discount: membershipDiscountAmount,
+    membership_plan_id: membershipPlanId,
     points_redeemed: pointsRedeemed,
     points_discount: pointsDiscount,
     payment_status: "pending",
@@ -249,6 +253,71 @@ function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number
     created_at: now,
     history: [{ status: "pending", at: now }],
   };
+}
+
+export type DevMembershipCycleOrderInput = {
+  customer: Customer;
+  cycleId: string;
+  deliveryDate: string;
+  deliveryArea: string;
+  deliveryAddress: string;
+  items: { productId: string; name: string; quantity: number; unitPrice: number }[];
+  deliveryFee: number;
+  total: number;
+  paymentReference: string;
+  freebie: { productId: string; name: string } | null;
+};
+
+/**
+ * Development-mode equivalent of the server-side scheduled-cycle settlement.
+ * A verified recurring invoice becomes a normal confirmed order, so the
+ * existing Orders and Deliveries workflows continue to work without a second
+ * kind of order in the customer experience.
+ */
+export function createDevMembershipCycleOrder(input: DevMembershipCycleOrderInput): Order {
+  const data = readDevCommerce();
+  const existing = data.orders.find((order) => order.membership_delivery_cycle_id === input.cycleId);
+  if (existing) return existing;
+  const timestamp = new Date().toISOString();
+  const year = new Date().getFullYear();
+  const sequence = 5000 + data.orders.length + 1;
+  const catalogItems = input.items.map((item) => ({
+    product_id: item.productId,
+    name: item.name,
+    quantity: item.quantity,
+    price: item.unitPrice,
+  }));
+  const items = input.freebie
+    ? [...catalogItems, { product_id: input.freebie.productId, name: `${input.freebie.name} (Zama+ freebie)`, quantity: 1, price: 0 }]
+    : catalogItems;
+  const order: Order = {
+    id: `ZAM-${year}-${String(sequence).padStart(4, "0")}`,
+    customer_id: input.customer.id,
+    status: "confirmed",
+    items,
+    subtotal: catalogItems.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    total: input.total,
+    membership_delivery_cycle_id: input.cycleId,
+    membership_delivery_fee: input.deliveryFee,
+    payment_status: "paid",
+    payment_method: "Bank transfer",
+    payment_reference: input.paymentReference,
+    delivery_date: input.deliveryDate,
+    delivery_area: input.deliveryArea,
+    notes: `Zama+ saved box · ${input.deliveryAddress}`,
+    created_at: timestamp,
+    history: [{ status: "confirmed", at: timestamp }],
+  };
+  if (!data.customers.some((customer) => customer.id === input.customer.id)) data.customers = [input.customer, ...data.customers];
+  data.orders = [order, ...data.orders];
+  writeDevCommerce(data);
+  recordDevAdminNotification({
+    type: "order_created",
+    title: "Scheduled delivery order created",
+    message: `Verified Zama+ saved-box cycle created order ${order.id}.`,
+    link: "#/admin?tab=orders",
+  });
+  return order;
 }
 
 export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderResult> {
@@ -306,10 +375,27 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
     return { ok: false, error: couponPreview.error ?? "That coupon could not be applied.", errorCode: couponPreview.errorCode };
   }
   const customer = saveDevCustomer(input.profile);
-  const total = couponPreview?.finalTotal ?? subtotal;
-  const couponDiscount = couponPreview?.discountAmount ?? 0;
-  const couponId = couponPreview?.coupon?.id ?? null;
-  const provisionalOrder = makeDevOrder(customer, input, total, subtotal, couponDiscount, couponId);
+  const { fetchMyMembership } = await import("../membership/membership-api");
+  const membershipSnapshot = await fetchMyMembership(input.profile.email);
+  const blockedEarlyAccessProduct = input.lines
+    .map((line) => shopProducts.find((product) => product.id === line.productId))
+    .find((product) => product && isMemberEarlyAccessWindow(product));
+  if (blockedEarlyAccessProduct && !(membershipSnapshot.status === "active" && membershipSnapshot.plan?.earlyAccessEnabled)) {
+    return { ok: false, error: `${blockedEarlyAccessProduct.name} is currently available only to active Zama+ members. It will be released to everyone when its early-access window ends.` };
+  }
+  const membershipEligibleSubtotal = input.lines.reduce((total, line) => {
+    const product = shopProducts.find((candidate) => candidate.id === line.productId);
+    return product && product.category !== "Custom boxes" ? total + line.price * line.quantity : total;
+  }, 0);
+  const memberDiscountAmount = membershipSnapshot.status === "active"
+    ? membershipDiscount(membershipEligibleSubtotal, membershipSnapshot.memberDiscountPercent)
+    : 0;
+  const selectedDiscounts = chooseBestDiscount(memberDiscountAmount, couponPreview?.discountAmount ?? 0);
+  const couponDiscount = selectedDiscounts.couponDiscount;
+  const couponId = couponDiscount > 0 ? couponPreview?.coupon?.id ?? null : null;
+  const membershipPlanId = selectedDiscounts.memberDiscount > 0 ? membershipSnapshot.plan?.id ?? null : null;
+  const total = Math.max(0, subtotal - selectedDiscounts.totalDiscount);
+  const provisionalOrder = makeDevOrder(customer, input, total, subtotal, couponDiscount, couponId, 0, 0, selectedDiscounts.memberDiscount, membershipPlanId);
   const pointsToRedeem = Math.max(0, Math.floor(input.pointsToRedeem ?? 0));
   let pointsDiscount = 0;
   if (pointsToRedeem > 0) {

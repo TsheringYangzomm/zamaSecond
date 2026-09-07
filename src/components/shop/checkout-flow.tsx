@@ -7,6 +7,8 @@ import type { AccountRewardsSnapshot } from "../../account-rewards/account-rewar
 import { checkoutPointsPreview, maximumCheckoutPoints } from "../../checkout/checkout-points";
 import { listMyCoupons, previewCoupon } from "../../coupons/coupons-api";
 import type { CouponPreview, CustomerCoupon } from "../../coupons/coupon-types";
+import { fetchMyMembership } from "../../membership/membership-api";
+import { chooseBestDiscount, membershipDiscount } from "../../membership/membership-rules";
 import { btnOutlineSm, btnPrimaryLg, btnPrimarySm } from "../ui/styles";
 import { PackageIcon } from "../ui/icons";
 import { numberFormatter } from "./shop-utils";
@@ -147,6 +149,7 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
   const [couponBusy, setCouponBusy] = useState(false);
   const [rewards, setRewards] = useState<AccountRewardsSnapshot | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [membershipDiscountPercent, setMembershipDiscountPercent] = useState(0);
   const pointsInputRef = useRef<HTMLInputElement>(null);
 
   const hasCompletePricing = items.length > 0 && items.every((line) => line.kind === "product" && line.product.priceAmount !== null);
@@ -156,11 +159,27 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
     quantity: line.quantity,
     unitPrice: line.product.priceAmount ?? 0,
   }] : []), [items]);
+  const membershipEligibleSubtotal = useMemo(() => items.reduce((total, line) => {
+    if (line.kind !== "product" || line.product.category === "Custom boxes") return total;
+    return total + (line.product.priceAmount ?? 0) * line.quantity;
+  }, 0), [items]);
 
   useEffect(() => {
     let active = true;
     void listMyCoupons(profile.email).then((coupons) => {
       if (active) setAvailableCoupons(coupons.filter((coupon) => coupon.canUse));
+    });
+    return () => {
+      active = false;
+    };
+  }, [profile.email]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchMyMembership(profile.email).then((snapshot) => {
+      if (active) setMembershipDiscountPercent(snapshot.status === "active" ? snapshot.memberDiscountPercent : 0);
+    }).catch(() => {
+      if (active) setMembershipDiscountPercent(0);
     });
     return () => {
       active = false;
@@ -196,7 +215,9 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
     onError(null);
   }
 
-  const payableBeforePoints = appliedCoupon?.ok ? appliedCoupon.finalTotal : subtotal;
+  const automaticMembershipDiscount = hasCompletePricing ? membershipDiscount(membershipEligibleSubtotal, membershipDiscountPercent) : 0;
+  const selectedDiscounts = chooseBestDiscount(automaticMembershipDiscount, appliedCoupon?.ok ? appliedCoupon.discountAmount : 0);
+  const payableBeforePoints = Math.max(0, subtotal - selectedDiscounts.totalDiscount);
   const pointsPreview = rewards
     ? checkoutPointsPreview(pointsToRedeem, rewards.pointsBalance, rewards.settings, payableBeforePoints)
     : { ok: pointsToRedeem === 0, points: pointsToRedeem, discountAmount: 0, finalTotal: payableBeforePoints, error: undefined };
@@ -247,7 +268,7 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
       paymentMethod,
       deliveryDate: deliveryDate || null,
       notes: notes.trim(),
-      couponCode: appliedCoupon?.ok ? appliedCoupon.coupon?.code ?? couponCode : null,
+      couponCode: selectedDiscounts.couponDiscount > 0 && appliedCoupon?.ok ? appliedCoupon.coupon?.code ?? couponCode : null,
       pointsToRedeem: pointsPreview.points || null,
     });
     setBusy(false);
@@ -289,7 +310,7 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
           <input className={inputClasses} aria-label="Coupon code" value={couponCode} onChange={(event) => { setCouponCode(event.target.value.toUpperCase()); setAppliedCoupon(null); }} placeholder="Enter coupon code" disabled={!hasCompletePricing} />
           {appliedCoupon?.ok ? <button className={btnOutlineSm} type="button" onClick={removeCoupon}>Remove</button> : <button className={btnOutlineSm} type="button" onClick={() => void applyCoupon()} disabled={couponBusy || !hasCompletePricing || !couponCode.trim()}>{couponBusy ? "Checking..." : "Apply"}</button>}
         </div>
-        {appliedCoupon?.ok ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{appliedCoupon.coupon?.code} applied — you saved Nu. {numberFormatter.format(appliedCoupon.discountAmount)}.</p> : null}
+        {appliedCoupon?.ok ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{selectedDiscounts.couponDiscount > 0 ? `${appliedCoupon.coupon?.code} applied — you saved Nu. ${numberFormatter.format(appliedCoupon.discountAmount)}.` : `Your Zama+ member saving is higher, so it will be used instead of ${appliedCoupon.coupon?.code}.`}</p> : null}
       </section>
 
       <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-4 shadow-brand-soft">
@@ -357,9 +378,10 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
       <div className="rounded-wobbly-card border-3 border-brand-forest bg-brand-yellow p-4 shadow-brand-soft">
         <div className="grid gap-1 text-sm">
           <div className="flex items-center justify-between gap-3"><p className="font-bold text-brand-black"><span className="tabular-nums">{items.length}</span> item{items.length === 1 ? "" : "s"}</p><p className="text-right font-bold text-brand-black/65">{hasCompletePricing ? `Nu. ${numberFormatter.format(subtotal)}` : "Pricing pending"}</p></div>
-          {appliedCoupon?.ok ? <div className="flex items-center justify-between gap-3 text-brand-green-ink"><span>Coupon discount</span><strong>− Nu. {numberFormatter.format(appliedCoupon.discountAmount)}</strong></div> : null}
+          {selectedDiscounts.memberDiscount > 0 ? <div className="flex items-center justify-between gap-3 text-brand-green-ink"><span>Member discount</span><strong>− Nu. {numberFormatter.format(selectedDiscounts.memberDiscount)}</strong></div> : null}
+          {selectedDiscounts.couponDiscount > 0 ? <div className="flex items-center justify-between gap-3 text-brand-green-ink"><span>Coupon discount</span><strong>− Nu. {numberFormatter.format(selectedDiscounts.couponDiscount)}</strong></div> : null}
           {pointsPreview.ok && pointsPreview.points > 0 ? <div className="flex items-center justify-between gap-3 text-brand-green-ink"><span>Points discount</span><strong>− Nu. {numberFormatter.format(pointsPreview.discountAmount)}</strong></div> : null}
-          {(appliedCoupon?.ok || pointsPreview.points > 0) ? <div className="mt-1 flex items-center justify-between gap-3 border-t-2 border-dashed border-brand-forest/25 pt-2"><span className="font-bold text-brand-black">Total</span><strong className="text-lg text-brand-orange-ink">Nu. {numberFormatter.format(finalTotal)}</strong></div> : null}
+          {(selectedDiscounts.totalDiscount > 0 || pointsPreview.points > 0) ? <div className="mt-1 flex items-center justify-between gap-3 border-t-2 border-dashed border-brand-forest/25 pt-2"><span className="font-bold text-brand-black">Total</span><strong className="text-lg text-brand-orange-ink">Nu. {numberFormatter.format(finalTotal)}</strong></div> : null}
         </div>
         <button className={`${btnPrimaryLg} mt-3 w-full`} type="submit" disabled={busy || !hasCompletePricing}>
           {busy ? "Placing order..." : `Place order · ${hasCompletePricing ? `Nu. ${numberFormatter.format(finalTotal)}` : "pending"}`}

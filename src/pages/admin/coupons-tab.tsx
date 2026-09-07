@@ -61,6 +61,7 @@ function toDraft(coupon: Coupon): CouponAdminDraft {
     usageLimit: coupon.usageLimit,
     perCustomerLimit: coupon.perCustomerLimit,
     active: coupon.active,
+    memberOnly: coupon.memberOnly,
     targets: coupon.targets,
   };
 }
@@ -80,6 +81,7 @@ function blankDraft(): CouponAdminDraft {
     usageLimit: null,
     perCustomerLimit: 1,
     active: true,
+    memberOnly: false,
     targets: [],
   };
 }
@@ -199,6 +201,7 @@ function CouponForm({ initial, products, categories, busy, error, onSave, onCanc
         <div className="grid gap-3 sm:grid-cols-3"><Field label="Minimum eligible spend" htmlFor="coupon-min-spend"><input className={inputClasses} id="coupon-min-spend" type="number" min="0" step="0.01" value={draft.minimumOrderAmount} onChange={(event) => update("minimumOrderAmount", Number(event.target.value))} /></Field><Field label="Total usage limit" hint="Leave blank for unlimited." htmlFor="coupon-usage-limit"><input className={inputClasses} id="coupon-usage-limit" type="number" min="1" step="1" placeholder="Unlimited" value={draft.usageLimit ?? ""} onChange={(event) => update("usageLimit", event.target.value ? Number(event.target.value) : null)} /></Field><Field label="Uses per customer" htmlFor="coupon-customer-limit"><input className={inputClasses} id="coupon-customer-limit" type="number" min="1" step="1" value={draft.perCustomerLimit} onChange={(event) => update("perCustomerLimit", Number(event.target.value))} /></Field></div>
         <div className="grid gap-3 sm:grid-cols-2"><Field label="Starts at" htmlFor="coupon-starts"><input className={inputClasses} id="coupon-starts" type="datetime-local" required value={draft.startsAt} onChange={(event) => update("startsAt", event.target.value)} /></Field><Field label="Expires at" hint="Leave blank for no expiry." htmlFor="coupon-expires"><input className={inputClasses} id="coupon-expires" type="datetime-local" value={draft.expiresAt ?? ""} onChange={(event) => update("expiresAt", event.target.value)} /></Field></div>
         <fieldset className="grid gap-3"><legend className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Eligible products and categories</legend><p className="text-sm text-brand-black/60">The discount applies to matching products only. Product and category targets are combined with OR logic.</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{products.map((product) => <Checkbox key={product.id} label={`Product · ${product.name}`} checked={hasProduct(product.id)} onChange={() => toggleTarget({ type: "product", value: product.id, label: product.name })} />)}{categories.map((category) => <Checkbox key={`category-${category}`} label={`Category · ${category}`} checked={hasCategory(category)} onChange={() => toggleTarget({ type: "category", value: category, label: category })} />)}</div>{products.length === 0 && categories.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black">No catalog products are available yet. Add a product before creating a targeted coupon.</p> : null}</fieldset>
+        <Checkbox label="Members only" checked={draft.memberOnly ?? false} onChange={(checked) => update("memberOnly", checked)} />
         <Checkbox label="Active and visible when its dates allow" checked={draft.active} onChange={(checked) => update("active", checked)} />
         {error ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{error}</p> : null}
         <div className="flex flex-wrap justify-end gap-2"><button className={btnOutlineSm} type="button" onClick={onCancel}>Cancel</button><button className={btnPrimarySm} type="submit" disabled={busy}>{busy ? "Saving..." : "Save coupon"}</button></div>

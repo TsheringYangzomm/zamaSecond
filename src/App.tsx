@@ -24,6 +24,7 @@ import { MembershipPage } from "./pages/membership-page";
 import { MealKitTrustPage } from "./pages/meal-kit-trust-page";
 import { AccountOrdersPage, AccountPage } from "./pages/account-page";
 import { AccountWalletPage } from "./pages/account-wallet-page";
+import { AccountMembershipPage } from "./pages/account-membership-page";
 import { CouponsPage } from "./pages/coupons-page";
 import { AdminPage } from "./pages/admin/admin-page";
 import { AdminAuthProvider } from "./admin/admin-auth";
@@ -88,9 +89,9 @@ function App() {
   }
 
   return (
-    <ContentProvider>
-      <CartProvider>
-        <CustomerAuthProvider>
+    <CartProvider>
+      <CustomerAuthProvider>
+        <ContentProvider>
           <a className="fixed left-4 top-3 z-50 -translate-y-24 rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow px-4 py-3 font-bold text-brand-black shadow-brand transition-transform focus:translate-y-0 focus:outline-none focus:ring-4 focus:ring-brand-leaf/30" href="#top">
             Skip to Content
           </a>
@@ -135,6 +136,10 @@ function App() {
         <main id="top" tabIndex={-1}>
           <AccountWalletPage />
         </main>
+      ) : route === "account-membership" ? (
+        <main id="top" tabIndex={-1}>
+          <AccountMembershipPage />
+        </main>
       ) : route === "coupons" ? (
         <main id="top" tabIndex={-1}>
           <CouponsPage />
@@ -161,9 +166,9 @@ function App() {
       )}
       <SiteFooter />
       <CartDrawer />
-        </CustomerAuthProvider>
-      </CartProvider>
-    </ContentProvider>
+        </ContentProvider>
+      </CustomerAuthProvider>
+    </CartProvider>
   );
 }
 

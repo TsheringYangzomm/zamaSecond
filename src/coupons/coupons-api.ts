@@ -23,6 +23,7 @@ type CouponDbRow = {
   usage_limit: number | null;
   per_customer_limit: number;
   active: boolean;
+  member_only?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -66,6 +67,7 @@ function mapCoupon(row: Partial<CouponDbRow> & Record<string, unknown>, targets:
     usageLimit: row.usage_limit == null && fromCamel.usageLimit == null ? null : numberValue(row.usage_limit ?? fromCamel.usageLimit),
     perCustomerLimit: numberValue(row.per_customer_limit ?? fromCamel.perCustomerLimit, 1),
     active: Boolean(row.active ?? fromCamel.active),
+    memberOnly: Boolean(row.member_only ?? fromCamel.memberOnly),
     targets: targets.length > 0 ? targets : normalizeTargets(row.targets),
     createdAt: stringValue(row.created_at ?? fromCamel.createdAt),
     updatedAt: stringValue(row.updated_at ?? fromCamel.updatedAt),
@@ -192,6 +194,11 @@ export async function listMyCoupons(email: string): Promise<CustomerCoupon[]> {
 export async function collectCoupon(coupon: Coupon, email: string): Promise<{ ok: boolean; error?: string }> {
   const client = getSupabaseClient();
   if (!client) {
+    if (coupon.memberOnly) {
+      const { fetchMyMembership } = await import("../membership/membership-api");
+      const membership = await fetchMyMembership(email);
+      if (membership.status !== "active") return { ok: false, error: "This offer is reserved for active Zama+ members." };
+    }
     const claims = readDevClaims();
     const key = email.trim().toLowerCase();
     claims[key] = [...new Set([...(claims[key] ?? []), coupon.id])];
@@ -210,6 +217,14 @@ export async function previewCoupon(code: string, lines: CouponLine[], email: st
   const client = getSupabaseClient();
   if (!client) {
     const coupon = devCoupons.find((item) => item.code === normalizedCode) ?? null;
+    if (coupon?.memberOnly) {
+      const { fetchMyMembership } = await import("../membership/membership-api");
+      const membership = await fetchMyMembership(email);
+      if (membership.status !== "active") {
+        const subtotal = lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+        return { ok: false, code: normalizedCode, eligibleSubtotal: 0, discountAmount: 0, finalTotal: subtotal, coupon, errorCode: "member_only", error: "This offer is reserved for active Zama+ members." };
+      }
+    }
     const redemptions = readDevRedemptions();
     const usage = {
       totalRedemptions: coupon ? redemptions.filter((row) => row.couponId === coupon.id && row.status === "redeemed").length : 0,
@@ -300,6 +315,7 @@ export async function saveAdminCoupon(draft: CouponAdminDraft): Promise<void> {
     usage_limit: draft.usageLimit,
     per_customer_limit: draft.perCustomerLimit,
     active: draft.active,
+    member_only: draft.memberOnly,
   }, { onConflict: "id" });
   if (error) throw new Error(error.message);
   const productTargets = draft.targets.filter((target) => target.type === "product").map((target) => ({ coupon_id: id, product_id: target.value }));

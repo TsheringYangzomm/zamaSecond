@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bell, CheckCheck, X } from "lucide-react";
 import { useCustomerAuth } from "../../checkout/customer-auth";
+import { processMembershipDueCycles } from "../../membership/membership-benefits-api";
 import { fetchCustomerNotifications, markAllNotificationsRead, markNotificationRead } from "../../returns/returns-notifications-api";
 import type { CustomerNotification } from "../../returns/returns-types";
 
@@ -27,6 +28,7 @@ function notificationHref(notification: CustomerNotification): string | null {
 
 function notificationActionLabel(notification: CustomerNotification): string {
   if (notification.returnId) return "View return";
+  if (notification.type.startsWith("membership_") || notification.type === "member_early_access") return "View membership";
   if (notification.type === "coupon_available") return "View coupons";
   if (notification.type === "product_available") return "View product";
   if (notification.orderId) return "View order";
@@ -56,10 +58,15 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
       setOpen(false);
       return;
     }
-    void refresh();
-    const interval = window.setInterval(() => void refresh(), 30_000);
-    const onFocus = () => void refresh();
-    const onVisibility = () => { if (document.visibilityState === "visible") void refresh(); };
+    const refreshAfterMembershipCheck = () => {
+      void processMembershipDueCycles()
+        .catch(() => undefined)
+        .finally(() => { void refresh(); });
+    };
+    refreshAfterMembershipCheck();
+    const interval = window.setInterval(refreshAfterMembershipCheck, 30_000);
+    const onFocus = refreshAfterMembershipCheck;
+    const onVisibility = () => { if (document.visibilityState === "visible") refreshAfterMembershipCheck(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {

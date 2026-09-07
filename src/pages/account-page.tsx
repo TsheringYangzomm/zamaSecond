@@ -5,6 +5,7 @@ import {
   ChevronRight,
   CircleHelp,
   Clock3,
+  Crown,
   Gift,
   Heart,
   History,
@@ -31,6 +32,8 @@ import { defaultRewardSettings, type AccountRewardsSnapshot } from "../account-r
 import { fetchCustomerReturns, requestCustomerReturn } from "../returns/returns-api";
 import { isReturnQuantityValid, remainingReturnableItems, returnEligibility, sortReceivedOrders } from "../returns/returns-rules";
 import { deliveredAtForOrder, RETURN_REASONS, type CustomerReturn, type ReturnRequestInput } from "../returns/returns-types";
+import { fetchMyMembership } from "../membership/membership-api";
+import type { MembershipSnapshot } from "../membership/membership-types";
 import { useCart } from "../cart-context";
 import { useContent } from "../cms/content-context";
 import { inputClasses } from "../components/shop/auth-pane";
@@ -86,6 +89,22 @@ function matchesOrder(order: Order, filter: OrderFilter): boolean {
 
 function returnStatusLabel(status: CustomerReturn["status"]): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function membershipStatusLabel(status: MembershipSnapshot["status"]): string {
+  if (status === "active") return "Zama+ Member";
+  if (status === "pending") return "Membership pending";
+  if (status === "paused") return "Membership paused";
+  if (status === "cancelled") return "Membership cancelled";
+  if (status === "rejected") return "Membership request declined";
+  return "Not a member";
+}
+
+function membershipStatusClasses(status: MembershipSnapshot["status"]): string {
+  if (status === "active") return "border-brand-forest bg-brand-mint text-brand-green-ink";
+  if (status === "pending") return "border-brand-orange-ink bg-brand-buff text-brand-orange-ink";
+  if (status === "rejected" || status === "cancelled") return "border-brand-orange bg-brand-orange/15 text-brand-orange-ink";
+  return "border-brand-forest/20 bg-brand-warm-white text-brand-black/65";
 }
 
 function pickupWindowLabel(returnRequest: CustomerReturn): string | null {
@@ -276,6 +295,7 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   const [profileBusy, setProfileBusy] = useState(false);
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [couponCount, setCouponCount] = useState<number | null>(null);
+  const [membership, setMembership] = useState<MembershipSnapshot | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -318,6 +338,18 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
     let active = true;
     void listMyCoupons(profile.email).then((coupons) => {
       if (active) setCouponCount(coupons.length);
+    });
+    return () => {
+      active = false;
+    };
+  }, [profile.email]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchMyMembership(profile.email).then((nextMembership) => {
+      if (active) setMembership(nextMembership);
+    }).catch(() => {
+      if (active) setMembership(null);
     });
     return () => {
       active = false;
@@ -490,10 +522,18 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
           <button className="grid h-12 w-12 shrink-0 place-items-center rounded-full border-3 border-brand-forest bg-brand-white text-brand-forest shadow-brand-soft hover:bg-brand-mint" type="button" aria-label="Edit profile" onClick={() => { setProfileEditing((open) => !open); setProfileNotice(null); }}><Settings className="h-5 w-5" /></button>
         </div>
         <div className="relative mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t-2 border-dashed border-brand-forest/25 pt-4 text-sm text-brand-forest/72">
-          <span className="inline-flex items-center gap-1.5"><BadgeCheck className="h-4 w-4" /> Zama member</span>
+          <span className={"inline-flex w-fit items-center gap-1.5 rounded-full border-2 px-2.5 py-1 text-xs font-bold " + membershipStatusClasses(membership?.status ?? "none")}><BadgeCheck className="h-4 w-4" /> {membership ? membershipStatusLabel(membership.status) : "Account member"}</span>
           {profile.area ? <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {profile.area}</span> : <span>Complete your profile for faster checkout.</span>}
         </div>
       </section>
+
+      {membership ? <section className={"grid gap-4 rounded-wobbly-card border-3 p-5 shadow-brand-soft sm:p-6 " + (membership.status === "active" ? "border-brand-forest bg-brand-yellow" : "border-brand-forest/25 bg-brand-warm-white")} aria-labelledby="account-membership-title">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-brand-forest bg-brand-mint text-brand-green-ink"><Crown className="h-5 w-5" /></span><div className="grid min-w-0 gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Membership</span><h2 id="account-membership-title" className="font-primary text-xl font-bold text-brand-green-ink">{membership.plan?.name ?? "Zama+ Membership"}</h2><span className={"w-fit rounded-full border-2 px-2 py-0.5 text-xs font-bold " + membershipStatusClasses(membership.status)}>{membershipStatusLabel(membership.status)}</span></div></div>
+          <a className="inline-flex items-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="#/account/membership">{membership.status === "none" ? "See member benefits" : "Manage membership"} <ChevronRight className="h-4 w-4" /></a>
+        </div>
+        {membership.status === "active" && membership.subscription ? <div className="grid gap-2 border-t-2 border-dashed border-brand-forest/20 pt-3 text-sm sm:grid-cols-3"><span><strong className="block text-xs uppercase tracking-[0.08em] text-brand-black/55">Plan</strong>{membership.plan?.name ?? "Zama+"}</span><span><strong className="block text-xs uppercase tracking-[0.08em] text-brand-black/55">Automatic saving</strong>{membership.memberDiscountPercent}% off eligible items</span><span><strong className="block text-xs uppercase tracking-[0.08em] text-brand-black/55">Next renewal</strong>{membership.subscription.nextRenewalDate ? formatDate(membership.subscription.nextRenewalDate) : "One-time plan"}</span></div> : membership.status === "pending" ? <p className="rounded-wobbly-md border-2 border-brand-orange-ink bg-brand-buff p-3 text-sm text-brand-black">Your bank transfer is waiting for verification. We’ll update your account when the request is reviewed.</p> : <p className="text-sm leading-relaxed text-brand-black/68">Join Zama+ for automatic savings, member-only offers, and early access to selected seasonal products.</p>}
+      </section> : null}
 
       {profileEditing ? (
         <form className="grid gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-warm-white p-5 shadow-brand-soft" onSubmit={(event) => void saveProfile(event)}>
@@ -568,7 +608,7 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
           {[
             { title: "Customer service", copy: "Questions about an order?", href: "#/contact", icon: CircleHelp, color: "bg-brand-yellow" },
             { title: "Delivery & freshness", copy: "See how we handle your box.", href: "#/meal-kit-trust", icon: PackageCheck, color: "bg-brand-mint" },
-            { title: "Zama+ membership", copy: "Explore future member perks.", href: "#/membership", icon: Users, color: "bg-brand-lime" },
+            { title: "Zama+ membership", copy: membership?.status === "active" ? "See your savings and member offers." : "See plans and join Zama+.", href: "#/account/membership", icon: Users, color: "bg-brand-lime" },
             { title: "Our policies", copy: "Clear information before you buy.", href: "#/meal-kit-trust", icon: ShieldIcon, color: "bg-brand-buff" },
           ].map((item) => { const Icon = item.icon; return <a className="group flex items-center gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft hover:-translate-y-px hover:bg-brand-warm-white" href={item.href} key={item.title}><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border-2 border-brand-forest ${item.color} text-brand-green-ink`}><Icon className="h-5 w-5" /></span><span className="grid min-w-0 gap-0.5"><strong className="text-sm text-brand-green-ink">{item.title}</strong><span className="text-xs text-brand-black/56">{item.copy}</span></span><ChevronRight className="ml-auto h-4 w-4 shrink-0 text-brand-forest transition-transform group-hover:translate-x-1" /></a>; })}
         </div>

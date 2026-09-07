@@ -9,6 +9,12 @@ export type AdminNotificationType =
   | "withdrawal_requested"
   | "customer_created"
   | "customer_updated"
+  | "membership_request"
+  | "membership_delivery_invoice"
+  | "membership_delivery_payment_submitted"
+  | "membership_delivery_skipped"
+  | "membership_delivery_paid"
+  | "member_early_access"
   | "system";
 
 export type AdminNotification = {
@@ -27,4 +33,3 @@ export type AdminNotificationInput = {
   message: string;
   link?: string | null;
 };
-

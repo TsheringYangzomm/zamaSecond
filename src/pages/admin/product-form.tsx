@@ -39,6 +39,8 @@ export function blankProduct(id: string): ProductRow {
     sourcing: "",
     sort_order: 0,
     published: true,
+    member_early_access_starts_at: null,
+    member_early_access_ends_at: null,
   };
 }
 
@@ -60,9 +62,35 @@ type IngredientRowError = {
   quantity?: string;
 };
 
+function toThimphuDateTimeLocal(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Thimphu",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const part = (kind: string) => parts.find((item) => item.type === kind)?.value ?? "00";
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
+}
+
+function thimphuTimestamp(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const raw = value.length === 16 ? `${value}:00+06:00` : value;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function toDraft(row: ProductRow): ProductDraft {
   return {
     ...row,
+    member_early_access_starts_at: toThimphuDateTimeLocal(row.member_early_access_starts_at),
+    member_early_access_ends_at: toThimphuDateTimeLocal(row.member_early_access_ends_at),
     price_amount: row.price_amount == null ? "" : String(row.price_amount),
     tags: row.tags.join(", "),
     collections: row.collections.join(", "),
@@ -74,6 +102,8 @@ function fromDraft(draft: ProductDraft): ProductRow {
   const parsedPrice = Number(draft.price_amount.trim());
   return {
     ...draft,
+    member_early_access_starts_at: thimphuTimestamp(draft.member_early_access_starts_at),
+    member_early_access_ends_at: thimphuTimestamp(draft.member_early_access_ends_at),
     price_amount: draft.price_amount.trim() === "" || Number.isNaN(parsedPrice) ? null : parsedPrice,
     tags: draft.tags.split(",").map((item) => item.trim()).filter(Boolean),
     collections: draft.collections.split(",").map((item) => item.trim()).filter(Boolean),
@@ -412,6 +442,16 @@ export function ProductForm({
       }
     }
 
+    const earlyStartsAt = draft.member_early_access_starts_at;
+    const earlyEndsAt = draft.member_early_access_ends_at;
+    if (earlyStartsAt || earlyEndsAt) {
+      const start = earlyStartsAt ? new Date(thimphuTimestamp(earlyStartsAt) ?? "").getTime() : Number.NaN;
+      const end = earlyEndsAt ? new Date(thimphuTimestamp(earlyEndsAt) ?? "").getTime() : Number.NaN;
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end) {
+        fields.memberEarlyAccess = "Set a valid Zama+ early-access start and end time.";
+      }
+    }
+
     if (showIngredients) {
       if (ingredients.length === 0) {
         ingredientsSection = `At least one inventory item must be linked to this ${draft.category.toLowerCase()}.`;
@@ -601,6 +641,12 @@ export function ProductForm({
           <div className="grid content-start justify-start gap-2 pt-1.5">
             <Checkbox checked={draft.published} onChange={(next) => set("published", next)} label="Active (shown on the site). Inactive products display as out of stock." />
           </div>
+        </div>
+        <div className="grid gap-3 rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-mint/45 p-3 sm:grid-cols-2">
+          <div className="sm:col-span-2"><strong className="text-sm text-brand-green-ink">Zama+ member early access</strong><p className="mt-1 text-xs text-brand-black/62">Members can browse and buy only during this window. The product becomes public automatically at the end time.</p></div>
+          <Field label="Member access starts" htmlFor="product-member-early-start"><TextInput id="product-member-early-start" type="datetime-local" value={draft.member_early_access_starts_at ?? ""} onChange={(event) => set("member_early_access_starts_at", event.target.value || null)} /></Field>
+          <Field label="Public release" htmlFor="product-member-early-end"><TextInput id="product-member-early-end" type="datetime-local" value={draft.member_early_access_ends_at ?? ""} onChange={(event) => set("member_early_access_ends_at", event.target.value || null)} /></Field>
+          {fieldErrors.memberEarlyAccess ? <p className="text-xs font-bold text-brand-orange sm:col-span-2" role="alert">{fieldErrors.memberEarlyAccess}</p> : null}
         </div>
       </CollapsibleSection>
 
