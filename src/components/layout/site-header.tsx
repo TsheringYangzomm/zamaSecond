@@ -6,6 +6,7 @@ import { useCustomerAuth } from "../../checkout/customer-auth";
 import { SmallOutlineLink, SmallPrimaryLink } from "../ui/action-link";
 import { ArrowIcon } from "../ui/icons";
 import { btnOutlineSm, btnPrimarySm, navLinkClass } from "../ui/styles";
+import { NotificationBell } from "./notification-bell";
 
 function navArrow(itemHref: string) {
   return itemHref.startsWith("#/") ? <ArrowIcon className="ml-1.5" /> : null;
@@ -169,6 +170,7 @@ export function SiteHeader() {
             <>
               <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
               <HeaderLinkAction href="#/account" label="My account" icon={UserRound} />
+              <NotificationBell />
               <HeaderLinkAction href="#b2b" label={partnerLabel} icon={Handshake} arrow />
               <HeaderButtonAction label="Sign out" icon={LogOut} onClick={handleSignOut} />
             </>
@@ -190,6 +192,7 @@ export function SiteHeader() {
           <SmallPrimaryLink className="px-3 text-[0.92rem]" href="#waitlist">
             {joinShortLabel}
           </SmallPrimaryLink>
+          {status === "signed-in" ? <NotificationBell compact /> : null}
           <CartButton onOpen={handleOpenCart} />
           <button
             type="button"

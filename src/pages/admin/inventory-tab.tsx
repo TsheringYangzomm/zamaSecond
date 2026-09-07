@@ -322,16 +322,16 @@ export function InventoryTab() {
     return sorted;
   }, [views, items, query, filters, sortBy]);
 
-  function handleStockSaved(result: { item: InventoryItemRow; lot: InventoryStockLotRow; createdNewItem: boolean }) {
+  async function handleStockSaved(result: { item: InventoryItemRow; lot: InventoryStockLotRow; createdNewItem: boolean }) {
     setAddOpen(false);
     setAddProduct(null);
+    await load();
     const unit = result.item.unit ? ` ${result.item.unit}` : "";
     setStatus(
       result.createdNewItem
         ? `Added ${result.item.name} to inventory with ${result.lot.quantity}${unit} from ${result.lot.supplier}.`
         : `Added ${result.lot.quantity}${unit} of ${result.item.name} from ${result.lot.supplier}.`,
     );
-    void load();
   }
 
   const attentionCount = levelCounts.low + levelCounts.out;

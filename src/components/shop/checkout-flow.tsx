@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../../cart-context";
 import { useCustomerAuth } from "../../checkout/customer-auth";
 import { submitOrder, type CustomerProfile } from "../../checkout/checkout-api";
+import { fetchAccountRewards } from "../../account-rewards/account-rewards-api";
+import type { AccountRewardsSnapshot } from "../../account-rewards/account-rewards-types";
+import { checkoutPointsPreview, maximumCheckoutPoints } from "../../checkout/checkout-points";
 import { listMyCoupons, previewCoupon } from "../../coupons/coupons-api";
 import type { CouponPreview, CustomerCoupon } from "../../coupons/coupon-types";
-import { btnOutlineSm, btnPrimaryLg } from "../ui/styles";
+import { btnOutlineSm, btnPrimaryLg, btnPrimarySm } from "../ui/styles";
 import { PackageIcon } from "../ui/icons";
 import { numberFormatter } from "./shop-utils";
 import type { CartLine } from "./cart-lines";
@@ -142,6 +145,9 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
   const [appliedCoupon, setAppliedCoupon] = useState<CouponPreview | null>(null);
   const [availableCoupons, setAvailableCoupons] = useState<CustomerCoupon[]>([]);
   const [couponBusy, setCouponBusy] = useState(false);
+  const [rewards, setRewards] = useState<AccountRewardsSnapshot | null>(null);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const pointsInputRef = useRef<HTMLInputElement>(null);
 
   const hasCompletePricing = items.length > 0 && items.every((line) => line.kind === "product" && line.product.priceAmount !== null);
   const couponLines = useMemo(() => items.flatMap((line) => line.kind === "product" ? [{
@@ -155,6 +161,18 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
     let active = true;
     void listMyCoupons(profile.email).then((coupons) => {
       if (active) setAvailableCoupons(coupons.filter((coupon) => coupon.canUse));
+    });
+    return () => {
+      active = false;
+    };
+  }, [profile.email]);
+
+  useEffect(() => {
+    let active = true;
+    void fetchAccountRewards(profile.email).then((snapshot) => {
+      if (active) setRewards(snapshot);
+    }).catch(() => {
+      if (active) setRewards(null);
     });
     return () => {
       active = false;
@@ -178,10 +196,28 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
     onError(null);
   }
 
+  const payableBeforePoints = appliedCoupon?.ok ? appliedCoupon.finalTotal : subtotal;
+  const pointsPreview = rewards
+    ? checkoutPointsPreview(pointsToRedeem, rewards.pointsBalance, rewards.settings, payableBeforePoints)
+    : { ok: pointsToRedeem === 0, points: pointsToRedeem, discountAmount: 0, finalTotal: payableBeforePoints, error: undefined };
+  const finalTotal = pointsPreview.ok ? pointsPreview.finalTotal : payableBeforePoints;
+  const maxRedeemablePoints = rewards ? maximumCheckoutPoints(rewards.pointsBalance, rewards.settings, payableBeforePoints) : 0;
+  const canRedeemPoints = Boolean(rewards && maxRedeemablePoints > 0 && hasCompletePricing);
+
+  function activatePoints() {
+    if (!canRedeemPoints) return;
+    setPointsToRedeem((current) => current > 0 ? current : maxRedeemablePoints);
+    requestAnimationFrame(() => pointsInputRef.current?.focus());
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     onError(null);
     if (!hasCompletePricing) return;
+    if (!pointsPreview.ok) {
+      onError(pointsPreview.error ?? "Your points could not be applied.");
+      return;
+    }
     setBusy(true);
     const result = await submitOrder({
       profile: {
@@ -212,6 +248,7 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
       deliveryDate: deliveryDate || null,
       notes: notes.trim(),
       couponCode: appliedCoupon?.ok ? appliedCoupon.coupon?.code ?? couponCode : null,
+      pointsToRedeem: pointsPreview.points || null,
     });
     setBusy(false);
     if (!result.ok) {
@@ -253,6 +290,28 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
           {appliedCoupon?.ok ? <button className={btnOutlineSm} type="button" onClick={removeCoupon}>Remove</button> : <button className={btnOutlineSm} type="button" onClick={() => void applyCoupon()} disabled={couponBusy || !hasCompletePricing || !couponCode.trim()}>{couponBusy ? "Checking..." : "Apply"}</button>}
         </div>
         {appliedCoupon?.ok ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{appliedCoupon.coupon?.code} applied — you saved Nu. {numberFormatter.format(appliedCoupon.discountAmount)}.</p> : null}
+      </section>
+
+      <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-4 shadow-brand-soft">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="grid gap-1">
+            <h4 className={`${labelClasses} text-brand-orange-ink`}>Redeem points</h4>
+            <p className="text-sm text-brand-black/62">Use your points directly on this order. Every {rewards?.settings.pointsPerNgultrum ?? 10} points is worth Nu. 1.</p>
+          </div>
+          <button className={pointsToRedeem > 0 ? btnOutlineSm : btnPrimarySm} type="button" disabled={!canRedeemPoints} onClick={activatePoints}>{pointsToRedeem > 0 ? "Adjust points" : "Redeem points"}</button>
+        </div>
+        {rewards ? <>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-wobbly-md border-2 border-brand-forest/20 bg-brand-white/70 p-3 text-sm"><span className="font-bold text-brand-green-ink">Available points</span><strong className="font-primary text-xl text-brand-green-ink">{rewards.pointsBalance}</strong></div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <label className="grid flex-1 gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Points to use<input className={inputClasses} ref={pointsInputRef} aria-label="Points to use at checkout" type="number" min="0" max={maxRedeemablePoints} step="1" value={pointsToRedeem || ""} onChange={(event) => setPointsToRedeem(Math.max(0, Math.floor(Number(event.target.value) || 0)))} placeholder={`Up to ${rewards.pointsBalance} points`} disabled={!hasCompletePricing || !canRedeemPoints} /></label>
+            <button className={btnOutlineSm} type="button" disabled={!canRedeemPoints} onClick={() => setPointsToRedeem(maxRedeemablePoints)}>Use maximum</button>
+            {pointsToRedeem > 0 ? <button className={btnOutlineSm} type="button" onClick={() => setPointsToRedeem(0)}>Clear</button> : null}
+          </div>
+          {pointsToRedeem > 0 && !pointsPreview.ok ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-yellow/50 p-3 text-sm font-semibold text-brand-black" role="alert">{pointsPreview.error}</p> : null}
+          {pointsPreview.ok && pointsPreview.points > 0 ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-white p-3 text-sm font-bold text-brand-green-ink" role="status">{pointsPreview.points} points applied — you save Nu. {numberFormatter.format(pointsPreview.discountAmount)}.</p> : null}
+          {pointsPreview.ok && pointsToRedeem > pointsPreview.points ? <p className="text-xs text-brand-black/58">Only {pointsPreview.points} points are needed for this order. The remaining points stay in your balance.</p> : null}
+          {!canRedeemPoints && rewards.pointsBalance <= 0 ? <p className="text-xs text-brand-black/58">You do not have any points available yet.</p> : null}
+        </> : <p className="text-sm text-brand-black/58">Loading your available points...</p>}
       </section>
 
       <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft">
@@ -299,10 +358,11 @@ function CheckoutForm({ items, subtotal, profile, error, onError, onPlaced, onSi
         <div className="grid gap-1 text-sm">
           <div className="flex items-center justify-between gap-3"><p className="font-bold text-brand-black"><span className="tabular-nums">{items.length}</span> item{items.length === 1 ? "" : "s"}</p><p className="text-right font-bold text-brand-black/65">{hasCompletePricing ? `Nu. ${numberFormatter.format(subtotal)}` : "Pricing pending"}</p></div>
           {appliedCoupon?.ok ? <div className="flex items-center justify-between gap-3 text-brand-green-ink"><span>Coupon discount</span><strong>− Nu. {numberFormatter.format(appliedCoupon.discountAmount)}</strong></div> : null}
-          {appliedCoupon?.ok ? <div className="mt-1 flex items-center justify-between gap-3 border-t-2 border-dashed border-brand-forest/25 pt-2"><span className="font-bold text-brand-black">Total</span><strong className="text-lg text-brand-orange-ink">Nu. {numberFormatter.format(appliedCoupon.finalTotal)}</strong></div> : null}
+          {pointsPreview.ok && pointsPreview.points > 0 ? <div className="flex items-center justify-between gap-3 text-brand-green-ink"><span>Points discount</span><strong>− Nu. {numberFormatter.format(pointsPreview.discountAmount)}</strong></div> : null}
+          {(appliedCoupon?.ok || pointsPreview.points > 0) ? <div className="mt-1 flex items-center justify-between gap-3 border-t-2 border-dashed border-brand-forest/25 pt-2"><span className="font-bold text-brand-black">Total</span><strong className="text-lg text-brand-orange-ink">Nu. {numberFormatter.format(finalTotal)}</strong></div> : null}
         </div>
         <button className={`${btnPrimaryLg} mt-3 w-full`} type="submit" disabled={busy || !hasCompletePricing}>
-          {busy ? "Placing order..." : `Place order · ${hasCompletePricing ? `Nu. ${numberFormatter.format(appliedCoupon?.ok ? appliedCoupon.finalTotal : subtotal)}` : "pending"}`}
+          {busy ? "Placing order..." : `Place order · ${hasCompletePricing ? `Nu. ${numberFormatter.format(finalTotal)}` : "pending"}`}
         </button>
         <p className="mt-2 text-xs text-brand-black/58">Orders appear in the admin Orders section as "pending" once placed.</p>
       </div>

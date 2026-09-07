@@ -91,6 +91,10 @@ Coupons are managed in the admin portal under **Commerce → Coupons** and are s
 
 Admins can create percentage or fixed campaigns, choose product/category targets, set dates and usage limits, and deactivate campaigns without removing redemption history. Customers can browse active coupons, sign in to collect them, and apply one coupon during checkout. The order-placement RPC recalculates the discount and total server-side.
 
+### Customer notifications
+
+Signed-in customers receive account-only notifications from the bell in the site header. To enable notifications for order placement/status and payment updates, newly published products, and newly usable coupons, run `supabase/customer-notifications-schema.sql` after the returns schema (and after the CMS, commerce, coupons, and account-rewards schemas). The migration updates the existing `customer_notifications` feed, adds customer-safe read-state RPCs, and enables realtime with the existing polling fallback. Notifications do not send email, SMS, or push messages.
+
 ## Quality Checks
 
 ```bash

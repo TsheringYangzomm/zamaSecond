@@ -94,7 +94,7 @@ describe("submitContactMessage", () => {
     ).resolves.toEqual({ mode: "remote" });
   });
 
-  it("reports success even when EmailJS rejects the request", async () => {
+  it("reports the delivery error when EmailJS rejects the inbox notification", async () => {
     vi.stubEnv("VITE_EMAILJS_SERVICE_ID", "service_zama");
     vi.stubEnv("VITE_EMAILJS_TEMPLATE_ID", "template_contact");
     vi.stubEnv("VITE_EMAILJS_AUTOREPLY_TEMPLATE_ID", "template_autoreply");
@@ -103,6 +103,6 @@ describe("submitContactMessage", () => {
 
     await expect(
       submitContactMessage({ name: "Demo", email: "hello@example.com", topic: "support", message: "Help" }),
-    ).resolves.toEqual({ mode: "remote" });
+    ).rejects.toThrow("Too Many Requests");
   });
 });

@@ -177,12 +177,16 @@ async function signInAsAdmin(page) {
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome to the Zama admin." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 }
 
-async function openInventory(page) {
+async function openInventory(page, list = false) {
   await page.getByRole("button", { name: "Inventory" }).click();
   await expect(page.getByRole("heading", { name: "Inventory" })).toBeVisible();
+  if (list) {
+    await page.getByRole("button", { name: "Stock List" }).click();
+    await expect(page.getByRole("table", { name: "Item stock levels" })).toBeVisible();
+  }
 }
 
 async function openAddStockModal(page) {
@@ -190,10 +194,16 @@ async function openAddStockModal(page) {
   await expect(page.getByRole("dialog", { name: "Add stock" })).toBeVisible();
 }
 
+async function chooseFilter(page, label: string, option: string) {
+  const filter = page.locator("div.group").filter({ has: page.locator('button[aria-haspopup="menu"]') }).filter({ hasText: label }).first();
+  await filter.locator('button[aria-haspopup="menu"]').click();
+  await filter.getByRole("menu").getByRole("button", { name: option, exact: true }).click();
+}
+
 test("shows stock levels for every item and can filter by level", async ({ page }) => {
   await mockInventoryAdmin(page);
   await signInAsAdmin(page);
-  await openInventory(page);
+  await openInventory(page, true);
 
   const itemTable = page.getByRole("table", { name: "Item stock levels" });
 
@@ -202,11 +212,11 @@ test("shows stock levels for every item and can filter by level", async ({ page 
   await expect(itemTable.getByRole("row", { name: /Chips/ })).toContainText("Out of stock");
   await expect(itemTable.getByRole("row", { name: /Milk Powder/ })).toContainText("Not tracked");
 
-  await page.getByLabel("Filter by stock status").selectOption("out");
+  await chooseFilter(page, "Level", "Out of stock");
   await expect(itemTable.getByRole("row", { name: /Chips/ })).toBeVisible();
   await expect(itemTable.getByRole("row", { name: /Potato/ })).toHaveCount(0);
 
-  await page.getByLabel("Filter by stock status").selectOption("");
+  await page.getByRole("button", { name: "Clear Level filter" }).click();
   await expect(itemTable.getByRole("row", { name: /Potato/ })).toBeVisible();
 });
 
@@ -224,7 +234,7 @@ test("shows inventory health computed from the live data", async ({ page }) => {
 test("searches, filters, and sorts inventory together", async ({ page }) => {
   await mockInventoryAdmin(page);
   await signInAsAdmin(page);
-  await openInventory(page);
+  await openInventory(page, true);
 
   const itemTable = page.getByRole("table", { name: "Item stock levels" });
   const bodyRows = itemTable.locator("tbody tr");
@@ -234,13 +244,13 @@ test("searches, filters, and sorts inventory together", async ({ page }) => {
   await expect(bodyRows.filter({ hasText: "Chicken" })).toHaveCount(0);
 
   await page.getByLabel("Search inventory").fill("");
-  await page.getByLabel("Filter by category").selectOption("Fresh produce");
-  await page.getByLabel("Filter by supplier").selectOption("Pema Dorji");
-  await page.getByLabel("Filter by stock status").selectOption("in");
+  await chooseFilter(page, "Category", "Fresh produce");
+  await chooseFilter(page, "Supplier", "Pema Dorji");
+  await chooseFilter(page, "Level", "In stock");
   await expect(bodyRows).toHaveCount(1);
   await expect(bodyRows.first()).toContainText("Potato");
 
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  await page.getByRole("button", { name: "Clear all", exact: true }).click();
   await expect(bodyRows).toHaveCount(4);
 
   await page.getByLabel("Sort by").selectOption("qty-desc");
@@ -253,22 +263,17 @@ test("searches, filters, and sorts inventory together", async ({ page }) => {
 test("Search button applies the query without reloading and Clear filters resets it", async ({ page }) => {
   await mockInventoryAdmin(page);
   await signInAsAdmin(page);
-  await openInventory(page);
+  await openInventory(page, true);
 
   const itemTable = page.getByRole("table", { name: "Item stock levels" });
   const bodyRows = itemTable.locator("tbody tr");
 
-  const searchButton = page.getByRole("button", { name: "Search" });
-  await expect(searchButton).toBeVisible();
-  await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
-
   await page.getByLabel("Search inventory").fill("Pema");
-  await searchButton.click();
   await expect(bodyRows).toHaveCount(1);
   await expect(bodyRows.first()).toContainText("Potato");
-  await expect(page.getByRole("button", { name: "Clear filters" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Clear all" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Clear filters" }).click();
+  await page.getByRole("button", { name: "Clear all" }).click();
   await expect(bodyRows).toHaveCount(4);
   await expect(page.getByRole("button", { name: "Clear filters" })).toHaveCount(0);
 });
@@ -276,7 +281,7 @@ test("Search button applies the query without reloading and Clear filters resets
 test("adds stock to an existing product without duplicating it", async ({ page }) => {
   await mockInventoryAdmin(page);
   await signInAsAdmin(page);
-  await openInventory(page);
+  await openInventory(page, true);
   await openAddStockModal(page);
 
   const modal = page.getByRole("dialog", { name: "Add stock" });
@@ -298,7 +303,7 @@ test("adds stock to an existing product without duplicating it", async ({ page }
 test("keeps the typed values in the add-stock modal while the save is in flight", async ({ page }) => {
   await mockInventoryAdmin(page, 600);
   await signInAsAdmin(page);
-  await openInventory(page);
+  await openInventory(page, true);
   await openAddStockModal(page);
 
   const modal = page.getByRole("dialog", { name: "Add stock" });
@@ -329,7 +334,7 @@ test("shows validation errors when required fields are missing", async ({ page }
 test("adds a new product and a new farmer as the supplier from the modal", async ({ page }) => {
   await mockInventoryAdmin(page);
   await signInAsAdmin(page);
-  await openInventory(page);
+  await openInventory(page, true);
   await openAddStockModal(page);
 
   const modal = page.getByRole("dialog", { name: "Add stock" });
@@ -354,7 +359,7 @@ test("adds a new product and a new farmer as the supplier from the modal", async
 test("shows the stock breakdown across suppliers", async ({ page }) => {
   await mockInventoryAdmin(page);
   await signInAsAdmin(page);
-  await openInventory(page);
+  await openInventory(page, true);
   await openAddStockModal(page);
 
   const modal = page.getByRole("dialog", { name: "Add stock" });
@@ -367,8 +372,9 @@ test("shows the stock breakdown across suppliers", async ({ page }) => {
   const itemTable = page.getByRole("table", { name: "Item stock levels" });
   await itemTable.getByRole("button", { name: "Potato" }).click();
 
-  const details = page.getByRole("dialog", { name: "Potato" });
-  await expect(details.getByText("50 kg")).toBeVisible();
+  const details = page.getByRole("list", { name: "Stock lots for Potato" });
+  await expect(details.getByText("20 kg")).toBeVisible();
+  await expect(details.getByText("30 kg")).toBeVisible();
   await expect(details.getByText("Pema Dorji")).toBeVisible();
   await expect(details.getByText("Karchung")).toBeVisible();
 });

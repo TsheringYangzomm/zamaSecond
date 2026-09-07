@@ -1,4 +1,4 @@
-export type PointsLedgerSource = "daily_check_in" | "customer_review" | "admin_adjustment" | "redemption_hold" | "redemption_release";
+export type PointsLedgerSource = "daily_check_in" | "customer_review" | "admin_adjustment" | "redemption_hold" | "redemption_release" | "checkout_redemption";
 
 export type PointsLedgerEntry = {
   id: string;

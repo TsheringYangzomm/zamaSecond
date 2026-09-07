@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Apple,
   Boxes,
@@ -33,6 +33,7 @@ import { SubscriptionsTab } from "./subscriptions-tab";
 import { MessagesTab } from "./messages-tab";
 import { CouponsTab } from "./coupons-tab";
 import { AccountsRewardsTab } from "./accounts-rewards-tab";
+import { AdminNotificationBell } from "./admin-notification-bell";
 import {
   Sidebar,
   SidebarContent,
@@ -53,6 +54,15 @@ import {
 import { btnOutlineSm } from "../../components/ui/styles";
 
 type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "coupons" | "farmers" | "dieticians" | "customers" | "accounts-rewards" | "waitlist" | "reviews" | "messages" | "subscriptions" | "content";
+
+const adminTabs: AdminTab[] = ["overview", "orders", "products", "inventory", "meal-kit-notes", "coupons", "farmers", "dieticians", "customers", "accounts-rewards", "waitlist", "reviews", "messages", "subscriptions", "content"];
+
+function tabFromHash(): AdminTab {
+  if (typeof window === "undefined") return "overview";
+  const query = window.location.hash.split("?")[1] ?? "";
+  const requested = new URLSearchParams(query).get("tab");
+  return requested && adminTabs.includes(requested as AdminTab) ? requested as AdminTab : "overview";
+}
 
 type NavItem = { key: AdminTab; label: string; icon: ReactNode };
 
@@ -96,7 +106,13 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 
 function AdminShell() {
   const { email, signOut } = useAdminAuth();
-  const [tab, setTab] = useState<AdminTab>("overview");
+  const [tab, setTab] = useState<AdminTab>(tabFromHash);
+
+  useEffect(() => {
+    const onHashChange = () => setTab(tabFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   return (
     <SidebarProvider className="flex min-h-svh w-full flex-col">
@@ -106,7 +122,10 @@ function AdminShell() {
           <img className="h-12 w-auto shrink-0" src="/assets/zama_logo.png" alt="Zama" width="144" height="94" />
           <span className="rounded-full border-2 border-brand-forest bg-brand-warm-white px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-forest">Admin</span>
         </div>
-        <a className={btnOutlineSm} href="#/">← Back to site</a>
+        <div className="flex items-center gap-2">
+          <AdminNotificationBell />
+          <a className={btnOutlineSm} href="#/">← Back to site</a>
+        </div>
       </header>
 
       <div className="flex flex-1 min-w-0">

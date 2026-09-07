@@ -20,7 +20,7 @@ type AddStockModalProps = {
   product?: InventoryItemRow | null;
   adminEmail: string | null;
   onClose: () => void;
-  onSaved: (result: { item: InventoryItemRow; lot: InventoryStockLotRow; createdNewItem: boolean }) => void;
+  onSaved: (result: { item: InventoryItemRow; lot: InventoryStockLotRow; createdNewItem: boolean }) => void | Promise<void>;
 };
 
 function todayString(): string {
@@ -103,7 +103,6 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
 
   async function handleSubmit() {
     if (busyRef.current) return;
-    busyRef.current = true;
     const trimmedProduct = (isNewProduct ? newProductName : productName).trim();
     const trimmedCategory = category.trim();
     const trimmedUnit = unit.trim();
@@ -130,6 +129,7 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
       return;
     }
 
+    busyRef.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -170,7 +170,7 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
         notes: notes.trim(),
         admin_email: adminEmail ?? "",
       });
-      onSaved({ item, lot, createdNewItem });
+      await onSaved({ item, lot, createdNewItem });
     } catch (submitError) {
       console.error("Failed to add stock:", submitError);
       setError(submitError instanceof Error ? submitError.message : "Could not add stock.");

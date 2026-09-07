@@ -106,6 +106,12 @@ function isBlockRow(
   );
 }
 
+function isMeaningfulStory(value: string | undefined): value is string {
+  if (!value || value.trim().length < 40) return false;
+  const letters = value.toLowerCase().replace(/[^a-z0-9]/g, "");
+  return new Set(letters).size >= 8;
+}
+
 function deriveTrustDetails(
   products: readonly ShopProduct[],
 ): MealKitTrustDetail[] {
@@ -290,9 +296,10 @@ async function loadRemoteContent(): Promise<RemoteContent> {
     ).map((row) => {
       const mapped = mapFarmerRow(row);
       const fallback = defaultFarmerById.get(row.id);
-      const story =
-        storyByFarmer.get(row.id) ??
-        (storyTableFailed ? fallback?.story : undefined);
+      const remoteStory = storyByFarmer.get(row.id);
+      const story = isMeaningfulStory(remoteStory)
+        ? remoteStory
+        : fallback?.story ?? (storyTableFailed ? fallback?.story : undefined);
       const seasonalUpdate =
         seasonalByFarmer.get(row.id) ??
         (seasonalTableFailed ? fallback?.seasonalUpdate : undefined);

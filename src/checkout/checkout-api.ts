@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "../supabase";
 import type { Customer, Order } from "../admin/commerce-types";
+import { recordDevAdminNotification } from "../admin/admin-notifications-api";
 import { previewCoupon, recordDevRedemption } from "../coupons/coupons-api";
 import type { CouponErrorCode } from "../coupons/coupon-types";
 
@@ -27,6 +28,7 @@ export type SubmitOrderInput = {
   deliveryDate: string | null;
   notes: string;
   couponCode?: string | null;
+  pointsToRedeem?: number | null;
 };
 
 export type SubmitOrderResult =
@@ -110,6 +112,14 @@ export function saveDevCustomer(profile: CustomerProfile): Customer {
     ? data.customers.map((customer) => (customer.id === existing.id ? merged : customer))
     : [merged, ...data.customers];
   writeDevCommerce(data);
+  if (!existing) {
+    recordDevAdminNotification({
+      type: "customer_created",
+      title: "New customer account",
+      message: (merged.name || "A customer") + " created an account.",
+      link: "#/admin?tab=customers",
+    });
+  }
   return merged;
 }
 
@@ -208,7 +218,7 @@ export async function fetchCustomerOrders(email: string): Promise<Order[]> {
   return data as Order[];
 }
 
-function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number, subtotal: number, couponDiscount: number, couponId: string | null): Order {
+function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number, subtotal: number, couponDiscount: number, couponId: string | null, pointsRedeemed = 0, pointsDiscount = 0): Order {
   const existing = readDevCommerce().orders;
   const year = new Date().getFullYear();
   const sequence = 5000 + existing.length + 1;
@@ -228,6 +238,8 @@ function makeDevOrder(customer: Customer, input: SubmitOrderInput, total: number
     coupon_id: couponId,
     coupon_code: input.couponCode?.trim().toUpperCase() || null,
     coupon_discount: couponDiscount,
+    points_redeemed: pointsRedeemed,
+    points_discount: pointsDiscount,
     payment_status: "pending",
     payment_method: input.paymentMethod,
     payment_reference: null,
@@ -249,7 +261,7 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
       if (!upsert.ok || !upsert.customerId) {
         throw new Error(upsert.error ?? "We could not save your account details.");
       }
-      const { data, error } = await client.rpc("place_order", {
+      const orderRpcArgs: Record<string, unknown> = {
         p_customer_id: upsert.customerId,
         p_items: input.lines.map((line) => ({
           product_id: line.productId,
@@ -263,7 +275,9 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
         p_delivery_date: input.deliveryDate ?? null,
         p_notes: input.notes,
         p_coupon_code: input.couponCode?.trim().toUpperCase() || null,
-      });
+      };
+      if ((input.pointsToRedeem ?? 0) > 0) orderRpcArgs.p_points_to_redeem = Math.floor(input.pointsToRedeem ?? 0);
+      const { data, error } = await client.rpc("place_order", orderRpcArgs);
       if (error) return { ok: false, error: error.message };
       const result = data as PlaceOrderResponse;
       if (result?.status !== "ok" || !result.orderId) {
@@ -295,10 +309,35 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
   const total = couponPreview?.finalTotal ?? subtotal;
   const couponDiscount = couponPreview?.discountAmount ?? 0;
   const couponId = couponPreview?.coupon?.id ?? null;
-  const order = makeDevOrder(customer, input, total, subtotal, couponDiscount, couponId);
+  const provisionalOrder = makeDevOrder(customer, input, total, subtotal, couponDiscount, couponId);
+  const pointsToRedeem = Math.max(0, Math.floor(input.pointsToRedeem ?? 0));
+  let pointsDiscount = 0;
+  if (pointsToRedeem > 0) {
+    const { redeemPointsAtCheckout } = await import("../account-rewards/account-rewards-api");
+    const pointsResult = await redeemPointsAtCheckout(input.profile.email, pointsToRedeem, provisionalOrder.id, total);
+    pointsDiscount = pointsResult.discountAmount;
+  }
+  const order = { ...provisionalOrder, total: Math.max(0, total - pointsDiscount), points_redeemed: pointsToRedeem, points_discount: pointsDiscount };
   const data = readDevCommerce();
   data.orders = [order, ...data.orders];
   writeDevCommerce(data);
+  recordDevAdminNotification({
+    type: "order_created",
+    title: "New order received",
+    message: "Order " + order.id + " was placed.",
+    link: "#/admin?tab=orders",
+  });
+  const { createDevCustomerNotification } = await import("../returns/returns-notifications-api");
+  createDevCustomerNotification({
+    customerId: customer.id,
+    returnId: null,
+    orderId: order.id,
+    type: "order_placed",
+    title: "Order placed",
+    message: `Your order ${order.id} was placed successfully.`,
+    status: order.status,
+    link: "#/account/orders",
+  });
   if (couponId) recordDevRedemption(couponId, input.profile.email, order.id);
   return { ok: true, orderId: order.id, mode: "dev" };
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { commerceStore, customerName } from "../../admin/commerce-api";
 import { orderStatuses, paymentStatuses, type Order, type OrderStatus } from "../../admin/commerce-types";
@@ -23,6 +23,7 @@ import {
 import { DeliveriesTab } from "./deliveries-tab";
 import { PaymentsTab } from "./payments-tab";
 import { ReceiptView } from "./receipt-view";
+import { ReturnsTab } from "./returns-tab";
 
 type PendingChange = { order: Order; status: OrderStatus };
 
@@ -37,10 +38,18 @@ type ColumnFilter = {
   notes: string;
 };
 
+type OrderView = "orders" | "deliveries" | "payments" | "returns";
+
+function viewFromHash(): OrderView {
+  if (typeof window === "undefined") return "orders";
+  const requested = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("view");
+  return requested === "deliveries" || requested === "payments" || requested === "returns" ? requested : "orders";
+}
+
 export function OrdersTab() {
   const { email: adminEmail } = useAdminAuth();
   const state = useCommerceStore();
-  const [view, setView] = useState<"orders" | "deliveries" | "payments">("orders");
+  const [view, setView] = useState<OrderView>(viewFromHash);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ColumnFilter>({ status: "", payment: "", location: "", customer: "", amount: "", placed: "", items: "", notes: "" });
   const [selected, setSelected] = useState<Order | null>(null);
@@ -49,6 +58,12 @@ export function OrdersTab() {
   const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
+
+  useEffect(() => {
+    const onHashChange = () => setView(viewFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
 
   const data = state.phase === "ready" ? state.data : null;
   const writable = state.phase === "ready" && state.writable;
@@ -162,6 +177,7 @@ export function OrdersTab() {
             <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Total</span>
             {selected.subtotal != null && selected.subtotal !== selected.total ? <span className="text-sm text-brand-black/60">Subtotal {formatMoney(selected.subtotal)}</span> : null}
             {selected.coupon_code && (selected.coupon_discount ?? 0) > 0 ? <span className="text-sm font-bold text-brand-green-ink">Coupon {selected.coupon_code} · − {formatMoney(selected.coupon_discount ?? 0)}</span> : null}
+            {(selected.points_redeemed ?? 0) > 0 ? <span className="text-sm font-bold text-brand-green-ink">Points {selected.points_redeemed} · − {formatMoney(selected.points_discount ?? 0)}</span> : null}
             <span className="font-primary text-2xl font-bold text-brand-green-ink">{formatMoney(selected.total)}</span>
             <span className="text-xs text-brand-black/56">Paid via {selected.payment_method || "—"}</span>
           </div>
@@ -263,6 +279,7 @@ export function OrdersTab() {
         <ViewButton active={view === "orders"} count={data ? data.orders.length : null} onClick={() => setView("orders")}>Orders</ViewButton>
         <ViewButton active={view === "deliveries"} count={data ? data.deliveries.length : null} onClick={() => setView("deliveries")}>Deliveries</ViewButton>
         <ViewButton active={view === "payments"} count={data ? data.payments.length : null} onClick={() => setView("payments")}>Payments</ViewButton>
+        <ViewButton active={view === "returns"} count={null} onClick={() => setView("returns")}>Returns</ViewButton>
       </div>
 
       {view === "orders" ? (
@@ -407,8 +424,10 @@ export function OrdersTab() {
         </>
       ) : view === "deliveries" ? (
         <DeliveriesTab />
-      ) : (
+      ) : view === "payments" ? (
         <PaymentsTab />
+      ) : (
+        <ReturnsTab />
       )}
     </div>
   );

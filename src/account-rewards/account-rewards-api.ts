@@ -1,6 +1,8 @@
 import { getSupabaseClient } from "../supabase";
+import { recordDevAdminNotification } from "../admin/admin-notifications-api";
 import { getDevCustomerByEmail, getDevCustomers, loadDevOrders } from "../checkout/checkout-api";
 import { loadCustomerPreferences } from "../account-preferences";
+import { checkoutPointsPreview } from "../checkout/checkout-points";
 import { checkInStreak, isValidRedemption, maskAccountNumber, walletBalance } from "./account-rewards-rules";
 import type {
   AccountRewardsSnapshot,
@@ -365,6 +367,12 @@ export async function submitCustomerReview(email: string, orderId: string, ratin
   snapshot.pointsLedger = [...snapshot.pointsLedger, { id: `pts-${Date.now()}`, customerId: snapshot.customerId, pointsDelta: review.pointsAwarded, source: "customer_review", sourceId: review.id, reason: `Review for order ${orderId}`, createdAt: now, createdBy: null }];
   snapshot.pointsBalance += review.pointsAwarded;
   saveDevSnapshot(snapshot);
+  recordDevAdminNotification({
+    type: "review_submitted",
+    title: "New customer review",
+    message: "A customer submitted a review for order " + orderId + ".",
+    link: "#/admin?tab=reviews",
+  });
   return { snapshot, review };
 }
 
@@ -389,7 +397,27 @@ export async function requestPointsRedemption(email: string, points: number): Pr
   snapshot.pointsLedger = [...snapshot.pointsLedger, { id: `pts-${Date.now()}`, customerId: snapshot.customerId, pointsDelta: -points, source: "redemption_hold", sourceId: id, reason: "Points redemption pending admin approval", createdAt: now, createdBy: null }];
   snapshot.redemptions = [...snapshot.redemptions, { id, customerId: snapshot.customerId, points, walletAmount, status: "pending", reason: "Customer requested wallet credit", requestedAt: now, reviewedAt: null, reviewedBy: null }];
   saveDevSnapshot(snapshot);
+  recordDevAdminNotification({
+    type: "points_redemption_requested",
+    title: "Points redemption requested",
+    message: "A customer requested Nu. " + walletAmount + " in wallet credit.",
+    link: "#/admin?tab=accounts-rewards",
+  });
   return snapshot;
+}
+
+export async function redeemPointsAtCheckout(email: string, points: number, orderId: string, payableTotal: number): Promise<{ snapshot: AccountRewardsSnapshot; discountAmount: number }> {
+  if (getSupabaseClient()) throw new Error("Checkout points are handled by the order service in live mode.");
+  const snapshot = devSnapshot(email);
+  const preview = checkoutPointsPreview(points, snapshot.pointsBalance, snapshot.settings, payableTotal);
+  if (!preview.ok) throw new Error(preview.error ?? "Choose a valid points amount for checkout.");
+  const appliedPoints = preview.points;
+  const discountAmount = preview.discountAmount;
+  const now = new Date().toISOString();
+  snapshot.pointsBalance -= appliedPoints;
+  snapshot.pointsLedger = [...snapshot.pointsLedger, { id: `pts-${Date.now()}`, customerId: snapshot.customerId, pointsDelta: -appliedPoints, source: "checkout_redemption", sourceId: orderId, reason: `Points used at checkout for order ${orderId}`, createdAt: now, createdBy: null }];
+  saveDevSnapshot(snapshot);
+  return { snapshot, discountAmount };
 }
 
 export async function saveBankAccount(email: string, input: CustomerBankInput): Promise<AccountRewardsSnapshot> {
@@ -445,6 +473,12 @@ export async function requestWalletWithdrawal(email: string, input: WithdrawalRe
   snapshot.walletLedger = [...snapshot.walletLedger, { id: `wallet-${Date.now()}`, customerId: snapshot.customerId, type: "hold", amount: input.amount, source: "wallet_withdrawal", sourceId: withdrawalId, description: "Withdrawal reserved pending admin approval", status: "completed", createdAt: now, createdBy: null }];
   snapshot.walletBalance = walletBalance(snapshot.walletLedger);
   saveDevSnapshot(snapshot);
+  recordDevAdminNotification({
+    type: "withdrawal_requested",
+    title: "Wallet withdrawal requested",
+    message: "A customer requested a Nu. " + input.amount + " withdrawal.",
+    link: "#/admin?tab=accounts-rewards",
+  });
   return snapshot;
 }
 

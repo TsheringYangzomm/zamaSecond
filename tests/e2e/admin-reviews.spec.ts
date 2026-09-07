@@ -140,7 +140,13 @@ async function signInAsAdmin(page) {
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome to the Zama admin." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+}
+
+async function chooseReviewProduct(page, option: string) {
+  const filter = page.locator("div.group").filter({ has: page.locator('button[aria-haspopup="menu"]') }).filter({ hasText: "Product" }).first();
+  await filter.locator('button[aria-haspopup="menu"]').click();
+  await filter.getByRole("menu").getByRole("button", { name: option, exact: true }).click();
 }
 
 test("lists reviews with product names", async ({ page }) => {
@@ -163,15 +169,15 @@ test("filters reviews by product", async ({ page }) => {
   await expect(page.getByRole("row", { name: /Karma/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Yeshey/ })).toBeVisible();
 
-  await page.getByLabel("Filter by product").selectOption("veg-box");
+  await chooseReviewProduct(page, "Vegetable Box");
   await expect(page.getByRole("row", { name: /Karma/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Yeshey/ })).toHaveCount(0);
 
-  await page.getByLabel("Filter by product").selectOption("meal-kit");
+  await chooseReviewProduct(page, "Meal Kit");
   await expect(page.getByRole("row", { name: /Yeshey/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Karma/ })).toHaveCount(0);
 
-  await page.getByLabel("Filter by product").selectOption("");
+  await page.getByRole("button", { name: "Clear Product filter" }).click();
   await expect(page.getByRole("row", { name: /Karma/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /Yeshey/ })).toBeVisible();
 });

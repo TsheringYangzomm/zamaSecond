@@ -28,6 +28,9 @@ import { listMyCoupons } from "../coupons/coupons-api";
 import { claimDailyCheckIn, fetchAccountRewards, migrateLegacySavedItems, requestPointsRedemption, submitCustomerReview, toggleSavedItem } from "../account-rewards/account-rewards-api";
 import { addDays, checkInStreak, localThimphuDateKey, rewardForNextCheckIn } from "../account-rewards/account-rewards-rules";
 import { defaultRewardSettings, type AccountRewardsSnapshot } from "../account-rewards/account-rewards-types";
+import { fetchCustomerReturns, requestCustomerReturn } from "../returns/returns-api";
+import { isReturnQuantityValid, remainingReturnableItems, returnEligibility, sortReceivedOrders } from "../returns/returns-rules";
+import { deliveredAtForOrder, RETURN_REASONS, type CustomerReturn, type ReturnRequestInput } from "../returns/returns-types";
 import { useCart } from "../cart-context";
 import { useContent } from "../cms/content-context";
 import { inputClasses } from "../components/shop/auth-pane";
@@ -78,11 +81,23 @@ function matchesOrder(order: Order, filter: OrderFilter): boolean {
   if (filter === "processing") return ["pending", "confirmed", "preparing"].includes(order.status);
   if (filter === "shipped") return ["out_for_delivery", "delivered"].includes(order.status);
   if (filter === "review") return order.status === "delivered";
-  return order.status === "cancelled" || order.payment_status === "refunded";
+  return order.status === "delivered";
 }
 
-function OrderCard({ order, productById, detailed, reviewed, rewardPoints = 20, onReview }: { order: Order; productById: Map<string, ShopProduct>; detailed?: boolean; reviewed?: boolean; rewardPoints?: number; onReview?: () => void }) {
+function returnStatusLabel(status: CustomerReturn["status"]): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function pickupWindowLabel(returnRequest: CustomerReturn): string | null {
+  if (!returnRequest.pickupWindowStart || !returnRequest.pickupWindowEnd) return null;
+  const date = new Intl.DateTimeFormat("en-BT", { timeZone: "Asia/Thimphu", day: "numeric", month: "short", year: "numeric" }).format(new Date(returnRequest.pickupWindowStart));
+  const time = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Thimphu", hour: "2-digit", minute: "2-digit", hour12: false });
+  return `${date}, ${time.format(new Date(returnRequest.pickupWindowStart))}–${time.format(new Date(returnRequest.pickupWindowEnd))} Bhutan time`;
+}
+
+function OrderCard({ order, productById, detailed, reviewed, rewardPoints = 20, onReview, onReturn, returnRequest, latestReturnRequest, returnIsEligible, returnWindowClosed }: { order: Order; productById: Map<string, ShopProduct>; detailed?: boolean; reviewed?: boolean; rewardPoints?: number; onReview?: () => void; onReturn?: () => void; returnRequest?: CustomerReturn; latestReturnRequest?: CustomerReturn; returnIsEligible?: boolean; returnWindowClosed?: boolean }) {
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const deliveredAt = deliveredAtForOrder(order);
 
   return (
     <article className="grid gap-3 rounded-wobbly-md border-2 border-brand-forest/20 bg-brand-warm-white p-4">
@@ -116,10 +131,12 @@ function OrderCard({ order, productById, detailed, reviewed, rewardPoints = 20, 
         <div className="grid gap-1 text-xs text-brand-black/68">
           <span>{itemCount} item{itemCount === 1 ? "" : "s"} · {order.delivery_area || "Delivery area pending"}</span>
           {detailed ? <span>Payment: <strong className="text-brand-black">{order.payment_method || "Not recorded"}</strong> · {order.payment_status}</span> : null}
-          {detailed ? <span>Delivery: <strong className="text-brand-black">{order.delivery_date ? formatDate(order.delivery_date) : "Date to be confirmed"}</strong></span> : null}
+          {detailed ? <span>{order.status === "delivered" ? "Delivered" : "Delivery"}: <strong className="text-brand-black">{deliveredAt ? formatDate(deliveredAt) : order.delivery_date ? formatDate(order.delivery_date) : "Date to be confirmed"}</strong></span> : null}
+          {detailed && latestReturnRequest ? <span className="grid gap-0.5 text-brand-green-ink"><strong>Return: {returnStatusLabel(latestReturnRequest.status)}</strong>{latestReturnRequest.status === "approved" && pickupWindowLabel(latestReturnRequest) ? <span className="text-brand-black/62">Pickup {pickupWindowLabel(latestReturnRequest)}</span> : null}{latestReturnRequest.status === "rejected" && latestReturnRequest.rejectionReason ? <span className="text-brand-black/62">Reason: {latestReturnRequest.rejectionReason}</span> : null}{latestReturnRequest.status === "refunded" && latestReturnRequest.refundAmount != null ? <span className="text-brand-black/62">Refund {formatMoney(latestReturnRequest.refundAmount)}{latestReturnRequest.refundMethod ? ` · ${latestReturnRequest.refundMethod}` : ""}</span> : null}</span> : null}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
           {onReview && order.status === "delivered" ? <button className={`rounded-wobbly-md border-2 px-3 py-1.5 text-xs font-bold ${reviewed ? "cursor-default border-brand-forest/20 bg-brand-mint text-brand-green-ink" : "border-brand-orange-ink bg-brand-yellow text-brand-black hover:bg-brand-orange"}`} type="button" disabled={reviewed} onClick={onReview}>{reviewed ? "Points earned" : `Review · +${rewardPoints} pts`}</button> : null}
+          {onReturn && order.status === "delivered" ? <button className={`rounded-wobbly-md border-2 px-3 py-1.5 text-xs font-bold ${returnRequest ? "cursor-default border-brand-forest/20 bg-brand-mint text-brand-green-ink" : returnIsEligible ? "border-brand-orange-ink bg-brand-yellow text-brand-black hover:bg-brand-orange" : "cursor-default border-brand-forest/15 bg-brand-white text-brand-black/48"}`} type="button" disabled={Boolean(returnRequest) || !returnIsEligible} onClick={onReturn}>{returnRequest ? `Return · ${returnStatusLabel(returnRequest.status)}` : returnWindowClosed ? "Return window closed" : latestReturnRequest ? "Request another return" : "Return item"}</button> : null}
           <strong className="shrink-0 font-primary text-lg text-brand-green-ink">{formatMoney(order.total)}</strong>
         </div>
       </div>
@@ -155,6 +172,55 @@ function ReviewForm({ order, rewardPoints, busy, onCancel, onSubmit }: { order: 
   );
 }
 
+function ReturnForm({ order, existingReturns, busy, onCancel, onSubmit }: { order: Order; existingReturns: CustomerReturn[]; busy: boolean; onCancel: () => void; onSubmit: (input: ReturnRequestInput) => void }) {
+  const availableItems = remainingReturnableItems(order, existingReturns);
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => Object.fromEntries(availableItems.map((item) => [item.productId, item.quantity])));
+  const [reason, setReason] = useState<(typeof RETURN_REASONS)[number]["value"]>(RETURN_REASONS[0].value);
+  const [note, setNote] = useState("");
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const items = availableItems.map((item) => ({ productId: item.productId, quantity: quantities[item.productId] ?? 0 })).filter((item) => item.quantity > 0);
+    if (!isReturnQuantityValid(order, items)) return;
+    onSubmit({ orderId: order.id, items, reason, note: note.trim() });
+  }
+
+  return (
+    <form className="grid gap-3 rounded-wobbly-md border-2 border-brand-forest/20 bg-brand-white p-4" onSubmit={submit}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="grid gap-0.5"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Step 2 of 2 · Choose items</span><strong className="text-sm text-brand-green-ink">{order.id}</strong></div>
+        <button className="text-xs font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={onCancel}>← Back to delivered orders</button>
+      </div>
+      <fieldset className="grid gap-2">
+        <legend className="text-sm font-bold text-brand-black">Which items would you like to return?</legend>
+        {availableItems.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/20 bg-brand-warm-white p-3 text-sm text-brand-black/68">All items from this order are already included in a return request.</p> : availableItems.map((available) => {
+          const orderItem = order.items.find((item) => item.product_id === available.productId);
+          if (!orderItem) return null;
+          const selected = (quantities[available.productId] ?? 0) > 0;
+          return <label className={`flex items-center gap-3 rounded-wobbly-md border-2 p-3 ${selected ? "border-brand-forest bg-brand-mint" : "border-brand-forest/15 bg-brand-warm-white"}`} key={available.productId}><input className="h-4 w-4 accent-brand-forest" type="checkbox" checked={selected} onChange={(event) => setQuantities((current) => ({ ...current, [available.productId]: event.target.checked ? Math.min(1, available.quantity) : 0 }))} /><span className="min-w-0 flex-1"><strong className="block truncate text-sm text-brand-green-ink">{orderItem.name}</strong><span className="text-xs text-brand-black/56">Up to {available.quantity} · {formatMoney(orderItem.price)} each</span></span><input className={`${inputClasses} w-20 px-2 py-1.5`} aria-label={`Return quantity for ${orderItem.name}`} type="number" min="1" max={available.quantity} value={selected ? quantities[available.productId] : ""} disabled={!selected} onChange={(event) => setQuantities((current) => ({ ...current, [available.productId]: Math.max(1, Math.min(available.quantity, Number(event.target.value) || 1)) }))} /></label>;
+        })}
+      </fieldset>
+      <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Why are you returning it?<select className={inputClasses} value={reason} onChange={(event) => setReason(event.target.value as ReturnRequestInput["reason"])}>{RETURN_REASONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+      <label className="grid gap-1.5 text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Optional note<textarea className={`${inputClasses} min-h-20 resize-y`} maxLength={1000} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Tell us what happened." /></label>
+      <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-xs text-brand-black/56">We’ll review this request and process the refund manually.</span><button className={btnPrimarySm} type="submit" disabled={busy || availableItems.length === 0}>{busy ? "Sending..." : "Send return request"}</button></div>
+    </form>
+  );
+}
+
+function ReturnCenter({ deliveredOrderCount, eligibleOrder, returningOrder, existingReturns, busy, notice, onStart, onViewOrders, onCancel, onSubmit }: { deliveredOrderCount: number; eligibleOrder: Order | null; returningOrder: Order | null; existingReturns: CustomerReturn[]; busy: boolean; notice: string | null; onStart: () => void; onViewOrders: () => void; onCancel: () => void; onSubmit: (input: ReturnRequestInput) => void }) {
+  return (
+    <div id="return-center" className="grid gap-3 rounded-wobbly-md border-2 border-brand-orange bg-brand-yellow/15 p-4">
+      <div className="grid gap-1">
+        <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Returns & refunds</span>
+        <h3 className="font-primary text-xl font-bold text-brand-green-ink">Need to return something?</h3>
+        <p className="text-sm text-brand-black/68">You have {deliveredOrderCount} delivered order{deliveredOrderCount === 1 ? "" : "s"}. Returns are available until the end of the second local calendar day after delivery.</p>
+      </div>
+      {returningOrder ? <ReturnForm order={returningOrder} existingReturns={existingReturns} busy={busy} onCancel={onCancel} onSubmit={onSubmit} /> : <div className="grid gap-3 rounded-wobbly-md border-2 border-dashed border-brand-orange/70 bg-brand-white/65 p-3"><div className="flex items-start gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-yellow text-sm font-bold text-brand-green-ink">1</span><p className="text-sm text-brand-black/68">Choose a delivered order below. We’ll show which items are still eligible for return.</p></div><div className="flex items-start gap-3"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-yellow text-sm font-bold text-brand-green-ink">2</span><p className="text-sm text-brand-black/68">Select the items, tell us why, and send your request for refund processing.</p></div><div className="flex flex-wrap gap-2 pt-1"><button className={btnPrimarySm} type="button" disabled={!eligibleOrder} onClick={onStart}>{eligibleOrder ? "Start a return" : "No eligible order right now"}</button><button className={btnOutlineSm} type="button" onClick={onViewOrders}>View delivered orders</button></div></div>}
+      {notice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{notice}</p> : null}
+    </div>
+  );
+}
+
 function ProductTile({ product, saved, onToggle, onAdd }: { product: ShopProduct; saved: boolean; onToggle: () => void; onAdd: () => void }) {
   return (
     <article className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-3 shadow-brand-soft">
@@ -184,10 +250,14 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [rewards, setRewards] = useState<AccountRewardsSnapshot | null>(null);
   const [rewardsError, setRewardsError] = useState<string | null>(null);
-  const [orderFilter, setOrderFilter] = useState<OrderFilter>("all");
+  const [orderFilter, setOrderFilter] = useState<OrderFilter>(() => typeof window !== "undefined" && window.location.hash.includes("section=returns") ? "returns" : "all");
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
   const [reviewNotice, setReviewNotice] = useState<string | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [returns, setReturns] = useState<CustomerReturn[]>([]);
+  const [returningOrder, setReturningOrder] = useState<Order | null>(null);
+  const [returnNotice, setReturnNotice] = useState<string | null>(null);
+  const [returnBusy, setReturnBusy] = useState(false);
   const [checkInNotice, setCheckInNotice] = useState<string | null>(null);
   const [checkInBusy, setCheckInBusy] = useState(false);
   const [redemptionOpen, setRedemptionOpen] = useState(false);
@@ -222,6 +292,18 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   }, [profile.email]);
 
   useEffect(() => {
+    let active = true;
+    void fetchCustomerReturns(profile.email).then((nextReturns) => {
+      if (active) setReturns(nextReturns);
+    }).catch((error) => {
+      if (active) setReturnNotice(error instanceof Error ? error.message : "Your return requests could not be loaded.");
+    });
+    return () => {
+      active = false;
+    };
+  }, [profile.email]);
+
+  useEffect(() => {
     setProfileForm({ name: profile.name, phone: profile.phone, area: profile.area, dzongkhag: profile.dzongkhag, address: profile.address });
     setRewards(null);
     setRewardsError(null);
@@ -248,7 +330,14 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
   const wishlistProducts = useMemo(() => wishlistIds.map((id) => productById.get(id)).filter((product): product is ShopProduct => Boolean(product)), [wishlistIds, productById]);
   const historyProducts = useMemo(() => historyIds.map((id) => productById.get(id)).filter((product): product is ShopProduct => Boolean(product)), [historyIds, productById]);
   const featuredProducts = useMemo(() => products.filter(isProductActive).slice(0, 4), [products]);
-  const visibleOrders = useMemo(() => (orders ?? []).filter((order) => matchesOrder(order, orderFilter)), [orders, orderFilter]);
+  const visibleOrders = useMemo(() => {
+    const filtered = (orders ?? []).filter((order) => matchesOrder(order, orderFilter));
+    return orderFilter === "returns" ? sortReceivedOrders(filtered) : filtered;
+  }, [orders, orderFilter]);
+  const eligibleReturnOrder = useMemo(() => visibleOrders.find((order) => {
+    const orderReturns = returns.filter((item) => item.orderId === order.id);
+    return returnEligibility(order, new Date(), orderReturns).eligible && remainingReturnableItems(order, orderReturns).length > 0;
+  }) ?? null, [returns, visibleOrders]);
   const rewardSettings = rewards?.settings ?? defaultRewardSettings;
   const checkInRecords = rewards?.checkIns ?? [];
   const todayKey = localThimphuDateKey();
@@ -280,6 +369,29 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
     setReviewingOrder(nextOrder ?? null);
     setReviewNotice(null);
     focusSection("review-center");
+  }
+
+  function openReturn(order: Order) {
+    setOrderFilter("returns");
+    setReturningOrder(order);
+    setReturnNotice(null);
+    focusSection("return-center");
+  }
+
+  async function submitReturn(input: ReturnRequestInput) {
+    if (returnBusy) return;
+    setReturnBusy(true);
+    setReturnNotice(null);
+    try {
+      const nextReturn = await requestCustomerReturn(profile.email, input);
+      setReturns((current) => [nextReturn, ...current]);
+      setReturningOrder(null);
+      setReturnNotice("Your return request was sent. We’ll review the refund and update you here.");
+    } catch (error) {
+      setReturnNotice(error instanceof Error ? error.message : "Your return request could not be submitted.");
+    } finally {
+      setReturnBusy(false);
+    }
   }
 
   async function submitReview(order: Order, rating: number, comment: string) {
@@ -437,7 +549,7 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
           {orderFilterLabels.map((item) => {
             const Icon = item.icon;
             const count = orders ? item.key === "review" ? orders.filter((order) => matchesOrder(order, item.key) && !reviewedOrderIds.has(order.id)).length : orders.filter((order) => matchesOrder(order, item.key)).length : "…";
-            return <button className={`grid min-h-24 content-center justify-items-center gap-2 rounded-wobbly-md border-2 p-2 text-center transition-colors ${orderFilter === item.key ? "border-brand-forest bg-brand-yellow text-brand-green-ink" : "border-brand-forest/15 bg-brand-warm-white text-brand-black/68 hover:border-brand-forest hover:bg-brand-mint"}`} key={item.key} type="button" aria-pressed={orderFilter === item.key} onClick={() => { if (item.key === "review") { openReviewCenter(); return; } setOrderFilter(item.key); setReviewingOrder(null); setReviewNotice(null); }}><Icon className="h-6 w-6" /><span className="text-xs font-bold">{item.label}</span><span className="text-xs font-bold opacity-60">{count}</span></button>;
+            return <button className={`grid min-h-24 content-center justify-items-center gap-2 rounded-wobbly-md border-2 p-2 text-center transition-colors ${orderFilter === item.key ? "border-brand-forest bg-brand-yellow text-brand-green-ink" : "border-brand-forest/15 bg-brand-warm-white text-brand-black/68 hover:border-brand-forest hover:bg-brand-mint"}`} key={item.key} type="button" aria-pressed={orderFilter === item.key} onClick={() => { if (item.key === "review") { openReviewCenter(); return; } setOrderFilter(item.key); setReviewingOrder(null); setReturningOrder(null); setReviewNotice(null); setReturnNotice(null); if (item.key === "returns") focusSection("return-center"); }}><Icon className="h-6 w-6" /><span className="text-xs font-bold">{item.label}</span><span className="text-xs font-bold opacity-60">{count}</span></button>;
           })}
         </div>
         {orderFilter === "review" ? <div id="review-center" className="grid gap-3 rounded-wobbly-md border-2 border-brand-orange bg-brand-yellow/15 p-4">
@@ -445,8 +557,9 @@ function AccountDashboard({ profile }: { profile: CustomerProfile }) {
           {reviewingOrder ? <ReviewForm order={reviewingOrder} rewardPoints={rewardSettings.reviewRewardPoints} busy={reviewBusy} onCancel={() => setReviewingOrder(null)} onSubmit={(rating, comment) => void submitReview(reviewingOrder, rating, comment)} /> : <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange/70 bg-brand-white/65 p-3 text-sm text-brand-black/68">Select the “Review · +{rewardSettings.reviewRewardPoints} pts” button on a delivered order below to get started.</p>}
           {reviewNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{reviewNotice}</p> : null}
         </div> : null}
+        {orderFilter === "returns" ? <ReturnCenter deliveredOrderCount={visibleOrders.length} eligibleOrder={eligibleReturnOrder} returningOrder={returningOrder} existingReturns={returningOrder ? returns.filter((item) => item.orderId === returningOrder.id) : []} busy={returnBusy} notice={returnNotice} onStart={() => { if (eligibleReturnOrder) openReturn(eligibleReturnOrder); }} onViewOrders={() => focusSection("return-orders")} onCancel={() => setReturningOrder(null)} onSubmit={(input) => void submitReturn(input)} /> : null}
         {ordersError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{ordersError}</p> : null}
-        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div className="grid gap-3 md:grid-cols-2">{visibleOrders.slice(0, 6).map((order) => <OrderCard key={order.id} order={order} productById={productById} detailed={orderFilter === "review"} rewardPoints={rewardSettings.reviewRewardPoints} reviewed={reviewedOrderIds.has(order.id)} onReview={() => openReview(order)} />)}</div>}
+        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div id="return-orders" className="grid gap-3 md:grid-cols-2">{visibleOrders.slice(0, 6).map((order) => { const orderReturns = returns.filter((item) => item.orderId === order.id); const eligibility = returnEligibility(order, new Date(), orderReturns); const activeRequest = orderReturns.find((item) => ["pending", "approved"].includes(item.status)); const latestRequest = orderReturns[0]; return <OrderCard key={order.id} order={order} productById={productById} detailed={orderFilter === "review" || orderFilter === "returns"} rewardPoints={rewardSettings.reviewRewardPoints} reviewed={reviewedOrderIds.has(order.id)} onReview={() => openReview(order)} onReturn={orderFilter === "returns" ? () => openReturn(order) : undefined} returnRequest={activeRequest} latestReturnRequest={latestRequest} returnIsEligible={eligibility.eligible} returnWindowClosed={eligibility.reason === "window_closed"} />; })}</div>}
       </section>
 
       <section className="grid gap-4" aria-labelledby="account-services-title">
@@ -493,6 +606,10 @@ export function AccountOrdersPage() {
   const [reviewingOrder, setReviewingOrder] = useState<Order | null>(null);
   const [reviewNotice, setReviewNotice] = useState<string | null>(null);
   const [reviewBusy, setReviewBusy] = useState(false);
+  const [returns, setReturns] = useState<CustomerReturn[]>([]);
+  const [returningOrder, setReturningOrder] = useState<Order | null>(null);
+  const [returnNotice, setReturnNotice] = useState<string | null>(null);
+  const [returnBusy, setReturnBusy] = useState(false);
 
   useEffect(() => {
     if (!profile) return;
@@ -510,7 +627,14 @@ export function AccountOrdersPage() {
   }, [profile]);
 
   const productById = useMemo(() => new Map(products.map((product) => [product.id, product])), [products]);
-  const visibleOrders = useMemo(() => (orders ?? []).filter((order) => matchesOrder(order, orderFilter)), [orders, orderFilter]);
+  const visibleOrders = useMemo(() => {
+    const filtered = (orders ?? []).filter((order) => matchesOrder(order, orderFilter));
+    return orderFilter === "returns" ? sortReceivedOrders(filtered) : filtered;
+  }, [orders, orderFilter]);
+  const eligibleReturnOrder = useMemo(() => visibleOrders.find((order) => {
+    const orderReturns = returns.filter((item) => item.orderId === order.id);
+    return returnEligibility(order, new Date(), orderReturns).eligible && remainingReturnableItems(order, orderReturns).length > 0;
+  }) ?? null, [returns, visibleOrders]);
   const reviewedOrderIds = useMemo(() => new Set((rewards?.reviews ?? []).map((review) => review.orderId)), [rewards]);
   const rewardPoints = rewards?.settings.reviewRewardPoints ?? defaultRewardSettings.reviewRewardPoints;
 
@@ -520,6 +644,24 @@ export function AccountOrdersPage() {
     setRewardsError(null);
     void fetchAccountRewards(profile.email).then(setRewards).catch((error) => setRewardsError(error instanceof Error ? error.message : "Your rewards could not be loaded."));
   }, [profile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    void fetchCustomerReturns(profile.email).then(setReturns).catch((error) => setReturnNotice(error instanceof Error ? error.message : "Your return requests could not be loaded."));
+  }, [profile]);
+
+  useEffect(() => {
+    const syncReturnSection = () => {
+      if (!window.location.hash.startsWith("#/account/orders") || !window.location.hash.includes("section=returns")) return;
+      setOrderFilter("returns");
+      setReviewingOrder(null);
+      setReturningOrder(null);
+      requestAnimationFrame(() => document.getElementById("return-center")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    };
+    window.addEventListener("hashchange", syncReturnSection);
+    syncReturnSection();
+    return () => window.removeEventListener("hashchange", syncReturnSection);
+  }, []);
 
   function focusSection(id: string) {
     requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -538,6 +680,29 @@ export function AccountOrdersPage() {
     setReviewingOrder(nextOrder ?? null);
     setReviewNotice(null);
     focusSection("review-center");
+  }
+
+  function openReturn(order: Order) {
+    setOrderFilter("returns");
+    setReturningOrder(order);
+    setReturnNotice(null);
+    focusSection("return-center");
+  }
+
+  async function submitReturn(input: ReturnRequestInput) {
+    if (!profile || returnBusy) return;
+    setReturnBusy(true);
+    setReturnNotice(null);
+    try {
+      const nextReturn = await requestCustomerReturn(profile.email, input);
+      setReturns((current) => [nextReturn, ...current]);
+      setReturningOrder(null);
+      setReturnNotice("Your return request was sent. We’ll review the refund and update you here.");
+    } catch (error) {
+      setReturnNotice(error instanceof Error ? error.message : "Your return request could not be submitted.");
+    } finally {
+      setReturnBusy(false);
+    }
   }
 
   async function submitReview(order: Order, rating: number, comment: string) {
@@ -577,13 +742,14 @@ export function AccountOrdersPage() {
         <div className="flex flex-wrap items-end justify-between gap-3"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Order history</span><h2 id="order-history-title" className="font-primary text-2xl font-bold text-brand-green-ink">{orderFilter === "all" ? "Every order" : orderFilterLabels.find((item) => item.key === orderFilter)?.label ?? "Orders"}</h2></div><span className="text-sm text-brand-black/56">{orders ? `${visibleOrders.length} order${visibleOrders.length === 1 ? "" : "s"}` : "Loading..."}</span></div>
         <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Order filters">
           <button className={`shrink-0 rounded-full border-2 px-4 py-2 text-sm font-bold ${orderFilter === "all" ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/20 bg-brand-warm-white text-brand-green-ink hover:bg-brand-yellow"}`} type="button" role="tab" aria-selected={orderFilter === "all"} onClick={() => { setOrderFilter("all"); setReviewingOrder(null); setReviewNotice(null); }}>All orders</button>
-          {orderFilterLabels.map((item) => { const Icon = item.icon; const count = orders ? item.key === "review" ? orders.filter((order) => matchesOrder(order, item.key) && !reviewedOrderIds.has(order.id)).length : orders.filter((order) => matchesOrder(order, item.key)).length : "…"; return <button className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 px-4 py-2 text-sm font-bold ${orderFilter === item.key ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/20 bg-brand-warm-white text-brand-green-ink hover:bg-brand-yellow"}`} key={item.key} type="button" role="tab" aria-selected={orderFilter === item.key} onClick={() => { if (item.key === "review") { chooseReviewFilter(); return; } setOrderFilter(item.key); setReviewingOrder(null); setReviewNotice(null); }}><Icon className="h-4 w-4" />{item.label}<span className="opacity-70">{count}</span></button>; })}
+          {orderFilterLabels.map((item) => { const Icon = item.icon; const count = orders ? item.key === "review" ? orders.filter((order) => matchesOrder(order, item.key) && !reviewedOrderIds.has(order.id)).length : orders.filter((order) => matchesOrder(order, item.key)).length : "…"; return <button className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border-2 px-4 py-2 text-sm font-bold ${orderFilter === item.key ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/20 bg-brand-warm-white text-brand-green-ink hover:bg-brand-yellow"}`} key={item.key} type="button" role="tab" aria-selected={orderFilter === item.key} onClick={() => { if (item.key === "review") { chooseReviewFilter(); return; } setOrderFilter(item.key); setReviewingOrder(null); setReturningOrder(null); setReviewNotice(null); setReturnNotice(null); if (item.key === "returns") focusSection("return-center"); }}><Icon className="h-4 w-4" />{item.label}<span className="opacity-70">{count}</span></button>; })}
         </div>
 
         {rewardsError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{rewardsError}</p> : null}
         {orderFilter === "review" ? <div id="review-center" className="grid gap-3 rounded-wobbly-md border-2 border-brand-orange bg-brand-yellow/15 p-4"><div className="grid gap-1"><span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-orange-ink">Earn points</span><h3 className="font-primary text-xl font-bold text-brand-green-ink">Review your previous orders</h3><p className="text-sm text-brand-black/68">Choose a delivered order, leave a rating, and we’ll add {rewardPoints} points to your Zama account.</p></div>{reviewingOrder ? <ReviewForm order={reviewingOrder} rewardPoints={rewardPoints} busy={reviewBusy} onCancel={() => setReviewingOrder(null)} onSubmit={(rating, comment) => void submitReview(reviewingOrder, rating, comment)} /> : <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange/70 bg-brand-white/65 p-3 text-sm text-brand-black/68">Select the “Review · +{rewardPoints} pts” button on a delivered order below to get started.</p>}{reviewNotice ? <p className="rounded-wobbly-md border-2 border-brand-forest bg-brand-mint p-3 text-sm font-bold text-brand-green-ink" role="status">{reviewNotice}</p> : null}</div> : null}
+        {orderFilter === "returns" ? <ReturnCenter deliveredOrderCount={visibleOrders.length} eligibleOrder={eligibleReturnOrder} returningOrder={returningOrder} existingReturns={returningOrder ? returns.filter((item) => item.orderId === returningOrder.id) : []} busy={returnBusy} notice={returnNotice} onStart={() => { if (eligibleReturnOrder) openReturn(eligibleReturnOrder); }} onViewOrders={() => focusSection("return-orders")} onCancel={() => setReturningOrder(null)} onSubmit={(input) => void submitReturn(input)} /> : null}
         {ordersError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{ordersError}</p> : null}
-        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div className="grid gap-3">{visibleOrders.map((order) => <OrderCard key={order.id} order={order} productById={productById} detailed rewardPoints={rewardPoints} reviewed={reviewedOrderIds.has(order.id)} onReview={() => openReview(order)} />)}</div>}
+        {!orders ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Loading your orders...</p> : orders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">Your Zama orders will appear here after checkout. <a className="font-bold text-brand-green-ink underline" href="#/shop">Browse the market</a></p> : visibleOrders.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-5 text-center text-sm text-brand-black/56">No orders in this section yet.</p> : <div id="return-orders" className="grid gap-3">{visibleOrders.map((order) => { const orderReturns = returns.filter((item) => item.orderId === order.id); const eligibility = returnEligibility(order, new Date(), orderReturns); const activeRequest = orderReturns.find((item) => ["pending", "approved"].includes(item.status)); const latestRequest = orderReturns[0]; return <OrderCard key={order.id} order={order} productById={productById} detailed={orderFilter === "returns" || orderFilter === "review"} returnRequest={activeRequest} latestReturnRequest={latestRequest} returnIsEligible={eligibility.eligible} returnWindowClosed={eligibility.reason === "window_closed"} rewardPoints={rewardPoints} reviewed={reviewedOrderIds.has(order.id)} onReview={() => openReview(order)} onReturn={orderFilter === "returns" ? () => openReturn(order) : undefined} />; })}</div>}
       </section>
     </div>
   );

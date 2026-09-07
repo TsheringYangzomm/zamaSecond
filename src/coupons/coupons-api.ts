@@ -154,6 +154,14 @@ export function couponId(): string {
   return `coupon-${random}`;
 }
 
+export function generateCouponCode(): string {
+  const random = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID().replaceAll("-", "").slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+  const time = Date.now().toString(36).slice(-4);
+  return `ZAMA-${time}${random}`.toUpperCase();
+}
+
 export async function listPublicCoupons(): Promise<Coupon[]> {
   const client = getSupabaseClient();
   if (!client) return devCoupons.map((coupon) => ({ ...coupon, targets: [...coupon.targets] }));
@@ -277,9 +285,10 @@ export async function saveAdminCoupon(draft: CouponAdminDraft): Promise<void> {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase is not configured.");
   const id = draft.id || couponId();
+  const code = draft.code.trim().toUpperCase() || generateCouponCode();
   const { error } = await client.from("coupons").upsert({
     id,
-    code: draft.code.trim().toUpperCase(),
+    code,
     title: draft.title.trim(),
     description: draft.description.trim(),
     discount_type: draft.discountType,

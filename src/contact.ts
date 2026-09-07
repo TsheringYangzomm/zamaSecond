@@ -1,5 +1,6 @@
 import emailjs from "@emailjs/browser";
 import { getSupabaseClient } from "./supabase";
+import { recordDevAdminNotification } from "./admin/admin-notifications-api";
 
 export type ContactTopic = "question" | "feedback" | "support";
 
@@ -65,16 +66,12 @@ function toAutoReplyParams(payload: ContactPayload) {
   };
 }
 
-function toErrorMessage(error: unknown): string {
-  const detail =
-    typeof error === "object" && error !== null && "text" in error && typeof error.text === "string"
-      ? error.text
-      : error instanceof Error
-        ? error.message
-        : null;
-  return detail
-    ? `We could not send your message (${detail}). Please try again or email hello@zama.bt.`
-    : "We could not send your message. Please try again or email hello@zama.bt.";
+function emailJsErrorDetail(reason: unknown): string {
+  if (typeof reason === "object" && reason !== null && "text" in reason && typeof reason.text === "string") {
+    return reason.text;
+  }
+  if (reason instanceof Error) return reason.message;
+  return "Unknown error";
 }
 
 export type AdminReplyResult = {
@@ -148,6 +145,12 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
           submittedAt: new Date().toISOString(),
         }),
       );
+      recordDevAdminNotification({
+        type: "message_received",
+        title: "New customer message",
+        message: payload.name + " sent a message about " + topicLabels[payload.topic] + ".",
+        link: "#/admin?tab=messages",
+      });
       await Promise.resolve();
       return { mode: "preview" };
     }
@@ -155,7 +158,7 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
     return { mode: "remote" };
   }
 
-  const [notificationResult] = await Promise.allSettled([
+  const [notificationResult, autoReplyResult] = await Promise.allSettled([
     emailjs.send(config.serviceId, config.templateId, toTemplateParams(payload), {
       publicKey: config.publicKey,
     }),
@@ -166,6 +169,14 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
 
   if (notificationResult.status === "rejected") {
     console.error("EmailJS contact notification failed:", notificationResult.reason);
+    const detail = emailJsErrorDetail(notificationResult.reason);
+    throw new Error(
+      `We couldn't send your message right now${detail ? ` (${detail})` : ""}. Please email hello@zama.bt.`,
+    );
+  }
+
+  if (autoReplyResult.status === "rejected") {
+    console.warn("EmailJS contact auto-reply failed:", autoReplyResult.reason);
   }
 
   return { mode: "remote" };

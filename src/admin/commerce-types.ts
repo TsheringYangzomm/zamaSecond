@@ -38,10 +38,13 @@ export type Order = {
   coupon_id?: string | null;
   coupon_code?: string | null;
   coupon_discount?: number;
+  points_redeemed?: number;
+  points_discount?: number;
   payment_status: PaymentStatus;
   payment_method: string;
   payment_reference: string | null;
   delivery_date: string | null;
+  delivered_at?: string | null;
   delivery_area: string;
   notes: string;
   created_at: string;

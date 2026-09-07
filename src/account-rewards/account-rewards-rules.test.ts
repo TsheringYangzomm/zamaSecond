@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { addDays, checkInStreak, isValidRedemption, maskAccountNumber, rewardForNextCheckIn, walletAmountForPoints, walletBalance } from "./account-rewards-rules";
 import { defaultRewardSettings } from "./account-rewards-types";
+import { checkoutPointsPreview, maximumCheckoutPoints } from "../checkout/checkout-points";
 
 describe("account rewards rules", () => {
   it("calculates consecutive check-in streaks by business date", () => {
@@ -21,6 +22,14 @@ describe("account rewards rules", () => {
     expect(isValidRedemption(100, 100, defaultRewardSettings)).toBe(true);
     expect(isValidRedemption(99, 100, defaultRewardSettings)).toBe(false);
     expect(isValidRedemption(200, 100, defaultRewardSettings)).toBe(false);
+  });
+
+  it("allows any available points at checkout and preserves unused points", () => {
+    expect(checkoutPointsPreview(100, 250, defaultRewardSettings, 25)).toMatchObject({ ok: true, discountAmount: 10, finalTotal: 15 });
+    expect(checkoutPointsPreview(1, 250, defaultRewardSettings, 25)).toMatchObject({ ok: true, points: 1, discountAmount: 0.1, finalTotal: 24.9 });
+    expect(checkoutPointsPreview(300, 300, defaultRewardSettings, 25)).toMatchObject({ ok: true, points: 250, discountAmount: 25, finalTotal: 0 });
+    expect(checkoutPointsPreview(301, 300, defaultRewardSettings, 25).ok).toBe(false);
+    expect(maximumCheckoutPoints(250, defaultRewardSettings, 25)).toBe(250);
   });
 
   it("calculates wallet holds and releases from the ledger", () => {

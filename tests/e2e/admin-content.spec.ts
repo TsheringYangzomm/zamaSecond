@@ -80,7 +80,7 @@ async function signInAsAdmin(page) {
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { name: "Welcome to the Zama admin." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 }
 
 test("lists blocks and edits the hero JSON", async ({ page }) => {

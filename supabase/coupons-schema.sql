@@ -370,7 +370,7 @@ begin
   v_subtotal := round(v_subtotal, 2);
   v_eligible := round(v_eligible, 2);
   if v_eligible <= 0 then
-    return jsonb_build_object('status', 'invalid', 'error_code', 'ineligible', 'error', 'This coupon does not apply to the items in your order.', 'eligible_subtotal', v_eligible, 'final_total', v_subtotal);
+    return jsonb_build_object('status', 'invalid', 'error_code', 'ineligible', 'error', 'This coupon is only valid on selected products or categories. Check the coupon details to see what qualifies.', 'eligible_subtotal', v_eligible, 'final_total', v_subtotal);
   end if;
   if v_eligible < v_coupon.minimum_order_amount then
     return jsonb_build_object('status', 'invalid', 'error_code', 'minimum_spend', 'error', 'Your eligible items do not meet the minimum spend for this coupon.', 'eligible_subtotal', v_eligible, 'final_total', v_subtotal);

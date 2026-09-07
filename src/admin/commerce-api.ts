@@ -3,6 +3,7 @@ import { requireClient } from "./admin-api";
 import { deductInventoryForOrder } from "./inventory-fulfillment";
 import { commerceDevData } from "../data/commerce-dev";
 import { getDevCustomers, loadDevOrders } from "../checkout/checkout-api";
+import { createDevCustomerNotification } from "../returns/returns-notifications-api";
 import type {
   Customer,
   CustomerStatus,
@@ -75,7 +76,8 @@ export async function loadCommerceData(): Promise<{ mode: CommerceMode; data: Co
 }
 
 function withHistory<T extends { history: { status: string; at: string }[] }>(row: T, status: string): T {
-  return { ...row, status, history: [...row.history, { status, at: new Date().toISOString() }] };
+  const at = new Date().toISOString();
+  return { ...row, status, history: [...row.history, { status, at }], ...(status === "delivered" ? { delivered_at: at } : {}) };
 }
 
 function deliveryStatusToOrderStatus(status: DeliveryStatus): OrderStatus | null {
@@ -111,11 +113,15 @@ async function appendOrderStatus(orderId: string, status: OrderStatus): Promise<
     .single();
   if (error) throw new Error(error.message);
   const history = [...((data?.history ?? []) as { status: string; at: string }[])];
-  history.push({ status, at: new Date().toISOString() });
-  const { error: updateError } = await requireClient()
-    .from("orders")
-    .update({ status, history })
-    .eq("id", orderId);
+  const at = new Date().toISOString();
+  history.push({ status, at });
+  const update = { status, history, ...(status === "delivered" ? { delivered_at: at } : {}) };
+  const { error: updateError } = await requireClient().from("orders").update(update).eq("id", orderId);
+  if (updateError && status === "delivered" && updateError.message.toLowerCase().includes("delivered_at")) {
+    const fallback = await requireClient().from("orders").update({ status, history }).eq("id", orderId);
+    if (!fallback.error) return;
+    throw new Error(fallback.error.message);
+  }
   if (updateError) throw new Error(updateError.message);
 }
 
@@ -143,11 +149,15 @@ async function updateOrderStatusLive(orderId: string, status: OrderStatus, admin
     }));
     await deductInventoryForOrder(orderId, items, adminEmail ?? "");
   }
-  history.push({ status, at: new Date().toISOString() });
-  const { error: updateError } = await requireClient()
-    .from("orders")
-    .update({ status, history })
-    .eq("id", orderId);
+  const at = new Date().toISOString();
+  history.push({ status, at });
+  const update = { status, history, ...(status === "delivered" ? { delivered_at: at } : {}) };
+  const { error: updateError } = await requireClient().from("orders").update(update).eq("id", orderId);
+  if (updateError && status === "delivered" && updateError.message.toLowerCase().includes("delivered_at")) {
+    const fallback = await requireClient().from("orders").update({ status, history }).eq("id", orderId);
+    if (!fallback.error) return;
+    throw new Error(fallback.error.message);
+  }
   if (updateError) throw new Error(updateError.message);
 }
 
@@ -275,6 +285,7 @@ class CommerceDataStore {
   async updateOrderStatus(orderId: string, status: OrderStatus, adminEmail?: string | null): Promise<void> {
     if (this.state.phase !== "ready") return;
     if (this.state.mode === "dev") {
+      const order = this.state.data.orders.find((item) => item.id === orderId);
       const deliveryStatus = orderStatusToDeliveryStatus(status);
       const data = {
         ...this.state.data,
@@ -290,6 +301,18 @@ class CommerceDataStore {
           : this.state.data.deliveries,
       };
       this.mutate(data);
+      if (order) {
+        createDevCustomerNotification({
+          customerId: order.customer_id,
+          returnId: null,
+          orderId: order.id,
+          type: "order_status_updated",
+          title: "Order status updated",
+          message: `Your order ${order.id} is now ${status.replaceAll("_", " ")}.`,
+          status,
+          link: "#/account/orders",
+        });
+      }
       return;
     }
     await updateOrderStatusLive(orderId, status, adminEmail ?? null);
@@ -331,6 +354,18 @@ class CommerceDataStore {
           : this.state.data.orders,
       };
       this.mutate(data);
+      if (delivery && orderStatus) {
+        createDevCustomerNotification({
+          customerId: delivery.customer_id,
+          returnId: null,
+          orderId: delivery.order_id,
+          type: "order_status_updated",
+          title: "Order status updated",
+          message: `Your order ${delivery.order_id} is now ${orderStatus.replaceAll("_", " ")}.`,
+          status: orderStatus,
+          link: "#/account/orders",
+        });
+      }
       return;
     }
     await updateDeliveryStatusLive(deliveryId, status, driver);
@@ -356,6 +391,7 @@ class CommerceDataStore {
   async updatePaymentStatus(paymentId: string, status: PaymentStatus): Promise<void> {
     if (this.state.phase !== "ready") return;
     if (this.state.mode === "dev") {
+      const payment = this.state.data.payments.find((item) => item.id === paymentId);
       const data = {
         ...this.state.data,
         payments: this.state.data.payments.map((payment) =>
@@ -363,6 +399,18 @@ class CommerceDataStore {
         ),
       };
       this.mutate(data);
+      if (payment) {
+        createDevCustomerNotification({
+          customerId: payment.customer_id,
+          returnId: null,
+          orderId: payment.order_id,
+          type: "payment_status_updated",
+          title: "Payment status updated",
+          message: `Payment for order ${payment.order_id} is now ${status}.`,
+          status,
+          link: "#/account/orders",
+        });
+      }
       return;
     }
     await updatePaymentStatusLive(paymentId, status);

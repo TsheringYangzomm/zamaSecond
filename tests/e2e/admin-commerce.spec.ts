@@ -96,6 +96,8 @@ type Store = {
   coupon_category_targets: Record<string, unknown>[];
   coupon_claims: Record<string, unknown>[];
   coupon_redemptions: Record<string, unknown>[];
+  order_returns: Record<string, unknown>[];
+  order_return_items: Record<string, unknown>[];
 };
 
 async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
@@ -115,6 +117,8 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
     coupon_category_targets: [{ coupon_id: "coupon-fresh-10", category: "Fresh boxes" }],
     coupon_claims: [{ coupon_id: "coupon-fresh-10" }, { coupon_id: "coupon-fresh-10" }],
     coupon_redemptions: [{ coupon_id: "coupon-fresh-10", status: "redeemed" }],
+    order_returns: [{ id: "return-1", customer_id: "cus-karma", order_id: "ZAM-2026-0200", status: "pending", reason: "damaged", note: "The box arrived damaged.", refund_amount: 400, refund_method: "Original COD", requested_at: "2026-08-16T09:00:00.000Z", reviewed_at: null, reviewed_by: null, updated_at: "2026-08-16T09:00:00.000Z" }],
+    order_return_items: [{ id: "return-item-1", return_id: "return-1", product_id: "veg-box", name: "Vegetable Box", unit_price: 400, quantity: 1 }],
   };
 
   await page.route("**/auth/v1/token*", (route) =>
@@ -178,7 +182,7 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
       return route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
     };
 
-  for (const name of ["products", "inventory", "customers", "orders", "subscriptions", "deliveries", "payments", "coupons", "coupon_product_targets", "coupon_category_targets", "coupon_claims", "coupon_redemptions"] as const) {
+  for (const name of ["products", "inventory", "customers", "orders", "subscriptions", "deliveries", "payments", "coupons", "coupon_product_targets", "coupon_category_targets", "coupon_claims", "coupon_redemptions", "order_returns", "order_return_items"] as const) {
     await page.route(`**/rest/v1/${name}*`, table(name));
   }
   await page.route("**/rest/v1/reviews*", (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
@@ -246,6 +250,19 @@ test("orders tab falls back to dev data with writes disabled", async ({ page }) 
   await page.getByRole("row", { name: /ZAM-2026-0141/ }).getByRole("button", { name: "View" }).click();
   await expect(page.getByRole("heading", { name: "Order ZAM-2026-0141" })).toBeVisible();
   await expect(page.getByText("Meal Kit Box")).toBeVisible();
+});
+
+test("returns tab lists customer requests and refund details", async ({ page }) => {
+  await mockAdmin(page, { commerceLive: true });
+  await signInAsAdmin(page);
+
+  await page.getByRole("button", { name: "Orders", exact: true }).click();
+  await page.getByRole("button", { name: "Returns", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Returns" })).toBeVisible();
+  await expect(page.getByText("ZAM-2026-0200")).toBeVisible();
+  await expect(page.getByText("The box arrived damaged.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+  await expect(page.getByLabel("Refund amount")).toHaveValue("400");
 });
 
 test("orders table keeps actions visible and filters open by click", async ({ page }) => {
