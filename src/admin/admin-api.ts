@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "../supabase";
-import type { ContactMessageRow, DieticianRow, FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, InventoryItemRow, InventoryRow, InventoryStockHistoryRow, InventoryStockLotRow, ProductRow, ReviewRow } from "../cms/types";
+import type { ContactMessageRow, DieticianRow, FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, InventoryItemRow, InventoryRow, InventoryStockHistoryRow, InventoryStockLotRow, ProductRow, ProductSeasonalUpdateRow, ReviewRow } from "../cms/types";
 
 export function requireClient() {
   const client = getSupabaseClient();
@@ -464,6 +464,34 @@ export async function upsertFarmerSeasonalUpdate(row: FarmerSeasonalUpdateRow): 
   const { error } = await requireClient()
     .from("farmer_seasonal_updates")
     .upsert(row, { onConflict: "farmer_id,season" });
+
+  if (error) throw new Error(error.message);
+}
+
+export async function productSeasonalUpdatesTableExists(): Promise<boolean> {
+  const { error } = await requireClient()
+    .from("product_seasonal_updates")
+    .select("product_id")
+    .limit(1);
+
+  return !error;
+}
+
+export async function listProductSeasonalUpdates(): Promise<ProductSeasonalUpdateRow[]> {
+  const { data, error } = await requireClient()
+    .from("product_seasonal_updates")
+    .select("*")
+    .order("season", { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data ?? []) as ProductSeasonalUpdateRow[];
+}
+
+export async function upsertProductSeasonalUpdate(row: ProductSeasonalUpdateRow): Promise<void> {
+  const { error } = await requireClient()
+    .from("product_seasonal_updates")
+    .upsert(row, { onConflict: "product_id,season" });
 
   if (error) throw new Error(error.message);
 }

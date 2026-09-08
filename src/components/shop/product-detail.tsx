@@ -41,6 +41,7 @@ export function ProductDetail({ product, short = false }: { product: ShopProduct
             Product code: <span className="break-all font-mono" translate="no">{product.sku}</span>
           </p>
         )}
+        {!short && product.seasonalUpdate ? <div className="mt-3 grid gap-1 border-t border-dashed border-brand-forest/20 pt-3"><span className="text-xs font-bold uppercase tracking-[0.06em] text-brand-green-ink">Seasonal update</span><p className="leading-[1.45] text-brand-black/72">{product.seasonalUpdate}</p></div> : null}
       </div>
     </details>
   );

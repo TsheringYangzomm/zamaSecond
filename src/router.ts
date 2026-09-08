@@ -1,6 +1,6 @@
 import { categorySlugs } from "./components/shop/shop-utils";
 
-export type Route = "home" | "contact" | "partnership" | "shop" | "product" | "category" | "farmers" | "customize" | "launch-updates" | "membership" | "account" | "account-orders" | "account-wallet" | "account-membership" | "coupons" | "admin" | "meal-kit-trust";
+export type Route = "home" | "contact" | "partnership" | "shop" | "product" | "category" | "farmers" | "farmer" | "customize" | "launch-updates" | "membership" | "account" | "account-orders" | "account-wallet" | "account-membership" | "coupons" | "admin" | "meal-kit-trust";
 
 export function getRoute(hash: string): Route {
   if (hash.startsWith("#/admin")) return "admin";
@@ -12,6 +12,7 @@ export function getRoute(hash: string): Route {
   if (hash.startsWith("#/partnership")) return "partnership";
   if (hash.startsWith("#/contact")) return "contact";
   if (hash.startsWith("#/customize")) return "customize";
+  if (hash.startsWith("#/farmers/")) return "farmer";
   if (hash.startsWith("#/farmers")) return "farmers";
   if (hash.startsWith("#/launch-updates")) return "launch-updates";
   if (hash.startsWith("#/meal-kit-trust")) return "meal-kit-trust";
@@ -23,6 +24,12 @@ export function getRoute(hash: string): Route {
   }
   if (hash.startsWith("#/shop")) return "shop";
   return "home";
+}
+
+export function getFarmerId(hash: string): string | null {
+  if (!hash.startsWith("#/farmers/")) return null;
+  const id = hash.slice("#/farmers/".length).split(/[/?#]/)[0];
+  return id ? decodeURIComponent(id) : null;
 }
 
 export function getProductId(hash: string): string | null {

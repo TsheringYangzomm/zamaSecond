@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import type { ProductIngredientInput } from "../../admin/admin-api";
-import type { InventoryItemRow, ProductRow } from "../../cms/types";
+import type { InventoryItemRow, ProductRow, ProductSeasonalUpdateRow } from "../../cms/types";
 import { Checkbox, Field, ImagePicker, selectClasses, TextArea, TextInput } from "./admin-fields";
 import { productCategoryOptions } from "./product-category-picker";
 import { InventoryItemPickerDialog } from "./inventory-item-picker-dialog";
@@ -41,6 +41,15 @@ export function blankProduct(id: string): ProductRow {
     published: true,
     member_early_access_starts_at: null,
     member_early_access_ends_at: null,
+  };
+}
+
+export function blankProductSeasonalUpdate(productId: string): ProductSeasonalUpdateRow {
+  return {
+    product_id: productId,
+    season: String(new Date().getFullYear()),
+    content: "",
+    published: false,
   };
 }
 
@@ -306,6 +315,8 @@ export function ProductForm({
   initial,
   initialIngredients = [],
   inventoryItems = [],
+  seasonalInfo = null,
+  seasonalAvailable = false,
   onSave,
   onCancel,
   ingredientsAvailable = false,
@@ -313,11 +324,14 @@ export function ProductForm({
   initial: ProductRow;
   initialIngredients?: ProductIngredientInput[];
   inventoryItems?: InventoryItemRow[];
-  onSave: (row: ProductRow, ingredients: ProductIngredientInput[]) => Promise<void> | void;
+  seasonalInfo?: ProductSeasonalUpdateRow | null;
+  seasonalAvailable?: boolean;
+  onSave: (row: ProductRow, ingredients: ProductIngredientInput[], seasonalRow: ProductSeasonalUpdateRow | null) => Promise<void> | void;
   onCancel: () => void;
   ingredientsAvailable?: boolean;
 }) {
   const [draft, setDraft] = useState<ProductDraft>(() => toDraft(initial));
+  const [seasonalDraft, setSeasonalDraft] = useState<ProductSeasonalUpdateRow>(() => seasonalInfo ?? blankProductSeasonalUpdate(initial.id));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -354,6 +368,10 @@ export function ProductForm({
 
   function setDetail(key: string, value: string) {
     setDraft((current) => ({ ...current, details: { ...current.details, [key]: value } }));
+  }
+
+  function setSeasonal<K extends keyof ProductSeasonalUpdateRow>(key: K, value: ProductSeasonalUpdateRow[K]) {
+    setSeasonalDraft((current) => ({ ...current, [key]: value }));
   }
 
   function setField(def: ProductFieldDef, next: string) {
@@ -491,7 +509,7 @@ export function ProductForm({
     }
     setBusy(true);
     try {
-      await onSave(fromDraft(draft), ingredientInputs());
+      await onSave(fromDraft(draft), ingredientInputs(), seasonalAvailable ? seasonalDraft : null);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save the product.");
       setBusy(false);
@@ -623,6 +641,29 @@ export function ProductForm({
       <section className="grid gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft" aria-label="Availability">
         <h3 className="font-primary text-lg font-bold text-brand-green-ink">Availability</h3>
         <FieldGrid fields={availabilityFields} getValue={(def) => fieldValue(draft, def)} onValue={(def, next) => setField(def, next)} getError={(def) => fieldErrors[def.key]} />
+      </section>
+
+      <section className="grid gap-4 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft" aria-label="Seasonal update">
+        <div className="grid gap-1">
+          <h3 className="font-primary text-lg font-bold text-brand-green-ink">Seasonal update</h3>
+          <p className="text-sm text-brand-black/64">Attach the latest harvest or availability note to this product. Older seasons remain preserved.</p>
+        </div>
+        {seasonalAvailable ? (
+          <>
+            <Field label="Season" htmlFor="product-season" hint="Use a simple label such as 2026. Each season is kept separately.">
+              <TextInput id="product-season" value={seasonalDraft.season} onChange={(event) => setSeasonal("season", event.target.value)} placeholder="2026" />
+            </Field>
+            <Field label="Seasonal update" htmlFor="product-seasonal-update" hint="A short note customers can read on the product page.">
+              <TextArea id="product-seasonal-update" rows={3} value={seasonalDraft.content} onChange={(event) => setSeasonal("content", event.target.value)} placeholder="Fresh from this season's harvest..." />
+            </Field>
+            <Checkbox checked={seasonalDraft.published} onChange={(next) => setSeasonal("published", next)} label="Publish this update (show it on the product page)" />
+            {seasonalDraft.content.trim() && !seasonalDraft.published ? <p className="text-xs font-semibold text-brand-black/58">This note will be saved as a draft and will not appear on the site until published.</p> : null}
+          </>
+        ) : (
+          <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 px-3 py-2 text-sm font-semibold text-brand-black">
+            Product seasonal updates require the <code className="rounded bg-brand-white px-1 py-0.5 text-xs">product_seasonal_updates</code> table. Run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/product-seasonal-updates-schema.sql</code> to enable them.
+          </p>
+        )}
       </section>
 
       <CollapsibleSection title="Publishing & search" hint="Visibility, ordering, and search keywords." defaultOpen={false}>

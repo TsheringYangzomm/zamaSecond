@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import { farmerDzongkhags } from "../../data/farmers";
-import type { FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow } from "../../cms/types";
+import type { FarmerPrivateInfoRow, FarmerRow, FarmerStoryRow } from "../../cms/types";
 import { Checkbox, Field, ImagePicker, TextArea, TextInput, selectClasses } from "./admin-fields";
 
 export function blankFarmer(id: string): FarmerRow {
@@ -44,15 +44,6 @@ export function blankFarmerStory(farmerId: string): FarmerStoryRow {
   };
 }
 
-export function blankFarmerSeasonalUpdate(farmerId: string): FarmerSeasonalUpdateRow {
-  return {
-    farmer_id: farmerId,
-    season: String(new Date().getFullYear()),
-    content: "",
-    published: false,
-  };
-}
-
 type FarmerDraft = Omit<FarmerRow, "products" | "tags" | "years_farming" | "partner_since"> & {
   products: string;
   tags: string;
@@ -82,21 +73,18 @@ function fromDraft(draft: FarmerDraft): FarmerRow {
   };
 }
 
-export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, privateEnabled, storyEnabled, seasonalEnabled, onSave, onCancel }: {
+export function FarmerForm({ initial, privateInfo, storyInfo, privateEnabled, storyEnabled, onSave, onCancel }: {
   initial: FarmerRow;
   privateInfo?: FarmerPrivateInfoRow | null;
   storyInfo?: FarmerStoryRow | null;
-  seasonalInfo?: FarmerSeasonalUpdateRow | null;
   privateEnabled: boolean;
   storyEnabled: boolean;
-  seasonalEnabled: boolean;
-  onSave: (row: FarmerRow, privateRow: FarmerPrivateInfoRow | null, storyRow: FarmerStoryRow | null, seasonalRow: FarmerSeasonalUpdateRow | null) => Promise<void> | void;
+  onSave: (row: FarmerRow, privateRow: FarmerPrivateInfoRow | null, storyRow: FarmerStoryRow | null) => Promise<void> | void;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<FarmerDraft>(() => toDraft(initial));
   const [privateDraft, setPrivateDraft] = useState<FarmerPrivateInfoRow>(() => privateInfo ?? blankFarmerPrivateInfo(initial.id));
   const [storyDraft, setStoryDraft] = useState<FarmerStoryRow>(() => storyInfo ?? blankFarmerStory(initial.id));
-  const [seasonalDraft, setSeasonalDraft] = useState<FarmerSeasonalUpdateRow>(() => seasonalInfo ?? blankFarmerSeasonalUpdate(initial.id));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,10 +100,6 @@ export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, priv
     setStoryDraft((current) => ({ ...current, [key]: value }));
   }
 
-  function setSeasonal<K extends keyof FarmerSeasonalUpdateRow>(key: K, value: FarmerSeasonalUpdateRow[K]) {
-    setSeasonalDraft((current) => ({ ...current, [key]: value }));
-  }
-
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!draft.name.trim()) {
@@ -129,7 +113,6 @@ export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, priv
         fromDraft(draft),
         privateEnabled ? privateDraft : null,
         storyEnabled ? storyDraft : null,
-        seasonalEnabled ? seasonalDraft : null,
       );
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save the farmer.");
@@ -174,7 +157,7 @@ export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, priv
       <div className="grid gap-4 rounded-wobbly-card border-3 border-dashed border-brand-green-ink/40 bg-brand-mint/25 p-4">
         <div className="grid gap-1">
           <h3 className="font-primary text-lg font-bold text-brand-green-ink">Farmer storytelling</h3>
-          <p className="text-xs font-semibold text-brand-black/60">The latest published seasonal update appears as a quote on the landing page, and a published story is linked with &ldquo;Read their story&rdquo;. Save drafts here anytime — they stay private until you publish them.</p>
+          <p className="text-xs font-semibold text-brand-black/60">A published story is linked with &ldquo;Read their story&rdquo;. Save drafts here anytime — they stay private until you publish them.</p>
         </div>
 
         {storyEnabled ? (
@@ -190,36 +173,11 @@ export function FarmerForm({ initial, privateInfo, storyInfo, seasonalInfo, priv
           </p>
         )}
 
-        {seasonalEnabled ? (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Season" htmlFor="farmer-season" hint="e.g. 2026. Each season is kept, so previous updates are preserved.">
-                <TextInput id="farmer-season" value={seasonalDraft.season} onChange={(e) => setSeasonal("season", e.target.value)} />
-              </Field>
-            </div>
-            <Field label="Seasonal update" htmlFor="farmer-seasonal-update" hint="A short quote. Only the latest published update shows on the landing page.">
-              <TextArea id="farmer-seasonal-update" rows={3} value={seasonalDraft.content} onChange={(e) => setSeasonal("content", e.target.value)} />
-            </Field>
-            <Checkbox checked={seasonalDraft.published} onChange={(next) => setSeasonal("published", next)} label="Publish this update (show on the landing page)" />
-          </>
-        ) : (
-          <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/30 bg-brand-white px-3 py-2 text-xs font-semibold text-brand-black/64">
-            Seasonal updates require the <code className="font-bold">farmer_seasonal_updates</code> table. Run <code className="font-bold">supabase/farmer-story-schema.sql</code> to enable them.
-          </p>
-        )}
-
         <div className="grid gap-2 rounded-wobbly-md border-2 border-dashed border-brand-forest/30 bg-brand-white p-4">
           <p className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Landing page preview</p>
-          {seasonalDraft.content.trim() ? (
-            <p className="italic leading-[1.5] text-brand-black/68">&ldquo;{seasonalDraft.content}&rdquo;</p>
-          ) : (
-            <p className="italic leading-[1.5] text-brand-black/68">&ldquo;{draft.bio}&rdquo;</p>
-          )}
+          <p className="italic leading-[1.5] text-brand-black/68">&ldquo;{draft.bio}&rdquo;</p>
           {storyDraft.content.trim() && storyDraft.published ? (
             <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="#/farmers">Read their story →</a>
-          ) : null}
-          {seasonalDraft.content.trim() && !seasonalDraft.published ? (
-            <p className="text-xs font-semibold text-brand-black/52">Draft only — not shown on the landing page until this update is published.</p>
           ) : null}
           {storyDraft.content.trim() && !storyDraft.published ? (
             <p className="text-xs font-semibold text-brand-black/52">Story saved as a draft — not linked until &ldquo;Show story on the site&rdquo; is checked.</p>

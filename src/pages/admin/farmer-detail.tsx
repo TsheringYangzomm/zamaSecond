@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { btnOutlineSm, btnOutlineXs, btnPrimarySm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
-import type { FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow } from "../../cms/types";
+import type { FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerStoryRow } from "../../cms/types";
 import { getFarmerDocumentSignedUrl } from "../../admin/admin-api";
 import { formatPartnerSince } from "../../cms/partner-since";
 import { DocumentPicker } from "./admin-fields";
@@ -10,7 +10,6 @@ type FarmerDetailProps = {
   farmer: FarmerRow;
   privateInfo?: FarmerPrivateInfoRow | null;
   storyInfo?: FarmerStoryRow | null;
-  seasonalInfo?: FarmerSeasonalUpdateRow | null;
   documentsEnabled: boolean;
   documents: FarmerDocumentRow[];
   productName: (id: string) => string;
@@ -63,7 +62,6 @@ export function FarmerDetail({
   farmer,
   privateInfo,
   storyInfo,
-  seasonalInfo,
   documentsEnabled,
   documents,
   productName,
@@ -162,6 +160,7 @@ export function FarmerDetail({
           <span className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-bold ${farmer.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
             {farmer.published ? "Active" : "Inactive"}
           </span>
+          <a className={btnOutlineSm} href={`#/farmers/${encodeURIComponent(farmer.id)}`}>View public profile</a>
           <button className={btnOutlineSm} type="button" onClick={onToggleActive} disabled={busy}>{farmer.published ? "Set inactive" : "Activate"}</button>
           <button className={btnOutlineSm} type="button" onClick={() => requestLeave("edit")} disabled={busy}>Edit</button>
         </div>
@@ -176,36 +175,25 @@ export function FarmerDetail({
       ) : null}
 
       <SectionCard title="Farmer profile">
-        {farmer.image ? (
-          <img className="h-28 w-28 rounded-wobbly-md border-3 border-brand-forest/30 bg-brand-warm-white object-cover shadow-brand-soft" src={farmer.image} alt="" />
-        ) : null}
-        <div className="grid gap-3 sm:grid-cols-2">
-          {detailRow("Location", farmer.location)}
-          {detailRow("Dzongkhag", farmer.dzongkhag)}
-          {detailRow("Years farming", farmer.years_farming ? `${farmer.years_farming}` : "")}
-          {detailRow("Partner since", formatPartnerSince(farmer.partner_since))}
-          {detailRow("Verified", farmer.verified ? "Yes" : "No")}
-          {detailRow("Products", farmer.products.length ? farmer.products.map((id) => productName(id)).join(", ") : "")}
-          {detailRow("Tags", farmer.tags.join(", "))}
-          {detailRow("Bio", farmer.bio)}
+        <div className="grid gap-5 lg:grid-cols-[minmax(190px,0.38fr)_minmax(0,1fr)] lg:items-start">
+          <div className="grid gap-2">
+            <img className="h-60 w-full rounded-wobbly-md border-3 border-brand-forest/30 bg-brand-warm-white object-cover shadow-brand-soft" src={farmer.image || "/assets/farmer.webp"} alt={farmer.name} />
+            <p className="text-center text-xs font-semibold text-brand-black/54">Profile image · admin preview</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {detailRow("Location", farmer.location)}
+            {detailRow("Dzongkhag", farmer.dzongkhag)}
+            {detailRow("Years farming", farmer.years_farming ? `${farmer.years_farming}` : "")}
+            {detailRow("Partner since", formatPartnerSince(farmer.partner_since))}
+            {detailRow("Verified", farmer.verified ? "Yes" : "No")}
+            {detailRow("Products", farmer.products.length ? farmer.products.map((id) => productName(id)).join(", ") : "")}
+            {detailRow("Tags", farmer.tags.join(", "))}
+            <div className="sm:col-span-2">{detailRow("Bio", farmer.bio)}</div>
+          </div>
         </div>
       </SectionCard>
 
-      <SectionCard title="Farmer storytelling" tone="story" hint="The latest published seasonal update shows on the landing page; a published story is linked as “Read their story”.">
-        {seasonalInfo ? (
-          <div className="grid gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Latest seasonal update</span>
-              <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${seasonalInfo.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
-                {seasonalInfo.published ? "Published" : "Draft"}
-              </span>
-              <span className="text-xs font-bold text-brand-black/52">{seasonalInfo.season}</span>
-            </div>
-            <p className="text-brand-black">{seasonalInfo.content || "—"}</p>
-          </div>
-        ) : (
-          <p className="text-sm text-brand-black/60">No seasonal update yet.</p>
-        )}
+      <SectionCard title="Farmer storytelling" tone="story" hint="A published farmer story is linked as “Read their story”. Product seasonal updates are managed from Products.">
         {storyInfo ? (
           <div className="grid gap-2">
             <div className="flex flex-wrap items-center gap-2">

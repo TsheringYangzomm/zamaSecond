@@ -62,13 +62,17 @@ export function FarmerCard({ farmer, image, detailed }: { farmer: Farmer; image?
                 <p className="text-base leading-[1.5] text-brand-black/68">{farmer.story}</p>
               </div>
             ) : null}
+            <a className="inline-flex w-fit items-center gap-2 rounded-wobbly-md border-3 border-brand-forest bg-brand-leaf px-4 py-2.5 text-sm font-bold text-brand-white shadow-brand-button transition-colors hover:bg-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4" href={`#/farmers/${encodeURIComponent(farmer.id)}`}>
+              View full farmer profile
+              <ArrowIcon className="!h-4 !w-4" />
+            </a>
           </>
         ) : (
           <>
             <p className="mt-auto border-t-2 border-dashed border-brand-forest/12 pt-3 text-sm italic leading-[1.5] text-brand-black/68">
               &ldquo;{farmer.seasonalUpdate || farmer.bio}&rdquo;
             </p>
-            <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href={`#/farmers?farmer=${farmer.id}`}>
+            <a className="inline-flex w-fit items-center gap-2 rounded-wobbly-md border-2 border-brand-forest bg-brand-white px-3 py-2 text-sm font-bold text-brand-green-ink shadow-brand-soft transition-colors hover:bg-brand-mint focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4" href={`#/farmers/${encodeURIComponent(farmer.id)}`}>
               {farmer.story ? "Read their story" : "Learn more"}
               <ArrowIcon className="!h-4 !w-4" />
             </a>

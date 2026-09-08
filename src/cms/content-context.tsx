@@ -50,6 +50,7 @@ import type {
   FarmerSeasonalUpdateRow,
   FarmerStoryRow,
   ProductRow,
+  ProductSeasonalUpdateRow,
   ReviewRow,
 } from "./types";
 
@@ -168,6 +169,7 @@ async function loadRemoteContent(): Promise<RemoteContent> {
     blockResult,
     storyResult,
     seasonalResult,
+    productSeasonalResult,
     ingredientResult,
     itemResult,
   ] = await Promise.all([
@@ -217,6 +219,14 @@ async function loadRemoteContent(): Promise<RemoteContent> {
       }),
 
     client
+      .from("product_seasonal_updates")
+      .select("*")
+      .eq("published", true)
+      .order("season", {
+        ascending: false,
+      }),
+
+    client
       .from("product_ingredients")
       .select("product_id, item_id, quantity"),
 
@@ -256,9 +266,16 @@ async function loadRemoteContent(): Promise<RemoteContent> {
       }
     }
 
+    const seasonalByProduct = new Map<string, string>();
+    for (const row of (productSeasonalResult.data ?? []) as ProductSeasonalUpdateRow[]) {
+      if (row.content && !seasonalByProduct.has(row.product_id)) {
+        seasonalByProduct.set(row.product_id, row.content);
+      }
+    }
+
     products = (
       productResult.data as unknown as ProductRow[]
-    ).map((row) => mapProductRow(row, contentsByProduct.get(row.id) ?? []));
+    ).map((row) => mapProductRow(row, contentsByProduct.get(row.id) ?? [], seasonalByProduct.get(row.id)));
   } else if (productResult.error) {
     hadError = true;
   }

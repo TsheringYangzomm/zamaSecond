@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getRoute } from "./router";
+import { getFarmerId, getRoute } from "./router";
 
 describe("routing", () => {
   it("opens the dedicated coupons page", () => {
@@ -14,5 +14,11 @@ describe("routing", () => {
 
   it("opens the dedicated partnership enquiry page", () => {
     expect(getRoute("#/partnership")).toBe("partnership");
+  });
+
+  it("opens a dedicated farmer profile route", () => {
+    expect(getRoute("#/farmers/pema-dorji")).toBe("farmer");
+    expect(getFarmerId("#/farmers/pema-dorji")).toBe("pema-dorji");
+    expect(getRoute("#/farmers?farmer=pema-dorji")).toBe("farmers");
   });
 });

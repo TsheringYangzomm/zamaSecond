@@ -137,6 +137,15 @@ export type FarmerSeasonalUpdateRow = {
   updated_at?: string;
 };
 
+export type ProductSeasonalUpdateRow = {
+  product_id: string;
+  season: string;
+  content: string;
+  published: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type FarmerDocumentRow = {
   id: string;
   farmer_id: string;

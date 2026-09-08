@@ -6,21 +6,25 @@ import {
   listInventory,
   listInventoryItems,
   listProductIngredients,
+  listProductSeasonalUpdates,
   listProducts,
   nextSlugId,
+  productSeasonalUpdatesTableExists,
   productIngredientsTableExists,
   reorderRows,
   saveProductIngredients,
   upsertProduct,
+  upsertProductSeasonalUpdate,
   type ProductIngredientInput,
 } from "../../admin/admin-api";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import { inputClasses } from "./admin-fields";
 import { amountRangeKeyFor, buildAmountRanges, ClearFiltersButton, ColumnFilterDropdown } from "./column-filter-dropdown";
-import type { InventoryItemRow, InventoryRow, ProductRow } from "../../cms/types";
-import { blankProduct, ProductForm } from "./product-form";
+import type { InventoryItemRow, InventoryRow, ProductRow, ProductSeasonalUpdateRow } from "../../cms/types";
+import { blankProduct, blankProductSeasonalUpdate, ProductForm } from "./product-form";
 import { ProductCategoryPicker } from "./product-category-picker";
+import { ProductDetail } from "./product-detail";
 import { StockBadge, stockInfo, stockLevel } from "./commerce-shared";
 import { useRowDragSort } from "./use-row-drag";
 
@@ -29,6 +33,7 @@ export function ProductsTab() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [editing, setEditing] = useState<ProductRow | null>(null);
+  const [selected, setSelected] = useState<ProductRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [choosingCategory, setChoosingCategory] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,6 +45,10 @@ export function ProductsTab() {
   const [editingIngredients, setEditingIngredients] = useState<ProductIngredientInput[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItemRow[]>([]);
   const [inventory, setInventory] = useState<InventoryRow[]>([]);
+  const [seasonalAvailable, setSeasonalAvailable] = useState(false);
+  const [seasonalMap, setSeasonalMap] = useState<Record<string, ProductSeasonalUpdateRow>>({});
+  const [seasonalInfo, setSeasonalInfo] = useState<ProductSeasonalUpdateRow | null>(null);
+  const [selectedIngredients, setSelectedIngredients] = useState<ProductIngredientInput[]>([]);
 
   const inventoryMap = useMemo(
     () => new Map(inventory.map((row) => [row.product_id, row])),
@@ -106,6 +115,21 @@ export function ProductsTab() {
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load products.");
     }
+    try {
+      const enabled = await productSeasonalUpdatesTableExists();
+      setSeasonalAvailable(enabled);
+      if (enabled) {
+        const rows = await listProductSeasonalUpdates();
+        const latest: Record<string, ProductSeasonalUpdateRow> = {};
+        for (const row of rows) {
+          if (!latest[row.product_id]) latest[row.product_id] = row;
+        }
+        setSeasonalMap(latest);
+      }
+    } catch {
+      setSeasonalAvailable(false);
+      setSeasonalMap({});
+    }
   }
 
   useEffect(() => {
@@ -121,6 +145,7 @@ export function ProductsTab() {
       const maxSort = (products ?? []).reduce((max, item) => Math.max(max, item.sort_order), -1);
       setEditing({ ...blankProduct(id), sort_order: maxSort + 1 });
       setEditingIngredients([]);
+      setSeasonalInfo(blankProductSeasonalUpdate(id));
       setCreating(true);
       setChoosingCategory(true);
     } catch (addError) {
@@ -135,16 +160,28 @@ export function ProductsTab() {
     setChoosingCategory(false);
   }
 
-  async function handleToggleActive(row: ProductRow) {
+async function handleToggleActive(row: ProductRow) {
   setStatus(null);
   try {
     await upsertProduct({ ...row, published: !row.published });
     setProducts((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: !row.published } : item)));
+    setSelected((current) => (current && current.id === row.id ? { ...current, published: !row.published } : current));
     setStatus(row.published ? `${row.name} is inactive (shows as out of stock).` : `${row.name} is now active.`);
   } catch (toggleError) {
     setStatus(toggleError instanceof Error ? toggleError.message : "Could not change the product status.");
   }
 }
+
+function handleView(row: ProductRow) {
+    setStatus(null);
+    setError(null);
+    setSelected(row);
+    setSelectedIngredients([]);
+    if (!ingredientsAvailable) return;
+    void listProductIngredients(row.id)
+      .then((ingredients) => setSelectedIngredients(ingredients))
+      .catch((viewError) => setStatus(viewError instanceof Error ? viewError.message : "Could not load the product contents."));
+  }
 
 async function handleEdit(row: ProductRow) {
     try {
@@ -156,13 +193,18 @@ async function handleEdit(row: ProductRow) {
     }
     setCreating(false);
     setChoosingCategory(false);
+    setSeasonalInfo(seasonalMap[row.id] ?? blankProductSeasonalUpdate(row.id));
     setEditing(row);
   }
 
-  async function handleSave(row: ProductRow, ingredients: ProductIngredientInput[]) {
+  async function handleSave(row: ProductRow, ingredients: ProductIngredientInput[], seasonalRow: ProductSeasonalUpdateRow | null) {
     await upsertProduct(row);
     if (ingredientsAvailable) {
       await saveProductIngredients(row.id, ingredients);
+    }
+    if (seasonalAvailable && seasonalRow && (seasonalMap[row.id] || seasonalRow.content.trim() !== "" || seasonalRow.published)) {
+      await upsertProductSeasonalUpdate(seasonalRow);
+      setSeasonalMap((current) => ({ ...current, [seasonalRow.product_id]: seasonalRow }));
     }
     const [next, inventoryRows, items] = await Promise.all([
       listProducts(),
@@ -175,6 +217,7 @@ async function handleEdit(row: ProductRow) {
     setStatus(creating ? `Created ${row.name}.` : `Saved ${row.name}.`);
     setEditing(null);
     setCreating(false);
+    setSeasonalInfo(null);
   }
 
   async function handleDelete(row: ProductRow) {
@@ -182,6 +225,11 @@ async function handleEdit(row: ProductRow) {
     try {
       await deleteProduct(row.id);
       setProducts((current) => (current ?? []).filter((item) => item.id !== row.id));
+      setSeasonalMap((current) => {
+        const next = { ...current };
+        delete next[row.id];
+        return next;
+      });
       setStatus(`Deleted ${row.name}.`);
     } catch (deleteError) {
       setStatus(deleteError instanceof Error ? deleteError.message : "Could not delete the product.");
@@ -211,12 +259,35 @@ async function handleEdit(row: ProductRow) {
 
   const { rowProps } = useRowDragSort(filtered, (orderedIds) => void handleReorder(orderedIds));
 
+  if (selected) {
+    const selectedStock = inventoryMap.get(selected.id) ?? null;
+    return (
+      <ProductDetail
+        product={selected}
+        ingredients={selectedIngredients}
+        ingredientsAvailable={ingredientsAvailable}
+        inventoryItems={inventoryItems}
+        inventory={selectedStock}
+        stockAvailable={stockAvailable}
+        seasonalInfo={seasonalMap[selected.id] ?? null}
+        seasonalAvailable={seasonalAvailable}
+        onBack={() => setSelected(null)}
+        onEdit={() => {
+          const row = selected;
+          setSelected(null);
+          void handleEdit(row);
+        }}
+        onToggleActive={() => void handleToggleActive(selected)}
+      />
+    );
+  }
+
   if (editing && choosingCategory) {
     return (
       <div className="grid gap-4">
         <ProductCategoryPicker
           onSelect={handleChooseCategory}
-          onCancel={() => { setEditing(null); setCreating(false); setChoosingCategory(false); setEditingIngredients([]); }}
+          onCancel={() => { setEditing(null); setCreating(false); setChoosingCategory(false); setEditingIngredients([]); setSeasonalInfo(null); }}
         />
       </div>
     );
@@ -228,9 +299,11 @@ async function handleEdit(row: ProductRow) {
         <ProductForm
           initial={editing}
           initialIngredients={editingIngredients}
+          seasonalInfo={seasonalInfo}
+          seasonalAvailable={seasonalAvailable}
           inventoryItems={inventoryItems}
           onSave={handleSave}
-          onCancel={() => { setEditing(null); setCreating(false); setEditingIngredients([]); }}
+          onCancel={() => { setEditing(null); setCreating(false); setEditingIngredients([]); setSeasonalInfo(null); }}
           ingredientsAvailable={ingredientsAvailable}
         />
       </div>
@@ -343,6 +416,7 @@ async function handleEdit(row: ProductRow) {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest bg-brand-mint px-3 py-1 text-xs font-bold text-brand-green-ink hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => handleView(row)}>View</button>
                             <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleEdit(row)}>Edit</button>
                             <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
                           </div>

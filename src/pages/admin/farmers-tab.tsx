@@ -5,11 +5,9 @@ import {
   deleteFarmerDocument,
   farmerDocumentsTableExists,
   farmerPrivateInfoTableExists,
-  farmerSeasonalUpdatesTableExists,
   farmerStoriesTableExists,
   listFarmerDocuments,
   listFarmerPrivateInfo,
-  listFarmerSeasonalUpdates,
   listFarmerStories,
   listFarmers,
   listProducts,
@@ -18,22 +16,22 @@ import {
   upsertFarmer,
   upsertFarmerDocument,
   upsertFarmerPrivateInfo,
-  upsertFarmerSeasonalUpdate,
   upsertFarmerStory,
 } from "../../admin/admin-api";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
 import { inputClasses } from "./admin-fields";
 import { ClearFiltersButton, ColumnFilterDropdown } from "./column-filter-dropdown";
-import type { FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerSeasonalUpdateRow, FarmerStoryRow, ProductRow } from "../../cms/types";
-import { blankFarmer, blankFarmerPrivateInfo, blankFarmerSeasonalUpdate, blankFarmerStory, FarmerForm } from "./farmer-form";
+import type { FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerStoryRow, ProductRow } from "../../cms/types";
+import { blankFarmer, blankFarmerPrivateInfo, blankFarmerStory, FarmerForm } from "./farmer-form";
 import { FarmerDetail } from "./farmer-detail";
 import { useRowDragSort } from "./use-row-drag";
 
 function farmerIdFromHash(): string | null {
   if (typeof window === "undefined") return null;
   const query = window.location.hash.split("?")[1] ?? "";
-  return new URLSearchParams(query).get("farmer");
+  const farmerId = new URLSearchParams(query).get("farmer");
+  return farmerId;
 }
 
 export function FarmersTab() {
@@ -54,9 +52,6 @@ export function FarmersTab() {
   const [storyEnabled, setStoryEnabled] = useState(false);
   const [storyMap, setStoryMap] = useState<Record<string, FarmerStoryRow>>({});
   const [storyInfo, setStoryInfo] = useState<FarmerStoryRow | null>(null);
-  const [seasonalEnabled, setSeasonalEnabled] = useState(false);
-  const [seasonalMap, setSeasonalMap] = useState<Record<string, FarmerSeasonalUpdateRow>>({});
-  const [seasonalInfo, setSeasonalInfo] = useState<FarmerSeasonalUpdateRow | null>(null);
   const [docsEnabled, setDocsEnabled] = useState(false);
   const [docsList, setDocsList] = useState<FarmerDocumentRow[]>([]);
 
@@ -129,21 +124,6 @@ export function FarmersTab() {
       setStoryMap({});
     }
     try {
-      const enabled = await farmerSeasonalUpdatesTableExists();
-      setSeasonalEnabled(enabled);
-      if (enabled) {
-        const rows = await listFarmerSeasonalUpdates();
-        const latest: Record<string, FarmerSeasonalUpdateRow> = {};
-        for (const row of rows) {
-          if (!latest[row.farmer_id]) latest[row.farmer_id] = row;
-        }
-        setSeasonalMap(latest);
-      }
-    } catch {
-      setSeasonalEnabled(false);
-      setSeasonalMap({});
-    }
-    try {
       const enabled = await farmerDocumentsTableExists();
       setDocsEnabled(enabled);
       if (enabled) {
@@ -165,6 +145,35 @@ export function FarmersTab() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const syncSelectedFarmer = () => {
+      const requestedFarmerId = farmerIdFromHash();
+      if (!requestedFarmerId) {
+        setSelected(null);
+        return;
+      }
+      const requestedFarmer = farmers?.find((row) => row.id === requestedFarmerId);
+      if (requestedFarmer) {
+        setEditing(null);
+        setSelected(requestedFarmer);
+      }
+    };
+    window.addEventListener("hashchange", syncSelectedFarmer);
+    return () => window.removeEventListener("hashchange", syncSelectedFarmer);
+  }, [farmers]);
+
+  function openFarmer(row: FarmerRow) {
+    setSelected(row);
+    window.location.hash = `#/admin?tab=farmers&farmer=${encodeURIComponent(row.id)}`;
+  }
+
+  function closeFarmer() {
+    setSelected(null);
+    if (window.location.hash.includes("farmer=")) {
+      window.location.hash = "#/admin?tab=farmers";
+    }
+  }
+
   async function handleAdd() {
     setStatus(null);
     setError(null);
@@ -175,7 +184,6 @@ export function FarmersTab() {
       setEditing({ ...blankFarmer(id), sort_order: maxSort + 1 });
       setPrivateInfo(blankFarmerPrivateInfo(id));
       setStoryInfo(blankFarmerStory(id));
-      setSeasonalInfo(blankFarmerSeasonalUpdate(id));
       setCreating(true);
     } catch (addError) {
       setError(addError instanceof Error ? addError.message : "Could not start a new farmer.");
@@ -184,7 +192,7 @@ export function FarmersTab() {
     }
   }
 
-  async function handleSave(row: FarmerRow, privateRow: FarmerPrivateInfoRow | null, storyRow: FarmerStoryRow | null, seasonalRow: FarmerSeasonalUpdateRow | null) {
+  async function handleSave(row: FarmerRow, privateRow: FarmerPrivateInfoRow | null, storyRow: FarmerStoryRow | null) {
     await upsertFarmer(row);
     if (privateEnabled && privateRow) {
       await upsertFarmerPrivateInfo(privateRow);
@@ -194,10 +202,6 @@ export function FarmersTab() {
       await upsertFarmerStory(storyRow);
       setStoryMap((current) => ({ ...current, [storyRow.farmer_id]: storyRow }));
     }
-    if (seasonalEnabled && seasonalRow && (seasonalMap[row.id] || seasonalRow.content.trim() !== "" || seasonalRow.published)) {
-      await upsertFarmerSeasonalUpdate(seasonalRow);
-      setSeasonalMap((current) => ({ ...current, [seasonalRow.farmer_id]: seasonalRow }));
-    }
     const next = await listFarmers();
     setFarmers(next);
     setStatus(creating ? `Created ${row.name}.` : `Saved ${row.name}.`);
@@ -205,7 +209,6 @@ export function FarmersTab() {
     setCreating(false);
     setPrivateInfo(null);
     setStoryInfo(null);
-    setSeasonalInfo(null);
   }
 
   async function handleDelete(row: FarmerRow) {
@@ -219,11 +222,6 @@ export function FarmersTab() {
         return next;
       });
       setStoryMap((current) => {
-        const next = { ...current };
-        delete next[row.id];
-        return next;
-      });
-      setSeasonalMap((current) => {
         const next = { ...current };
         delete next[row.id];
         return next;
@@ -296,7 +294,6 @@ export function FarmersTab() {
         farmer={selected}
         privateInfo={privateMap[selected.id] ?? null}
         storyInfo={storyMap[selected.id] ?? null}
-        seasonalInfo={seasonalMap[selected.id] ?? null}
         documentsEnabled={docsEnabled}
         documents={docsList.filter((doc) => doc.farmer_id === selected.id)}
         productName={productName}
@@ -304,12 +301,12 @@ export function FarmersTab() {
           const row = selected;
           setSelected(null);
           setCreating(false);
+          window.location.hash = "#/admin?tab=farmers";
           setEditing(row);
           setPrivateInfo(privateMap[row.id] ?? blankFarmerPrivateInfo(row.id));
           setStoryInfo(storyMap[row.id] ?? blankFarmerStory(row.id));
-          setSeasonalInfo(seasonalMap[row.id] ?? blankFarmerSeasonalUpdate(row.id));
         }}
-        onBack={() => setSelected(null)}
+        onBack={closeFarmer}
         onToggleActive={() => void handleToggleSelectedActive()}
         onSaveChanges={(adds, deletes) => handleSaveDocuments(adds, deletes)}
       />
@@ -323,12 +320,10 @@ export function FarmersTab() {
           initial={editing}
           privateInfo={privateInfo}
           storyInfo={storyInfo}
-          seasonalInfo={seasonalInfo}
           privateEnabled={privateEnabled}
           storyEnabled={storyEnabled}
-          seasonalEnabled={seasonalEnabled}
           onSave={handleSave}
-          onCancel={() => { setEditing(null); setCreating(false); setPrivateInfo(null); setStoryInfo(null); setSeasonalInfo(null); }}
+          onCancel={() => { setEditing(null); setCreating(false); setPrivateInfo(null); setStoryInfo(null); }}
         />
       </div>
     );
@@ -432,8 +427,8 @@ export function FarmersTab() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setSelected(row)}>View</button>
-                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => { setCreating(false); setEditing(row); setPrivateInfo(privateMap[row.id] ?? blankFarmerPrivateInfo(row.id)); setStoryInfo(storyMap[row.id] ?? blankFarmerStory(row.id)); setSeasonalInfo(seasonalMap[row.id] ?? blankFarmerSeasonalUpdate(row.id)); }}>Edit</button>
+                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => openFarmer(row)}>View profile</button>
+                        <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => { setCreating(false); setEditing(row); setPrivateInfo(privateMap[row.id] ?? blankFarmerPrivateInfo(row.id)); setStoryInfo(storyMap[row.id] ?? blankFarmerStory(row.id)); }}>Edit</button>
                         <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
                       </div>
                     </td>

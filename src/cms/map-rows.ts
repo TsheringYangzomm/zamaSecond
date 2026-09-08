@@ -5,7 +5,7 @@ import type { Review } from "../components/shop/reviews";
 import { numberFormatter } from "../components/shop/shop-utils";
 import type { DieticianRow, FarmerRow, ProductRow, ReviewRow } from "./types";
 
-export function mapProductRow(row: ProductRow, contents: readonly BoxContents[] = []): ShopProduct {
+export function mapProductRow(row: ProductRow, contents: readonly BoxContents[] = [], seasonalUpdate?: string): ShopProduct {
   return {
     id: row.id,
     sku: row.sku,
@@ -33,6 +33,7 @@ export function mapProductRow(row: ProductRow, contents: readonly BoxContents[] 
     active: row.published,
     memberEarlyAccessStartsAt: row.member_early_access_starts_at ?? null,
     memberEarlyAccessEndsAt: row.member_early_access_ends_at ?? null,
+    seasonalUpdate,
     consultantNote: row.consultant_note,
     dieticianNote: row.dietician_note,
     healthBenefits: row.health_benefits,

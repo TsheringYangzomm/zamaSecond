@@ -38,6 +38,8 @@ export type ShopProduct = {
   /** A temporary Zama+ member-only sales window, managed by an admin. */
   memberEarlyAccessStartsAt?: string | null;
   memberEarlyAccessEndsAt?: string | null;
+  /** Latest published product-specific seasonal update. */
+  seasonalUpdate?: string;
   consultantNote?: string;
   dieticianNote?: string;
   healthBenefits?: readonly string[];

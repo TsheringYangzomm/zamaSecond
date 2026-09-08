@@ -20,6 +20,7 @@ import { ProductPage } from "./pages/product-page";
 import { CustomizeBoxPage } from "./pages/customize-box-page";
 import { CategoryPage } from "./pages/category-page";
 import { FarmersPage } from "./pages/farmers-page";
+import { FarmerProfilePage } from "./pages/farmer-profile-page";
 import { LaunchUpdatesPage } from "./pages/launch-updates-page";
 import { MembershipPage } from "./pages/membership-page";
 import { MealKitTrustPage } from "./pages/meal-kit-trust-page";
@@ -30,12 +31,13 @@ import { CouponsPage } from "./pages/coupons-page";
 import { AdminPage } from "./pages/admin/admin-page";
 import { AdminAuthProvider } from "./admin/admin-auth";
 import { CustomerAuthProvider } from "./checkout/customer-auth";
-import { getCategoryFromHash, getProductId, getRoute, setPendingSection, takePendingSection } from "./router";
+import { getCategoryFromHash, getFarmerId, getProductId, getRoute, setPendingSection, takePendingSection } from "./router";
 
 function App() {
   const [hash, setHash] = useState(window.location.hash);
   const route = getRoute(hash);
   const productId = route === "product" ? getProductId(hash) : null;
+  const farmerId = route === "farmer" ? getFarmerId(hash) : null;
   const categorySlug = route === "category" ? getCategoryFromHash(hash) : null;
   const previousRoute = useRef(route);
 
@@ -108,6 +110,10 @@ function App() {
       ) : route === "farmers" ? (
         <main id="top" tabIndex={-1}>
           <FarmersPage />
+        </main>
+      ) : route === "farmer" ? (
+        <main id="top" tabIndex={-1}>
+          <FarmerProfilePage key={farmerId ?? "missing"} farmerId={farmerId} />
         </main>
       ) : route === "shop" ? (
         <main id="top" tabIndex={-1}>
