@@ -1,8 +1,16 @@
 import { categorySlugs } from "./components/shop/shop-utils";
 
-export type Route = "home" | "contact" | "partnership" | "shop" | "product" | "category" | "farmers" | "farmer" | "customize" | "launch-updates" | "membership" | "account" | "account-orders" | "account-wallet" | "account-membership" | "coupons" | "admin" | "meal-kit-trust";
+export type Route = "home" | "contact" | "partnership" | "shop" | "product" | "category" | "farmers" | "farmer" | "customize" | "launch-updates" | "membership" | "account" | "account-orders" | "account-wallet" | "account-membership" | "coupons" | "admin" | "admin-password-reset" | "meal-kit-trust";
 
-export function getRoute(hash: string): Route {
+export function getRoute(
+  hash: string,
+  search = typeof window === "undefined" ? "" : window.location.search,
+  pathname = typeof window === "undefined" ? "" : window.location.pathname,
+): Route {
+  const hashValue = hash.startsWith("#") ? hash.slice(1) : hash;
+  const hashParams = new URLSearchParams(hashValue.includes("?") ? hashValue.slice(hashValue.indexOf("?") + 1) : hashValue);
+  const searchParams = new URLSearchParams(search);
+  if (pathname.replace(/\/+$/, "").endsWith("/reset-password") || hash.startsWith("#/reset-password") || hashParams.get("type") === "recovery" || searchParams.has("code")) return "admin-password-reset";
   if (hash.startsWith("#/admin")) return "admin";
   if (hash.startsWith("#/coupons")) return "coupons";
   if (hash.startsWith("#/account/wallet")) return "account-wallet";

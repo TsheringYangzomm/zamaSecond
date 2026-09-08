@@ -29,6 +29,7 @@ import { AccountWalletPage } from "./pages/account-wallet-page";
 import { AccountMembershipPage } from "./pages/account-membership-page";
 import { CouponsPage } from "./pages/coupons-page";
 import { AdminPage } from "./pages/admin/admin-page";
+import { AdminPasswordResetPage } from "./pages/admin/admin-password-reset";
 import { AdminAuthProvider } from "./admin/admin-auth";
 import { CustomerAuthProvider } from "./checkout/customer-auth";
 import { getCategoryFromHash, getFarmerId, getProductId, getRoute, setPendingSection, takePendingSection } from "./router";
@@ -101,6 +102,10 @@ function App() {
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
   }, [route]);
+
+  if (route === "admin-password-reset") {
+    return <AdminPasswordResetPage />;
+  }
 
   if (route === "admin") {
     return (
