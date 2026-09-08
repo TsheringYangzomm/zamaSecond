@@ -117,8 +117,8 @@ export function ContentTab() {
           <span className="rounded-full border-2 border-brand-forest bg-brand-white px-3 py-1 text-xs font-bold text-brand-black">{editing.key}</span>
         </div>
 
-        <Field label="Block JSON" htmlFor="block-json" hint="This JSON replaces the landing-copy block with the same key. The public site falls back to its built-in copy if a key is missing.">
-          <textarea id="block-json" className={`${textAreaClasses} min-h-80 font-mono text-sm`} spellCheck={false} value={editing.json} onChange={(e) => setEditing({ ...editing, json: e.target.value })} />
+        <Field label="Block JSON" required htmlFor="block-json" hint="This JSON replaces the landing-copy block with the same key. The public site falls back to its built-in copy if a key is missing.">
+          <textarea id="block-json" required className={`${textAreaClasses} min-h-80 font-mono text-sm`} spellCheck={false} value={editing.json} onChange={(e) => setEditing({ ...editing, json: e.target.value })} />
         </Field>
 
         {error ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 px-3 py-2 text-sm font-semibold text-brand-black" role="alert">{error}</p> : null}
@@ -143,8 +143,8 @@ export function ContentTab() {
         </div>
       </div>
 
-      <form className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-forest/40 bg-brand-white p-4 sm:grid-cols-[minmax(0,1fr)_auto]" onSubmit={(e) => { e.preventDefault(); void handleAdd(); }}>
-        <TextInput aria-label="New block key" placeholder="New block key, e.g. hero" value={newKey} onChange={(e) => setNewKey(e.target.value)} />
+      <form className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-forest/40 bg-brand-white p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" onSubmit={(e) => { e.preventDefault(); void handleAdd(); }}>
+        <Field label="New block key" required htmlFor="new-block-key" hint="Use a short, unique key such as hero or partnership."><TextInput id="new-block-key" required aria-label="New block key" placeholder="e.g. hero" value={newKey} onChange={(e) => setNewKey(e.target.value)} /></Field>
         <button className={btnPrimarySm} type="submit" disabled={busy}>Add block</button>
       </form>
 

@@ -10,10 +10,14 @@ export const textAreaClasses =
 export const selectClasses =
   "min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
 
-export function Field({ label, hint, htmlFor, children }: { label: ReactNode; hint?: string; htmlFor?: string; children: ReactNode }) {
+export function RequiredMark() {
+  return <span className="required-mark ml-0.5 font-black text-red-600" aria-hidden="true" />;
+}
+
+export function Field({ label, hint, htmlFor, required = false, children }: { label: ReactNode; hint?: string; htmlFor?: string; required?: boolean; children: ReactNode }) {
   return (
     <div className="grid gap-1.5">
-      <label htmlFor={htmlFor} className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">{label}</label>
+      <label htmlFor={htmlFor} className="admin-field-label text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">{label}{required ? <RequiredMark /> : null}</label>
       {children}
       {hint ? <p className="text-xs text-brand-black/40">{hint}</p> : null}
     </div>

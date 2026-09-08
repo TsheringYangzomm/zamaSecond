@@ -81,7 +81,7 @@ export function DieticianForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={<>Name <span className="text-brand-orange">*</span></>} htmlFor="dietician-name"><TextInput id="dietician-name" required value={draft.name} onChange={(e) => set("name", e.target.value)} /></Field>
+        <Field label="Name" htmlFor="dietician-name" required><TextInput id="dietician-name" required value={draft.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Title" htmlFor="dietician-title" hint="e.g. Registered Dietician"><TextInput id="dietician-title" value={draft.title} onChange={(e) => set("title", e.target.value)} /></Field>
       </div>
 

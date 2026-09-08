@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
 import type { ProductIngredientInput } from "../../admin/admin-api";
 import type { InventoryItemRow, ProductRow, ProductSeasonalUpdateRow } from "../../cms/types";
-import { Checkbox, Field, ImagePicker, selectClasses, TextArea, TextInput } from "./admin-fields";
+import { Checkbox, Field, ImagePicker, RequiredMark, selectClasses, TextArea, TextInput } from "./admin-fields";
 import { productCategoryOptions } from "./product-category-picker";
 import { InventoryItemPickerDialog } from "./inventory-item-picker-dialog";
 import { categoryFieldConfig, commonProductFieldDefs, type ProductFieldDef } from "./product-fields";
@@ -165,7 +165,7 @@ function MultiSelectField({ def, label, values, onChange, error }: {
   const options = def.options ?? [];
   return (
     <div className="grid gap-1.5">
-      <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">{label}{def.required ? <RequiredMark /> : null}</span>
       <button
         type="button"
         aria-expanded={open}
@@ -201,21 +201,21 @@ function ConfigField({ def, value, onChange, error }: {
   onChange: (next: string) => void;
   error?: string;
 }) {
-  const label = <>{def.label}{def.required ? <span className="text-brand-orange"> *</span> : null}</>;
+  const label = def.label;
   const fieldErrorClasses = error ? "border-brand-orange ring-4 ring-brand-orange/25" : "";
   const errorText = error ? <p className="text-xs font-bold text-brand-orange" role="alert">{error}</p> : null;
   if (def.type === "textarea") {
     return (
-      <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint}>
-        <TextArea id={`product-${def.key}`} rows={3} value={value} aria-invalid={error ? true : undefined} className={fieldErrorClasses} onChange={(event) => onChange(event.target.value)} />
+      <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint} required={def.required}>
+        <TextArea id={`product-${def.key}`} rows={3} value={value} required={def.required} aria-invalid={error ? true : undefined} className={fieldErrorClasses} onChange={(event) => onChange(event.target.value)} />
         {errorText}
       </Field>
     );
   }
   if (def.type === "number") {
     return (
-      <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint}>
-        <TextInput id={`product-${def.key}`} type="number" inputMode="decimal" min="0" value={value} aria-invalid={error ? true : undefined} className={fieldErrorClasses} onChange={(event) => onChange(event.target.value)} />
+      <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint} required={def.required}>
+        <TextInput id={`product-${def.key}`} type="number" inputMode="decimal" min="0" value={value} required={def.required} aria-invalid={error ? true : undefined} className={fieldErrorClasses} onChange={(event) => onChange(event.target.value)} />
         {errorText}
       </Field>
     );
@@ -223,8 +223,8 @@ function ConfigField({ def, value, onChange, error }: {
   if (def.type === "select") {
     const options = def.options ?? [];
     return (
-      <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint}>
-        <select id={`product-${def.key}`} className={`${selectClasses} ${fieldErrorClasses}`} value={value} aria-invalid={error ? true : undefined} onChange={(event) => onChange(event.target.value)}>
+      <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint} required={def.required}>
+        <select id={`product-${def.key}`} className={`${selectClasses} ${fieldErrorClasses}`} value={value} required={def.required} aria-invalid={error ? true : undefined} onChange={(event) => onChange(event.target.value)}>
           <option value="">{def.placeholder ?? "Select…"}</option>
           {options.map((option) => <option key={option} value={option}>{option}</option>)}
           {value !== "" && !options.includes(value) ? <option value={value}>{value}</option> : null}
@@ -236,7 +236,7 @@ function ConfigField({ def, value, onChange, error }: {
   const values = splitList(value);
   if (def.type === "chips") {
     return (
-      <Field label={label} hint={def.hint}>
+      <Field label={label} hint={def.hint} required={def.required}>
         <div className="flex flex-wrap gap-2" role="group" aria-label={def.label}>
           {(def.options ?? []).map((option) => {
             const active = values.includes(option);
@@ -261,8 +261,8 @@ function ConfigField({ def, value, onChange, error }: {
     return <MultiSelectField def={def} label={label} values={values} error={error} onChange={(next) => onChange(listJoin(next))} />;
   }
   return (
-    <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint}>
-      <TextInput id={`product-${def.key}`} value={value} aria-invalid={error ? true : undefined} className={fieldErrorClasses} onChange={(event) => onChange(event.target.value)} />
+    <Field label={label} htmlFor={`product-${def.key}`} hint={def.hint} required={def.required}>
+      <TextInput id={`product-${def.key}`} value={value} required={def.required} aria-invalid={error ? true : undefined} className={fieldErrorClasses} onChange={(event) => onChange(event.target.value)} />
       {errorText}
     </Field>
   );
@@ -525,8 +525,8 @@ export function ProductForm({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Category" htmlFor="product-category" hint="This controls which fields are shown below and is saved with the product. You can change it anytime.">
-          <select id="product-category" className={`min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 ${fieldErrors.category ? "border-brand-orange ring-4 ring-brand-orange/25" : "border-brand-forest"} bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20`} value={draft.category} aria-invalid={fieldErrors.category ? true : undefined} onChange={(e) => handleCategoryChange(e.target.value)}>
+        <Field label="Category" htmlFor="product-category" hint="This controls which fields are shown below and is saved with the product. You can change it anytime." required>
+          <select id="product-category" required className={`min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 ${fieldErrors.category ? "border-brand-orange ring-4 ring-brand-orange/25" : "border-brand-forest"} bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20`} value={draft.category} aria-invalid={fieldErrors.category ? true : undefined} onChange={(e) => handleCategoryChange(e.target.value)}>
             {productCategoryOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             {!categories.includes(draft.category) ? <option value={draft.category}>{draft.category}</option> : null}
           </select>
@@ -593,8 +593,8 @@ export function ProductForm({
                             <span className="truncate font-bold text-brand-black">{item?.name ?? ingredient.item_id}</span>
                             <span className="truncate text-xs text-brand-black/52">{item?.category ?? "Inventory item no longer tracked"}{item?.unit ? ` · ${item.unit}` : ""}</span>
                           </div>
-                          <Field label="Quantity" htmlFor={`ingredient-${ingredient.item_id}-quantity`}>
-                            <TextInput id={`ingredient-${ingredient.item_id}-quantity`} type="number" inputMode="decimal" min="0" step="0.1" value={ingredient.quantity} aria-invalid={rowError?.quantity ? true : undefined} className={quantityError} onChange={(e) => updateIngredient(ingredient.item_id, { quantity: e.target.value })} />
+                          <Field label="Quantity" htmlFor={`ingredient-${ingredient.item_id}-quantity`} required>
+                            <TextInput id={`ingredient-${ingredient.item_id}-quantity`} type="number" inputMode="decimal" min="0" step="0.1" required value={ingredient.quantity} aria-invalid={rowError?.quantity ? true : undefined} className={quantityError} onChange={(e) => updateIngredient(ingredient.item_id, { quantity: e.target.value })} />
                             {rowError?.quantity ? <p className="text-xs font-bold text-brand-orange" role="alert">{rowError.quantity}</p> : null}
                           </Field>
                           <button className={btnOutlineSm} type="button" onClick={() => removeIngredient(ingredient.item_id)}>Remove</button>

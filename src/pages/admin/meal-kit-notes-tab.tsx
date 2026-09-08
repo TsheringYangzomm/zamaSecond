@@ -79,10 +79,11 @@ export function MealKitNotesTab() {
 
       {mealKits ? (
         <div className="grid gap-4">
-          <Field label="Select a meal kit" htmlFor="meal-kit-select">
+          <Field label="Select a meal kit" htmlFor="meal-kit-select" required>
             <select
               id="meal-kit-select"
               className={`${inputClasses} min-w-0`}
+              required
               value={selectedId}
               onChange={(event) => handleSelect(event.target.value)}
             >

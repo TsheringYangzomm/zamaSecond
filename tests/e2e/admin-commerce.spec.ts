@@ -110,7 +110,7 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
     customers: [sampleCustomer()],
     orders: [sampleOrder()],
     subscriptions: [sampleOrder({ id: "SUB-1", customer_id: "cus-karma", status: "active", items: [], total: 500, subscription: true })],
-    deliveries: [sampleOrder({ id: "DEL-1", customer_id: "cus-karma", status: "preparing", items: [], total: 0, delivery: true })],
+    deliveries: [{ id: "DEL-0200", order_id: "ZAM-2026-0200", customer_id: "cus-karma", area: "Thimphu", delivery_date: "2026-08-15", status: "preparing", driver: "Sangay" }],
     payments: [sampleOrder({ id: "PAY-1", customer_id: "cus-karma", status: "paid", items: [], total: 400, payment: true })],
     coupons: [{ id: "coupon-fresh-10", code: "FRESH10", title: "Fresh start", description: "Save 10% on fresh boxes.", discount_type: "percentage", discount_value: 10, maximum_discount_amount: 300, minimum_order_amount: 500, starts_at: "2026-01-01T00:00:00.000Z", expires_at: "2027-01-01T00:00:00.000Z", usage_limit: 100, per_customer_limit: 1, active: true, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }],
     coupon_product_targets: [],
@@ -222,12 +222,23 @@ test("orders tab lists, searches, and updates a live order", async ({ page }) =>
   const row = page.getByRole("row", { name: /ZAM-2026-0200/ });
   await expect(row).toBeVisible();
   await expect(row).toContainText("Pending");
+  await expect(row).toContainText("Preparing");
+  await expect(row).toContainText("15/08/26");
+  await expect(row).toContainText("Sangay");
 
-  await page.getByRole("row", { name: /ZAM-2026-0200/ }).getByRole("button", { name: "View" }).click();
+  await page.getByRole("row", { name: /ZAM-2026-0200/ }).getByRole("button", { name: "View details" }).click();
   await expect(page.getByRole("heading", { name: "Order ZAM-2026-0200" })).toBeVisible();
   await expect(page.getByText("Vegetable Box")).toBeVisible();
+  await expect(page.getByText("DEL-0200")).toBeVisible();
+  await expect(page.getByLabel("Delivery driver")).toHaveValue("Sangay");
+  await expect(page.getByLabel("Change delivery status")).toBeVisible();
 
-  const detailSelect = page.getByLabel("Change status");
+  await page.getByLabel("Change delivery status").selectOption("out_for_delivery");
+  await page.getByRole("alertdialog").getByRole("button", { name: "Update delivery" }).click();
+  await expect(page.getByRole("alertdialog")).toHaveCount(0);
+  await expect(page.getByText("Out For Delivery").first()).toBeVisible();
+
+  const detailSelect = page.getByLabel("Change order status");
   await detailSelect.selectOption("confirmed");
   await page.getByRole("alertdialog").getByRole("button", { name: "Update" }).click();
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
@@ -244,12 +255,11 @@ test("orders tab falls back to dev data with writes disabled", async ({ page }) 
 
   await page.getByRole("button", { name: "Orders" }).click();
   await expect(page.getByRole("row", { name: /ZAM-2026-0141/ })).toBeVisible();
-  const selects = page.getByLabel("Change status");
-  await expect(selects.first()).toBeDisabled();
 
-  await page.getByRole("row", { name: /ZAM-2026-0141/ }).getByRole("button", { name: "View" }).click();
+  await page.getByRole("row", { name: /ZAM-2026-0141/ }).getByRole("button", { name: "View details" }).click();
   await expect(page.getByRole("heading", { name: "Order ZAM-2026-0141" })).toBeVisible();
   await expect(page.getByText("Meal Kit Box")).toBeVisible();
+  await expect(page.getByLabel("Change order status")).toBeDisabled();
 });
 
 test("returns tab lists customer requests and refund details", async ({ page }) => {
@@ -272,8 +282,8 @@ test("orders table keeps actions visible and filters open by click", async ({ pa
   await page.getByRole("button", { name: "Orders", exact: true }).click();
   await expect(page.getByRole("columnheader", { name: "Order", exact: true })).toBeVisible();
   const firstOrder = page.getByRole("row", { name: /ZAM-2026-0200/ });
-  await expect(firstOrder.getByRole("button", { name: "View" })).toBeVisible();
-  await expect(firstOrder.getByLabel("Change status")).toBeVisible();
+  await expect(firstOrder.getByRole("button", { name: "View details" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Delivery status", exact: true })).toBeVisible();
 
   await page.locator('button[aria-haspopup="menu"]').filter({ hasText: "Payment" }).click();
   const paymentMenu = page.locator('[role="menu"]').filter({ hasText: "All payments" });
@@ -373,10 +383,19 @@ test("every admin section renders in dev mode without crashing", async ({ page }
   }
 
   await page.getByRole("button", { name: "Orders", exact: true }).click();
-  await page.getByRole("button", { name: /^Deliveries/ }).click();
-  await expect(page.getByRole("heading", { name: "Deliveries" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Deliveries/ })).toHaveCount(0);
   await page.getByRole("button", { name: /^Payments/ }).click();
   await expect(page.getByRole("heading", { name: "Payments" })).toBeVisible();
+});
+
+test("legacy delivery links open the unified orders workspace", async ({ page }) => {
+  await mockAdmin(page, { commerceLive: false });
+  await signInAsAdmin(page);
+
+  await page.goto("/#/admin?view=deliveries");
+  await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Deliveries/ })).toHaveCount(0);
 });
 
 test("sidebar collapses to an icon rail with tooltips and expands back", async ({ page }) => {

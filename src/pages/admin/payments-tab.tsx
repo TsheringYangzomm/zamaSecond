@@ -3,6 +3,7 @@ import { commerceStore } from "../../admin/commerce-api";
 import { paymentStatuses, type Payment, type PaymentStatus } from "../../admin/commerce-types";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";
+import { selectClasses } from "./admin-fields";
 import {
   CommerceError,
   CommerceLoading,
@@ -16,6 +17,9 @@ import {
 } from "./commerce-shared";
 
 type PendingChange = { payment: Payment; status: PaymentStatus };
+
+const paymentMethodOptions = ["Card", "COD", "Bank transfer", "Wallet"];
+const refundMethodOptions = ["Original Card", "Original COD", "Bank transfer", "Wallet credit", "Cash"];
 
 function returnMethod(payment: Payment): string {
   return payment.refund_method?.trim() || (payment.method ? `Original ${payment.method}` : "Not recorded");
@@ -399,21 +403,28 @@ export function PaymentsTab() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="grid gap-1.5 text-sm font-bold text-brand-green-ink">
                 Payment method
-                <input
-                  className="min-h-11 rounded-[14px] border-2 border-brand-forest bg-brand-white px-3 py-2 font-normal text-brand-black outline-none focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
+                <select
+                  className={selectClasses}
+                  required
                   value={methodDraft}
                   onChange={(event) => setMethodDraft(event.target.value)}
-                  placeholder="Card, COD, bank transfer..."
-                />
+                >
+                  <option value="">Select payment method</option>
+                  {paymentMethodOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  {methodDraft && !paymentMethodOptions.includes(methodDraft) ? <option value={methodDraft}>{methodDraft}</option> : null}
+                </select>
               </label>
               <label className="grid gap-1.5 text-sm font-bold text-brand-green-ink">
                 Return method
-                <input
-                  className="min-h-11 rounded-[14px] border-2 border-brand-forest bg-brand-white px-3 py-2 font-normal text-brand-black outline-none focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
+                <select
+                  className={selectClasses}
                   value={refundMethodDraft}
                   onChange={(event) => setRefundMethodDraft(event.target.value)}
-                  placeholder="Original Card, bank transfer..."
-                />
+                >
+                  <option value="">No refund method recorded</option>
+                  {refundMethodOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  {refundMethodDraft && !refundMethodOptions.includes(refundMethodDraft) ? <option value={refundMethodDraft}>{refundMethodDraft}</option> : null}
+                </select>
                 <span className="text-xs font-normal text-brand-black/56">Used when this payment is refunded.</span>
               </label>
             </div>

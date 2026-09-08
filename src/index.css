@@ -1,6 +1,23 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Keep native required controls visually consistent, including the small admin-only labels that do not use Field. */
+.admin-shell label:not(.admin-field-label):has(> input[required])::before,
+.admin-shell label:not(.admin-field-label):has(> select[required])::before,
+.admin-shell label:not(.admin-field-label):has(> textarea[required])::before,
+.admin-shell label:not(.admin-field-label):has(+ input[required])::after,
+.admin-shell label:not(.admin-field-label):has(+ select[required])::after,
+.admin-shell label:not(.admin-field-label):has(+ textarea[required])::after {
+  color: #dc2626;
+  content: "*";
+  font-weight: 900;
+  margin-inline: 0.2rem;
+}
+
+.required-mark::after {
+  content: "*";
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -224,7 +241,8 @@ body::before {
   transition: opacity 120ms ease, transform 120ms ease;
 }
 .nav-link:hover::after,
-.nav-link:focus-visible::after {
+.nav-link:focus-visible::after,
+.nav-link-active::after {
   opacity: 0.55;
   transform: rotate(-1deg) scaleX(1);
 }

@@ -48,7 +48,7 @@ export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel
   }, [open]);
 
   return (
-    <div className="group relative" ref={rootRef}>
+    <div className="relative" ref={rootRef}>
       <div className={`inline-flex items-center rounded-full border-2 text-xs font-bold uppercase tracking-[0.06em] transition-colors duration-120 ${hasActive ? "border-brand-forest bg-brand-forest text-brand-white" : "border-brand-forest/40 bg-brand-white text-brand-green-ink hover:border-brand-forest hover:bg-brand-warm-white"}`}>
         <button
           className="flex items-center gap-1 rounded-full border-0 bg-transparent px-3 py-1.5 font-bold uppercase tracking-[0.06em] outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
@@ -75,7 +75,7 @@ export function ColumnFilterDropdown({ label, options, value, onSelect, allLabel
           </button>
         ) : null}
       </div>
-      <div className={`${align === "right" ? "left-auto right-0" : "left-0"} absolute top-full z-20 -mt-1 max-h-72 w-max max-w-[min(20rem,calc(100vw-2rem))] min-w-40 overflow-y-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-2 shadow-brand transition-opacity duration-100 ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100"}`} role="menu">
+      <div className={`${align === "right" ? "left-auto right-0" : "left-0"} absolute top-full z-20 mt-2 max-h-72 w-max max-w-[min(20rem,calc(100vw-2rem))] min-w-40 overflow-y-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-2 shadow-brand transition-opacity duration-100 ${open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`} role="menu">
         {showSearch ? (
           <input
             className="mb-1 w-full rounded-lg border-2 border-brand-forest/25 bg-brand-warm-white px-2.5 py-1.5 text-xs font-semibold text-brand-black shadow-none outline-none placeholder:text-brand-black/44 focus-visible:border-brand-forest"

@@ -22,7 +22,7 @@ export function AdminLogin() {
   }
 
   return (
-    <section className="grid min-h-screen place-items-center px-4 py-10" aria-labelledby="admin-login-title">
+    <section className="admin-shell grid min-h-screen place-items-center px-4 py-10" aria-labelledby="admin-login-title">
       <div className="w-full max-w-105 rounded-[30px_40px_26px_36px/36px_26px_40px_30px] border-3 border-brand-forest bg-brand-warm-white p-6 shadow-brand-big sm:p-8">
         <div className="grid gap-2 text-center">
           <div className="flex justify-center"><span className="inline-flex rounded-full border-2 border-brand-forest bg-brand-yellow px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-black">Owner only</span></div>

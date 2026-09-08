@@ -37,6 +37,7 @@ import type { MembershipSnapshot } from "../membership/membership-types";
 import { useCart } from "../cart-context";
 import { useContent } from "../cms/content-context";
 import { inputClasses } from "../components/shop/auth-pane";
+import { AddToCartButton } from "../components/shop/product-cards";
 import { btnOutlineSm, btnPrimarySm } from "../components/ui/styles";
 import { isProductActive, productDetailHref, productPrice, type ShopProduct } from "../components/shop/shop-utils";
 
@@ -251,11 +252,11 @@ function ProductTile({ product, saved, onToggle, onAdd }: { product: ShopProduct
         <a className="truncate font-primary text-lg font-bold leading-tight text-brand-black hover:text-brand-green-ink" href={productDetailHref(product)}>{product.name}</a>
         <span className="text-sm font-bold text-brand-orange-ink">{productPrice(product)}</span>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-2">
         <button className="min-h-9 rounded-wobbly-md border-2 border-brand-forest/35 px-2 text-xs font-bold text-brand-green-ink hover:bg-brand-mint" type="button" aria-pressed={saved} onClick={onToggle}>
           <Heart className={`mr-1 inline h-3.5 w-3.5 ${saved ? "fill-brand-orange text-brand-orange-ink" : ""}`} />{saved ? "Saved" : "Save"}
         </button>
-        <button className="min-h-9 rounded-wobbly-md border-2 border-brand-forest bg-brand-forest px-2 text-xs font-bold text-brand-white hover:bg-brand-leaf" type="button" disabled={!isProductActive(product)} onClick={onAdd}>{isProductActive(product) ? "Add" : "Unavailable"}</button>
+        <AddToCartButton product={product} onAdd={() => onAdd()} />
       </div>
     </article>
   );

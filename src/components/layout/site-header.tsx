@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import { Handshake, LogIn, LogOut, TicketPercent, UserRound } from "lucide-react";
 import { useCart } from "../../cart-context";
 import { useContent } from "../../cms/content-context";
@@ -7,9 +7,20 @@ import { SmallOutlineLink, SmallPrimaryLink } from "../ui/action-link";
 import { ArrowIcon } from "../ui/icons";
 import { btnOutlineSm, btnPrimarySm, navLinkClass } from "../ui/styles";
 import { NotificationBell } from "./notification-bell";
+import { getRoute, setPendingSection } from "../../router";
 
 function navArrow(itemHref: string) {
   return itemHref.startsWith("#/") ? <ArrowIcon className="ml-1.5" /> : null;
+}
+
+function isNavItemActive(href: string, currentHash: string) {
+  const route = getRoute(currentHash);
+  if (href === "#/shop") return route === "shop" || route === "category" || route === "product" || route === "customize";
+  if (href === "#/farmers") return route === "farmers" || route === "farmer";
+  if (href === "#pricing") return route === "membership" || (route === "home" && currentHash === "#pricing");
+  if (href === "#meal-kits") return route === "meal-kit-trust" || (route === "home" && currentHash === "#meal-kits");
+  if (href === "#how-it-works") return route === "home" && currentHash === "#how-it-works";
+  return false;
 }
 
 const compactActionClass =
@@ -73,7 +84,7 @@ function CartButton({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function DesktopNav() {
+function DesktopNav({ currentHash }: { currentHash: string }) {
   const { blocks } = useContent();
   const { items: navItems } = blocks.nav;
 
@@ -83,7 +94,7 @@ function DesktopNav() {
       aria-label="Main navigation"
     >
       {navItems.map((item) => (
-        <a className={`${navLinkClass} shrink-0`} href={item.href} key={item.href}>
+        <a className={`${navLinkClass} shrink-0 ${isNavItemActive(item.href, currentHash) ? "nav-link-active" : ""}`} href={item.href} key={item.href} aria-current={isNavItemActive(item.href, currentHash) ? "page" : undefined}>
           {item.label}
           {navArrow(item.href)}
         </a>
@@ -92,7 +103,7 @@ function DesktopNav() {
   );
 }
 
-function MobileNav({ onSelect, onAuth, isOpen }: { onSelect: () => void; onAuth: () => void; isOpen: boolean }) {
+function MobileNav({ onSelect, onAuth, isOpen, currentHash }: { onSelect: () => void; onAuth: () => void; isOpen: boolean; currentHash: string }) {
   const { blocks } = useContent();
   const { items: navItems, partnerLabel } = blocks.nav;
   const { status, signOut } = useCustomerAuth();
@@ -108,7 +119,7 @@ function MobileNav({ onSelect, onAuth, isOpen }: { onSelect: () => void; onAuth:
       aria-label="Mobile navigation"
     >
       {navItems.map((item) => (
-        <a className={`${navLinkClass} text-[1.05rem]`} href={item.href} key={item.href} onClick={onSelect}>
+        <a className={`${navLinkClass} text-[1.05rem] ${isNavItemActive(item.href, currentHash) ? "nav-link-active" : ""}`} href={item.href} key={item.href} onClick={onSelect} aria-current={isNavItemActive(item.href, currentHash) ? "page" : undefined}>
           {item.label}
           {navArrow(item.href)}
         </a>
@@ -131,10 +142,26 @@ function MobileNav({ onSelect, onAuth, isOpen }: { onSelect: () => void; onAuth:
 
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentHash, setCurrentHash] = useState(() => window.location.hash);
   const { cartQuantity, openCart, openAuth } = useCart();
   const { status, signOut } = useCustomerAuth();
   const { blocks } = useContent();
   const { partnerLabel, joinLabel, joinShortLabel } = blocks.nav;
+  useEffect(() => {
+    const onHashChange = () => {
+      setCurrentHash(window.location.hash);
+      setMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
   const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const handleOpenCart = useCallback(() => {
@@ -149,11 +176,22 @@ export function SiteHeader() {
     closeMenu();
     void signOut();
   }, [closeMenu, signOut]);
+  const handleJoin = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const waitlist = document.getElementById("waitlist");
+    if (!waitlist) {
+      setPendingSection("waitlist");
+      window.location.hash = "#/";
+      return;
+    }
+    waitlist.scrollIntoView({ behavior: "smooth", block: "center" });
+    requestAnimationFrame(() => document.getElementById("email")?.focus({ preventScroll: true }));
+  }, []);
 
   return (
     <header className="site-header sticky top-0 z-20 w-full border-b-3 border-brand-forest">
       <div className="mx-auto grid min-w-0 w-full max-w-[90rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[clamp(0.75rem,2vw,1.5rem)] px-[clamp(0.75rem,2.2vw,2.75rem)] py-[0.6rem] sm:py-[0.7rem] lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-x-[clamp(0.75rem,1.4vw,1.75rem)]">
-        <a className="brand inline-flex shrink-0 items-center" href="#top" aria-label="Zama home">
+        <a className="brand inline-flex shrink-0 items-center" href="#/" aria-label="Zama home">
           <img
             className="h-14 w-[5.35rem] sm:h-16 sm:w-[6.1rem] xl:h-20 xl:w-[7.65rem]"
             src="assets/zama_logo.png"
@@ -163,7 +201,7 @@ export function SiteHeader() {
           />
         </a>
 
-        <DesktopNav />
+        <DesktopNav currentHash={currentHash} />
 
         <div className="header-actions hidden min-w-0 items-center justify-end gap-x-1.5 lg:flex xl:gap-x-2.5" aria-label="Primary actions">
           {status === "signed-in" ? (
@@ -181,7 +219,7 @@ export function SiteHeader() {
               <HeaderButtonAction label="Sign in" icon={LogIn} onClick={handleOpenAuth} />
             </>
           )}
-          <SmallPrimaryLink className="shrink-0 px-3 2xl:px-[0.9rem]" href="#waitlist">
+          <SmallPrimaryLink className="shrink-0 px-3 2xl:px-[0.9rem]" href="#waitlist" onClick={handleJoin}>
             <span className="2xl:hidden">{joinShortLabel}</span>
             <span className="hidden 2xl:inline">{joinLabel}</span>
           </SmallPrimaryLink>
@@ -189,7 +227,7 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center justify-end gap-[0.55rem] lg:hidden">
-          <SmallPrimaryLink className="px-3 text-[0.92rem]" href="#waitlist">
+          <SmallPrimaryLink className="px-3 text-[0.92rem]" href="#waitlist" onClick={handleJoin}>
             {joinShortLabel}
           </SmallPrimaryLink>
           {status === "signed-in" ? <NotificationBell compact /> : null}
@@ -226,7 +264,7 @@ export function SiteHeader() {
         aria-hidden={!menuOpen}
         inert={!menuOpen}
       >
-        <MobileNav onSelect={closeMenu} onAuth={handleOpenAuth} isOpen={menuOpen} />
+        <MobileNav onSelect={closeMenu} onAuth={handleOpenAuth} isOpen={menuOpen} currentHash={currentHash} />
       </div>
     </header>
   );

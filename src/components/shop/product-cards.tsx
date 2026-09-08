@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Heart } from "lucide-react";
+import { Check, Heart } from "lucide-react";
 import { fetchAccountRewards, toggleSavedItem } from "../../account-rewards/account-rewards-api";
 import { useCart } from "../../cart-context";
 import { useOptionalCustomerAuth } from "../../checkout/customer-auth";
@@ -23,6 +23,9 @@ export { AddToCartIcon };
 
 const saveButtonClasses =
   "inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-wobbly-md border-2 border-brand-forest/35 bg-brand-white px-3 py-2 text-sm font-bold text-brand-green-ink transition-colors hover:border-brand-forest hover:bg-brand-mint focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2";
+
+const quantityButtonClasses =
+  "grid h-10 w-10 touch-manipulation place-items-center rounded-wobbly-md font-bold text-brand-forest transition-colors hover:bg-brand-white focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
 
 export function WishlistButton({ product }: { product: ShopProduct }) {
   const auth = useOptionalCustomerAuth();
@@ -64,6 +67,25 @@ export function WishlistButton({ product }: { product: ShopProduct }) {
 }
 
 export function AddToCartButton({ product, onAdd }: { product: ShopProduct; onAdd: (product: ShopProduct) => void }) {
+  const { cart, changeCartQuantity } = useCart();
+  const quantity = cart[product.id] ?? 0;
+
+  if (quantity > 0) {
+    return (
+      <div className="grid gap-2" aria-label={`${product.name} cart controls`}>
+        <div className="flex items-center justify-between gap-2 rounded-wobbly-md border-2 border-brand-forest bg-brand-mint px-3 py-2 text-xs font-bold text-brand-green-ink" aria-live="polite">
+          <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4" strokeWidth={3} />Added to cart</span>
+          <span className="tabular-nums">{quantity} item{quantity === 1 ? "" : "s"}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-wobbly-md border-2 border-brand-forest bg-brand-yellow px-1.5 py-1">
+          <button className={quantityButtonClasses} type="button" disabled={quantity === 0} onClick={() => changeCartQuantity(product.id, -1)} aria-label={`Decrease ${product.name} quantity`}>−</button>
+          <span className="min-w-8 text-center font-bold tabular-nums text-brand-black" aria-label={`${quantity} ${product.name} in cart`}>{quantity}</span>
+          <button className={quantityButtonClasses} type="button" disabled={!isProductActive(product)} onClick={() => changeCartQuantity(product.id, 1)} aria-label={`Increase ${product.name} quantity`}>+</button>
+        </div>
+      </div>
+    );
+  }
+
   if (!isProductActive(product)) {
     return (
       <button className={`${btnPrimaryKit} w-full gap-2 cursor-not-allowed opacity-50`} type="button" disabled aria-label={`${product.name} is out of stock`}>

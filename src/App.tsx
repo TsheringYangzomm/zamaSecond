@@ -33,6 +33,19 @@ import { AdminAuthProvider } from "./admin/admin-auth";
 import { CustomerAuthProvider } from "./checkout/customer-auth";
 import { getCategoryFromHash, getFarmerId, getProductId, getRoute, setPendingSection, takePendingSection } from "./router";
 
+function scrollToSection(targetId: string) {
+  const target = document.getElementById(targetId);
+  if (!target) return false;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (target instanceof HTMLElement && target.tabIndex >= 0) {
+    target.focus({ preventScroll: true });
+  }
+  if (targetId === "waitlist") {
+    requestAnimationFrame(() => document.getElementById("email")?.focus({ preventScroll: true }));
+  }
+  return true;
+}
+
 function App() {
   const [hash, setHash] = useState(window.location.hash);
   const route = getRoute(hash);
@@ -62,19 +75,25 @@ function App() {
     if (route !== "home") return;
     const target = takePendingSection();
     if (!target) return;
-    const frame = requestAnimationFrame(() => document.getElementById(target)?.scrollIntoView());
+    const frame = requestAnimationFrame(() => scrollToSection(target));
     return () => cancelAnimationFrame(frame);
   }, [route]);
 
   useEffect(() => {
-    if (route === "home") return;
     const onClick = (event: MouseEvent) => {
+      if (event.defaultPrevented) return;
       const anchor = (event.target as Element | null)?.closest?.('a[href^="#"]');
       if (!(anchor instanceof HTMLAnchorElement)) return;
       const href = anchor.getAttribute("href") ?? "";
       if (href.startsWith("#/")) return;
-      const targetId = href.replace(/^#/, "");
-      if (!targetId || document.getElementById(targetId)) return;
+      const targetId = decodeURIComponent(href.replace(/^#/, ""));
+      if (!targetId) return;
+      if (document.getElementById(targetId)) {
+        event.preventDefault();
+        scrollToSection(targetId);
+        return;
+      }
+      if (route === "home") return;
       event.preventDefault();
       setPendingSection(targetId);
       window.location.hash = "#/";

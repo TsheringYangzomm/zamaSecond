@@ -128,7 +128,7 @@ export function FarmerForm({ initial, privateInfo, storyInfo, privateEnabled, st
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label={<>Name <span className="text-brand-orange">*</span></>} htmlFor="farmer-name"><TextInput id="farmer-name" required value={draft.name} onChange={(e) => set("name", e.target.value)} /></Field>
+        <Field label="Name" htmlFor="farmer-name" required><TextInput id="farmer-name" required value={draft.name} onChange={(e) => set("name", e.target.value)} /></Field>
         <Field label="Location" htmlFor="farmer-location" hint="e.g. Paro, Bhutan"><TextInput id="farmer-location" value={draft.location} onChange={(e) => set("location", e.target.value)} /></Field>
         <Field label="Dzongkhag" htmlFor="farmer-dzongkhag">
           <select id="farmer-dzongkhag" className="min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20" value={draft.dzongkhag} onChange={(e) => set("dzongkhag", e.target.value)}>

@@ -77,6 +77,8 @@ export const commonProductFieldDefs: ProductFieldDef[] = [
     label: "Price unit",
     hint: "e.g. / box, / 500g",
     column: "price_unit",
+    type: "select",
+    options: ["per box", "per kit", "per basket", "per piece", "per bunch", "per kg", "per 500g", "per pack"],
     section: "pricing",
   },
   {
@@ -84,6 +86,8 @@ export const commonProductFieldDefs: ProductFieldDef[] = [
     label: "Availability status",
     hint: "e.g. In stock, Pre-order, or Sold out for the season.",
     column: "availability",
+    type: "select",
+    options: ["In stock", "In season", "Seasonal", "Pre-order", "Coming soon", "Sold out"],
     section: "availability",
   },
   {

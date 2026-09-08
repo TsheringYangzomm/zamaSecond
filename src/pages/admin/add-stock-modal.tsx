@@ -199,6 +199,7 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
               ref={productRef}
               id="add-stock-product"
               className={selectClasses}
+              required
               value={productName}
               onChange={(event) => handleProductChange(event.target.value)}
             >
@@ -215,19 +216,20 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
                     id="add-stock-new-product"
                     className={inputClasses}
                     type="text"
+                    required
                     value={newProductName}
                     onChange={(event) => setNewProductName(event.target.value)}
                     placeholder="e.g., Onion"
                   />
                 </div>
-                <Field label="Category" htmlFor="add-stock-category">
-                  <select id="add-stock-category" className={selectClasses} value={category} onChange={(event) => setCategory(event.target.value)}>
+                <Field label="Category" htmlFor="add-stock-category" required>
+                  <select id="add-stock-category" className={selectClasses} required value={category} onChange={(event) => setCategory(event.target.value)}>
                     <option value="">Select category</option>
                     {categories.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </Field>
-                <Field label="Unit" htmlFor="add-stock-unit">
-                  <select id="add-stock-unit" className={selectClasses} value={unit} onChange={(event) => setUnit(event.target.value)}>
+                <Field label="Unit" htmlFor="add-stock-unit" required>
+                  <select id="add-stock-unit" className={selectClasses} required value={unit} onChange={(event) => setUnit(event.target.value)}>
                     <option value="">Select unit</option>
                     {units.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
@@ -238,7 +240,7 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
 
           <div className="grid gap-1.5 sm:col-span-2">
             <label htmlFor="add-stock-supplier" className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Supplier / Farmer</label>
-            <select id="add-stock-supplier" className={selectClasses} value={supplier} onChange={(event) => handleSupplierChange(event.target.value)}>
+            <select id="add-stock-supplier" className={selectClasses} required value={supplier} onChange={(event) => handleSupplierChange(event.target.value)}>
               <option value="">Select supplier</option>
               {farmers.map((farmer) => <option key={farmer.id} value={farmer.name}>{farmer.name}</option>)}
               <option value={NEW_OPTION}>+ Add a new farmer…</option>
@@ -251,6 +253,7 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
                   id="add-stock-new-supplier"
                   className={inputClasses}
                   type="text"
+                  required
                   value={newSupplierName}
                   onChange={(event) => setNewSupplierName(event.target.value)}
                   placeholder="e.g., Tashi Dorji"
@@ -260,7 +263,7 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
             ) : null}
           </div>
 
-          <Field label="Quantity received" htmlFor="add-stock-quantity">
+          <Field label="Quantity received" htmlFor="add-stock-quantity" required>
             <input
               id="add-stock-quantity"
               className={inputClasses}
@@ -268,17 +271,19 @@ export function AddStockModal({ open, items, farmers, product = null, adminEmail
               min="0"
               step="any"
               inputMode="decimal"
+              required
               value={quantity}
               onChange={(event) => setQuantity(event.target.value)}
               placeholder="e.g., 25"
             />
           </Field>
 
-          <Field label="Received date" htmlFor="add-stock-date">
+          <Field label="Received date" htmlFor="add-stock-date" required>
             <input
               id="add-stock-date"
               className={inputClasses}
               type="date"
+              required
               value={receivedDate}
               onChange={(event) => setReceivedDate(event.target.value)}
             />

@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, MouseEventHandler, ReactNode } from "react";
 import { btnOutlineLg, btnOutlineSm, btnPrimaryLg, btnPrimarySm } from "./styles";
 import { ArrowIcon } from "./icons";
 
@@ -6,7 +6,7 @@ export type ActionLinkProps = {
   children: ReactNode;
   href: string;
   className?: string;
-  onClick?: () => void;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
 };
 
 export function ActionLink({ children, href, className, onClick }: ActionLinkProps) {

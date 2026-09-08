@@ -153,20 +153,21 @@ export function useCommerceStore(): CommerceLoadState {
   return state;
 }
 
-export function StatusChangeSelect({ value, options, writable, busy, onChange, compact = false }: {
+export function StatusChangeSelect({ value, options, writable, busy, onChange, compact = false, ariaLabel = "Change status" }: {
   value: string;
   options: readonly string[];
   writable: boolean;
   busy: boolean;
   onChange: (next: string) => void;
   compact?: boolean;
+  ariaLabel?: string;
 }) {
   return (
     <select
       className={`${compact ? "min-h-8 w-24 min-w-0 max-w-full px-1.5 text-[0.65rem]" : "min-h-10 min-w-36 px-3 text-xs"} rounded-full border-2 border-brand-forest bg-brand-white py-1 font-bold text-brand-black outline-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-55`}
       value={value}
       disabled={!writable || busy}
-      aria-label="Change status"
+      aria-label={ariaLabel}
       onChange={(event) => onChange(event.target.value)}
     >
       {options.map((option) => (

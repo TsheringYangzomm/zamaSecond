@@ -117,6 +117,12 @@ function AdminShell() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
+  const selectTab = (nextTab: AdminTab) => {
+    const nextHash = `#/admin?tab=${encodeURIComponent(nextTab)}`;
+    if (window.location.hash === nextHash) return;
+    window.location.hash = nextHash;
+  };
+
   return (
     <SidebarProvider className="flex min-h-svh w-full flex-col">
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b-4 border-brand-forest bg-brand-yellow px-4 sm:px-6 lg:px-8">
@@ -135,12 +141,12 @@ function AdminShell() {
         <AdminSidebar
           className="top-16! h-[calc(100svh-4rem)]!"
           tab={tab}
-          onSelect={setTab}
+          onSelect={selectTab}
           email={email}
           onSignOut={() => void signOut()}
         />
         <SidebarInset className="min-w-0">
-          <main className="px-4 py-8 sm:px-6 lg:px-10">
+          <main className="admin-shell px-4 py-8 sm:px-6 lg:px-10">
             {tab === "overview" ? <OverviewTab /> : null}
             {tab === "orders" ? <OrdersTab /> : null}
             {tab === "products" ? <ProductsTab /> : null}
@@ -177,7 +183,7 @@ function AdminSidebar({
   onSignOut: () => void;
   className?: string;
 }) {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
 
   return (
     <Sidebar
@@ -201,7 +207,10 @@ function AdminSidebar({
                     <SidebarMenuButton
                       isActive={tab === key}
                       tooltip={label}
-                      onClick={() => onSelect(key)}
+                      onClick={() => {
+                        onSelect(key);
+                        if (isMobile) setOpenMobile(false);
+                      }}
                       aria-current={tab === key ? "page" : undefined}
                       className={tab === key ? "bg-brand-yellow/20! text-brand-warm-white!" : ""}
                     >
