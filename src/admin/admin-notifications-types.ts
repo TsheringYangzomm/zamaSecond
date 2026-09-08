@@ -5,6 +5,7 @@ export type AdminNotificationType =
   | "return_requested"
   | "review_submitted"
   | "message_received"
+  | "partnership_request_received"
   | "points_redemption_requested"
   | "withdrawal_requested"
   | "customer_created"

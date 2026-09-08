@@ -11,6 +11,7 @@ const topicLabels: Record<string, string> = {
   question: "Question",
   feedback: "Feedback",
   support: "Support",
+  partnership: "Partnership",
 };
 
 export function MessagesTab() {

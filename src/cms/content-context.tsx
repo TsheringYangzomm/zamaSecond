@@ -451,6 +451,16 @@ function mergeContent(
         },
       };
     }
+
+    if (remote.blocks.partnership) {
+      mergedBlocks = {
+        ...mergedBlocks,
+        partnership: {
+          ...base.blocks.partnership,
+          ...remote.blocks.partnership,
+        },
+      };
+    }
   }
 
   return {

@@ -30,6 +30,12 @@ import { blankFarmer, blankFarmerPrivateInfo, blankFarmerSeasonalUpdate, blankFa
 import { FarmerDetail } from "./farmer-detail";
 import { useRowDragSort } from "./use-row-drag";
 
+function farmerIdFromHash(): string | null {
+  if (typeof window === "undefined") return null;
+  const query = window.location.hash.split("?")[1] ?? "";
+  return new URLSearchParams(query).get("farmer");
+}
+
 export function FarmersTab() {
   const [farmers, setFarmers] = useState<FarmerRow[] | null>(null);
   const [products, setProducts] = useState<ProductRow[]>([]);
@@ -92,6 +98,11 @@ export function FarmersTab() {
       const [farmerRows, productRows] = await Promise.all([listFarmers(), listProducts()]);
       setFarmers(farmerRows);
       setProducts(productRows);
+      const requestedFarmerId = farmerIdFromHash();
+      if (requestedFarmerId) {
+        const requestedFarmer = farmerRows.find((row) => row.id === requestedFarmerId);
+        if (requestedFarmer) setSelected(requestedFarmer);
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Could not load farmers.");
     }

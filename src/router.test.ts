@@ -11,4 +11,8 @@ describe("routing", () => {
     expect(getRoute("#/account/membership")).toBe("account-membership");
     expect(getRoute("#/account/membership?source=account")).toBe("account-membership");
   });
+
+  it("opens the dedicated partnership enquiry page", () => {
+    expect(getRoute("#/partnership")).toBe("partnership");
+  });
 });

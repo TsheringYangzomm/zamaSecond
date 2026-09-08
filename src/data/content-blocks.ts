@@ -13,6 +13,8 @@ import {
 } from "./landing";
 
 import type { ProductCategory } from "../components/shop/shop-utils";
+import { createDefaultPartnershipPageSettings } from "../partnerships/partnership-defaults";
+import type { PartnershipPageSettings } from "../partnerships/partnership-types";
 
 export type NavItem = { label: string; href: string };
 export type FeatureItem = (typeof featureItems)[number];
@@ -29,6 +31,7 @@ export type PolicyItem = (typeof policyItems)[number];
 export type FooterLink = { label: string; href: string };
 
 export type ContentBlocks = {
+  partnership: PartnershipPageSettings;
   nav: {
     items: readonly NavItem[];
     partnerLabel: string;
@@ -248,6 +251,7 @@ type CategoryPageContent = {
 };
 
 export const defaultBlocks: ContentBlocks = {
+  partnership: createDefaultPartnershipPageSettings(),
   nav: {
     items: navItems,
     partnerLabel: "Partner with us",
@@ -286,7 +290,7 @@ export const defaultBlocks: ContentBlocks = {
     supportTitle: "Support",
     supportLinks: [
       { label: "How it Works", href: "#how-it-works" },
-      { label: "Farm Partnership", href: "#b2b" },
+      { label: "Farm Partnership", href: "#/partnership" },
       { label: "Delivery Areas", href: "#delivery" },
       { label: "Contact Us", href: "#/contact" },
       { label: "Privacy Policy", href: "#privacy-policy" },

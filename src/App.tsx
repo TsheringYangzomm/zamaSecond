@@ -14,6 +14,7 @@ import { MealKitsSection } from "./sections/meal-kits/meal-kits-section";
 import { PricingSection } from "./sections/pricing/pricing-section";
 import { ProcessSection } from "./sections/process/process-section";
 import { ContactPage } from "./pages/contact-page";
+import { PartnershipPage } from "./pages/partnership-page";
 import { ShopPage } from "./pages/shop-page";
 import { ProductPage } from "./pages/product-page";
 import { CustomizeBoxPage } from "./pages/customize-box-page";
@@ -99,6 +100,10 @@ function App() {
       {route === "contact" ? (
         <main id="top" tabIndex={-1}>
           <ContactPage />
+        </main>
+      ) : route === "partnership" ? (
+        <main id="top" tabIndex={-1}>
+          <PartnershipPage />
         </main>
       ) : route === "farmers" ? (
         <main id="top" tabIndex={-1}>

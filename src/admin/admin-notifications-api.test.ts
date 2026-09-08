@@ -51,4 +51,19 @@ describe("admin notifications development fallback", () => {
     await markAllAdminNotificationsRead("second@zama.bt");
     expect((await fetchAdminNotifications("second@zama.bt"))[0].readAt).not.toBeNull();
   });
+
+  it("supports a partnership request notification routed to the pipeline", async () => {
+    recordDevAdminNotification({
+      type: "partnership_request_received",
+      title: "New partnership request",
+      message: "Pema Farm submitted a partnership request.",
+      link: "#/admin?tab=partnerships",
+    });
+
+    const [notification] = await fetchAdminNotifications("admin@zama.bt");
+    expect(notification).toMatchObject({
+      type: "partnership_request_received",
+      link: "#/admin?tab=partnerships",
+    });
+  });
 });

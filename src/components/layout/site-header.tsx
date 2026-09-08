@@ -113,7 +113,7 @@ function MobileNav({ onSelect, onAuth, isOpen }: { onSelect: () => void; onAuth:
           {navArrow(item.href)}
         </a>
       ))}
-      <SmallOutlineLink className="mt-1 w-full" href="#b2b" onClick={onSelect}>
+      <SmallOutlineLink className="mt-1 w-full" href="#/partnership" onClick={onSelect}>
         {partnerLabel}
       </SmallOutlineLink>
       {status === "signed-in" ? (
@@ -171,13 +171,13 @@ export function SiteHeader() {
               <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
               <HeaderLinkAction href="#/account" label="My account" icon={UserRound} />
               <NotificationBell />
-              <HeaderLinkAction href="#b2b" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} arrow />
               <HeaderButtonAction label="Sign out" icon={LogOut} onClick={handleSignOut} />
             </>
           ) : (
             <>
               <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
-              <HeaderLinkAction href="#b2b" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} arrow />
               <HeaderButtonAction label="Sign in" icon={LogIn} onClick={handleOpenAuth} />
             </>
           )}

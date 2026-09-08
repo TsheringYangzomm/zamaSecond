@@ -176,7 +176,7 @@ export function LaunchDetailsSection() {
             <h2 id="b2b-title" className={`${sectionTitle} max-w-190 text-brand-forest`}>{launch.b2bHeading}</h2>
             <p className="max-w-170 text-[1.05rem] text-brand-black/72">{launch.b2bCopy}</p>
             <div>
-              <PrimaryLink href="#/contact">{launch.b2bCtaLabel}</PrimaryLink>
+              <PrimaryLink href="#/partnership">{launch.b2bCtaLabel}</PrimaryLink>
             </div>
           </div>
           <aside className="postcard-stamp relative z-[1] grid justify-items-center gap-3 rotate-[2deg] rounded-wobbly-card border-3 border-dashed border-brand-forest bg-brand-warm-white p-5 text-center shadow-brand">

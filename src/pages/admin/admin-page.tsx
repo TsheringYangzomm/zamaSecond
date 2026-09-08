@@ -4,6 +4,7 @@ import {
   Boxes,
   ClipboardList,
   FileText,
+  Handshake,
   LayoutDashboard,
   ListChecks,
   LogOut,
@@ -33,6 +34,7 @@ import { SubscriptionsTab } from "./subscriptions-tab";
 import { MessagesTab } from "./messages-tab";
 import { CouponsTab } from "./coupons-tab";
 import { AccountsRewardsTab } from "./accounts-rewards-tab";
+import { PartnershipsTab } from "./partnerships-tab";
 import { AdminNotificationBell } from "./admin-notification-bell";
 import {
   Sidebar,
@@ -53,9 +55,9 @@ import {
 } from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
 
-type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "coupons" | "farmers" | "dieticians" | "customers" | "accounts-rewards" | "waitlist" | "reviews" | "messages" | "subscriptions" | "content";
+type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "coupons" | "farmers" | "partnerships" | "dieticians" | "customers" | "accounts-rewards" | "waitlist" | "reviews" | "messages" | "subscriptions" | "content";
 
-const adminTabs: AdminTab[] = ["overview", "orders", "products", "inventory", "meal-kit-notes", "coupons", "farmers", "dieticians", "customers", "accounts-rewards", "waitlist", "reviews", "messages", "subscriptions", "content"];
+const adminTabs: AdminTab[] = ["overview", "orders", "products", "inventory", "meal-kit-notes", "coupons", "farmers", "partnerships", "dieticians", "customers", "accounts-rewards", "waitlist", "reviews", "messages", "subscriptions", "content"];
 
 function tabFromHash(): AdminTab {
   if (typeof window === "undefined") return "overview";
@@ -82,6 +84,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "People",
     items: [
       { key: "farmers", label: "Farmers", icon: <Sprout /> },
+      { key: "partnerships", label: "Partnerships", icon: <Handshake /> },
       { key: "dieticians", label: "Dieticians", icon: <Apple /> },
       { key: "customers", label: "Customers", icon: <Users /> },
       { key: "accounts-rewards", label: "Accounts & rewards", icon: <Sparkles /> },
@@ -145,6 +148,7 @@ function AdminShell() {
             {tab === "meal-kit-notes" ? <MealKitNotesTab /> : null}
             {tab === "coupons" ? <CouponsTab /> : null}
             {tab === "farmers" ? <FarmersTab /> : null}
+            {tab === "partnerships" ? <PartnershipsTab /> : null}
             {tab === "dieticians" ? <DieticiansTab /> : null}
             {tab === "customers" ? <CustomersTab /> : null}
             {tab === "accounts-rewards" ? <AccountsRewardsTab /> : null}
