@@ -7,7 +7,7 @@ import { cadenceLabel } from "../membership/membership-rules";
 import type { MembershipPlan } from "../membership/membership-types";
 import { PrimaryButton } from "../components/ui/action-link";
 import { OutlineTag } from "../components/ui/tag";
-import { btnPrimaryLg, sectionShell, sectionTitle } from "../components/ui/styles";
+import { btnOutlineLg, btnPrimaryLg, sectionShell, sectionTitle } from "../components/ui/styles";
 import { submitMembershipInterest } from "../launch-interest";
 
 const launchPreviewBenefits = [

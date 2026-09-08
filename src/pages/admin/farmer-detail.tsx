@@ -174,7 +174,7 @@ export function FarmerDetail({
         </p>
       ) : null}
 
-      <SectionCard title="Farmer profile">
+      <SectionCard title="Farmer profile" tone="main">
         <div className="grid gap-5 lg:grid-cols-[minmax(190px,0.38fr)_minmax(0,1fr)] lg:items-start">
           <div className="grid gap-2">
             <img className="h-60 w-full rounded-wobbly-md border-3 border-brand-forest/30 bg-brand-warm-white object-cover shadow-brand-soft" src={farmer.image || "/assets/farmer.webp"} alt={farmer.name} />

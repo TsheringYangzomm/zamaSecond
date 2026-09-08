@@ -1,6 +1,4 @@
-import { shopProducts } from "../../data/landing";
-
-export { shopProducts };
+import { shopProducts as landingShopProducts } from "../../data/landing";
 
 export type ProductCategory = "Vegetables" | "Fruits" | "Meal kits" | "Groceries" | "Custom boxes";
 
@@ -46,6 +44,8 @@ export type ShopProduct = {
   trustAllergens?: readonly string[];
   sourcing?: string;
 };
+
+export const shopProducts: readonly ShopProduct[] = landingShopProducts;
 
 export function isProductActive(product: ShopProduct): boolean {
   return product.active !== false;

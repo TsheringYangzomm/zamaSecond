@@ -163,6 +163,8 @@ export type DieticianRow = {
   image: string;
   bio: string;
   qualifications: string;
+  consultant_note: string;
+  dietician_note: string;
   meal_kit_notes: string;
   sort_order: number;
   published: boolean;

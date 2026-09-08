@@ -11,6 +11,8 @@ export type Dietician = {
   image?: string;
   bio: string;
   qualifications: string[];
+  consultantNote?: string;
+  dieticianNote?: string;
   /**
    * Notes this dietician wrote for specific meal kits.
    * Each entry selects a meal kit and holds its consultant

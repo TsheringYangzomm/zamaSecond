@@ -3,7 +3,7 @@ import type { Customer, Order } from "../admin/commerce-types";
 import { recordDevAdminNotification } from "../admin/admin-notifications-api";
 import { previewCoupon, recordDevRedemption } from "../coupons/coupons-api";
 import type { CouponErrorCode } from "../coupons/coupon-types";
-import { shopProducts } from "../data/landing";
+import { shopProducts } from "../components/shop/shop-utils";
 import { chooseBestDiscount, isMemberEarlyAccessWindow, membershipDiscount } from "../membership/membership-rules";
 
 export type CustomerProfile = {

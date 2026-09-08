@@ -71,6 +71,8 @@ export function mapDieticianRow(row: DieticianRow): Dietician {
     title: row.title,
     image: row.image || undefined,
     bio: row.bio,
+    consultantNote: row.consultant_note,
+    dieticianNote: row.dietician_note,
     qualifications,
     mealKitNotes: parseMealKitNotes(row.meal_kit_notes),
     sortOrder: row.sort_order,

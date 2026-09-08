@@ -3,7 +3,7 @@ import { createDevMembershipCycleOrder, getDevCustomerByEmail, getDevCustomers, 
 import type { Customer } from "../admin/commerce-types";
 import { recordDevAdminNotification } from "../admin/admin-notifications-api";
 import { createDevCustomerNotification } from "../returns/returns-notifications-api";
-import { shopProducts } from "../data/landing";
+import { shopProducts } from "../components/shop/shop-utils";
 import { commerceDevData } from "../data/commerce-dev";
 import {
   defaultMembershipDeliveryTiers,

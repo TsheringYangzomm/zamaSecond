@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { deleteContactMessage, listContactMessages, type ContactMessageRow } from "../../admin/admin-api";
+import { deleteContactMessage, listContactMessages } from "../../admin/admin-api";
+import type { ContactMessageRow } from "../../cms/types";
 import { sendAdminReply } from "../../contact";
 import { btnOutlineSm } from "../../components/ui/styles";
 import { ConfirmDialog } from "../../components/ui/confirm-dialog";

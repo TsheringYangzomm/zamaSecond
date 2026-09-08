@@ -89,8 +89,10 @@ export function FarmersTab() {
   async function load() {
     setFarmers(null);
     setError(null);
+    let loadedFarmers: FarmerRow[] | null = null;
     try {
       const [farmerRows, productRows] = await Promise.all([listFarmers(), listProducts()]);
+      loadedFarmers = farmerRows;
       setFarmers(farmerRows);
       setProducts(productRows);
       const requestedFarmerId = farmerIdFromHash();
@@ -136,7 +138,7 @@ export function FarmersTab() {
     }
     setSelected((current) => {
       if (!current) return current;
-      const latest = farmerRows?.find((row) => row.id === current.id);
+      const latest = loadedFarmers?.find((row) => row.id === current.id);
       return latest ?? current;
     });
   }

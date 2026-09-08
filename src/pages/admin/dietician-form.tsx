@@ -13,6 +13,7 @@ export function blankDietician(id: string): DieticianRow {
     qualifications: "",
     consultant_note: "",
     dietician_note: "",
+    meal_kit_notes: "[]",
     sort_order: 0,
     published: true,
   };

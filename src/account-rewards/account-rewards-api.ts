@@ -1,6 +1,6 @@
 import { getSupabaseClient } from "../supabase";
 import { recordDevAdminNotification } from "../admin/admin-notifications-api";
-import { getDevCustomerByEmail, getDevCustomers, loadDevOrders } from "../checkout/checkout-api";
+import { getDevCustomerByEmail, getDevCustomers } from "../checkout/checkout-api";
 import { loadCustomerPreferences } from "../account-preferences";
 import { checkoutPointsPreview } from "../checkout/checkout-points";
 import { checkInStreak, isValidRedemption, maskAccountNumber, walletBalance } from "./account-rewards-rules";
@@ -321,9 +321,6 @@ export async function recordSavedItem(email: string, productId: string, kind: Sa
     }
   }
   const snapshot = devSnapshot(email);
-  const order = loadDevOrders().find((candidate) => candidate.id === orderId && candidate.customer_id === snapshot.customerId);
-  if (!order || order.status !== "delivered") throw new Error("Reviews are available after an order is delivered.");
-  if (snapshot.reviews.some((item) => item.orderId === orderId)) throw new Error("This order has already been reviewed.");
   const now = new Date().toISOString();
   snapshot.savedItems = [{ customerId: snapshot.customerId, productId, kind, createdAt: now, updatedAt: now }, ...snapshot.savedItems.filter((item) => !(item.productId === productId && item.kind === kind))].slice(0, kind === "history" ? 12 : 100);
   saveDevSnapshot(snapshot);
@@ -581,7 +578,7 @@ export async function reviewWithdrawal(id: string, action: "approve" | "reject" 
     withdrawal.reviewedAt = new Date().toISOString();
     withdrawal.reviewedBy = adminEmail;
     if (action === "paid") snapshot.walletLedger = snapshot.walletLedger.map((entry) => entry.sourceId === withdrawal.id && entry.type === "hold" ? { ...entry, description: "Bank withdrawal paid", createdBy: adminEmail } : entry);
-    if (action === "rejected") snapshot.walletLedger = [...snapshot.walletLedger, { id: `wallet-${Date.now()}`, customerId: snapshot.customerId, type: "release", amount: withdrawal.amount, source: "wallet_withdrawal", sourceId: withdrawal.id, description: "Rejected withdrawal released", status: "completed", createdAt: new Date().toISOString(), createdBy: adminEmail }];
+    if (action === "reject") snapshot.walletLedger = [...snapshot.walletLedger, { id: `wallet-${Date.now()}`, customerId: snapshot.customerId, type: "release", amount: withdrawal.amount, source: "wallet_withdrawal", sourceId: withdrawal.id, description: "Rejected withdrawal released", status: "completed", createdAt: new Date().toISOString(), createdBy: adminEmail }];
     snapshot.walletBalance = walletBalance(snapshot.walletLedger);
     saveDevSnapshot(snapshot);
     return;
