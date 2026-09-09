@@ -1,0 +1,271 @@
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import { Handshake, LogOut, TicketPercent, UserRound, UserRoundPlus } from "lucide-react";
+import { useCart } from "../../cart-context";
+import { useContent } from "../../cms/content-context";
+import { useCustomerAuth } from "../../checkout/customer-auth";
+import { SmallOutlineLink, SmallPrimaryLink } from "../ui/action-link";
+import { ArrowIcon } from "../ui/icons";
+import { btnOutlineSm, btnPrimarySm, navLinkClass } from "../ui/styles";
+import { NotificationBell } from "./notification-bell";
+import { getRoute, setPendingSection } from "../../router";
+
+function navArrow(itemHref: string) {
+  return itemHref.startsWith("#/") ? <ArrowIcon className="ml-1.5" /> : null;
+}
+
+function isNavItemActive(href: string, currentHash: string) {
+  const route = getRoute(currentHash);
+  if (href === "#/shop") return route === "shop" || route === "category" || route === "product" || route === "customize";
+  if (href === "#/farmers") return route === "farmers" || route === "farmer";
+  if (href === "#pricing") return route === "membership" || (route === "home" && currentHash === "#pricing");
+  if (href === "#meal-kits") return route === "meal-kit-trust" || (route === "home" && currentHash === "#meal-kits");
+  if (href === "#how-it-works") return route === "home" && currentHash === "#how-it-works";
+  return false;
+}
+
+const compactActionClass =
+  "inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-2 border-brand-forest/20 bg-brand-white/65 px-2.5 font-secondary font-bold text-brand-forest transition-[background-color,color,box-shadow] duration-120 ease-in-out hover:bg-brand-mint hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4 2xl:rounded-none 2xl:border-0 2xl:bg-transparent 2xl:px-1.5";
+
+type HeaderActionProps = {
+  label: string;
+  icon: typeof TicketPercent;
+};
+
+function HeaderLinkAction({ href, label, icon: Icon, arrow = false }: HeaderActionProps & { href: string; arrow?: boolean }) {
+  return (
+    <a className={compactActionClass} href={href} aria-label={label} title={label}>
+      <Icon className="h-4.5 w-4.5 2xl:hidden" aria-hidden="true" />
+      <span className="hidden whitespace-nowrap 2xl:inline">{label}</span>
+      {arrow ? <ArrowIcon className="hidden h-4 w-4 2xl:inline-flex" /> : null}
+    </a>
+  );
+}
+
+function HeaderButtonAction({ label, icon: Icon, onClick }: HeaderActionProps & { onClick: () => void }) {
+  return (
+    <button className={compactActionClass} type="button" onClick={onClick} aria-label={label} title={label}>
+      <Icon className="h-4.5 w-4.5 2xl:hidden" aria-hidden="true" />
+      <span className="hidden whitespace-nowrap 2xl:inline">{label}</span>
+    </button>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 4h2.2l1.55 10.05a2 2 0 0 0 1.98 1.7h8.84a2 2 0 0 0 1.94-1.5L21 8H6.05" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 20h.01M18 20h.01" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CartButton({ onOpen }: { onOpen: () => void }) {
+  const { cartQuantity, isCartOpen } = useCart();
+
+  return (
+    <button
+      type="button"
+      className="relative grid h-12 w-12 shrink-0 -translate-y-1 -rotate-1 touch-manipulation place-items-center rounded-[46%_54%_45%_55%/54%_44%_56%_46%] border-3 border-brand-forest bg-brand-yellow text-brand-forest shadow-brand-hover transition-[background-color,box-shadow,transform] duration-120 ease-in-out hover:bg-brand-white active:translate-y-0 active:rotate-0 active:shadow-brand-tight focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4"
+      aria-label={`Open cart, ${cartQuantity} item${cartQuantity === 1 ? "" : "s"}`}
+      aria-controls="cart-drawer"
+      aria-expanded={isCartOpen}
+      aria-haspopup="dialog"
+      onClick={onOpen}
+    >
+      <CartIcon />
+      <span
+        className="cart-count-badge absolute -right-1.5 -top-2 grid min-h-5 min-w-5 place-items-center rounded-full border-2 border-brand-forest bg-brand-orange px-1 text-[0.68rem] font-bold leading-none text-brand-white"
+        key={cartQuantity}
+        aria-hidden="true"
+      >
+        {cartQuantity > 99 ? "99+" : cartQuantity}
+      </span>
+    </button>
+  );
+}
+
+function DesktopNav({ currentHash }: { currentHash: string }) {
+  const { blocks } = useContent();
+  const { items: navItems } = blocks.nav;
+
+  return (
+    <nav
+      className="site-nav hidden min-w-0 lg:flex lg:items-center lg:justify-start lg:gap-[clamp(0.6rem,1vw,1.25rem)] lg:overflow-hidden lg:text-[0.94rem] lg:font-bold xl:gap-[clamp(1rem,1.45vw,2rem)] xl:text-[1.02rem]"
+      aria-label="Main navigation"
+    >
+      {navItems.map((item) => (
+        <a className={`${navLinkClass} shrink-0 ${isNavItemActive(item.href, currentHash) ? "nav-link-active" : ""}`} href={item.href} key={item.href} aria-current={isNavItemActive(item.href, currentHash) ? "page" : undefined}>
+          {item.label}
+          {navArrow(item.href)}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function MobileNav({ onSelect, onAuth, isOpen, currentHash }: { onSelect: () => void; onAuth: () => void; isOpen: boolean; currentHash: string }) {
+  const { blocks } = useContent();
+  const { items: navItems, partnerLabel } = blocks.nav;
+  const { status, signOut } = useCustomerAuth();
+
+  const handleSignOut = () => {
+    onSelect();
+    void signOut();
+  };
+
+  return (
+    <nav
+      className={`grid min-h-0 gap-[0.4rem] overflow-hidden rounded-wobbly-md bg-brand-warm-white shadow-brand transition-[border-width,padding] duration-300 ${isOpen ? "border-3 border-brand-forest p-[0.9rem]" : "border-0 p-0"}`}
+      aria-label="Mobile navigation"
+    >
+      {navItems.map((item) => (
+        <a className={`${navLinkClass} text-[1.05rem] ${isNavItemActive(item.href, currentHash) ? "nav-link-active" : ""}`} href={item.href} key={item.href} onClick={onSelect} aria-current={isNavItemActive(item.href, currentHash) ? "page" : undefined}>
+          {item.label}
+          {navArrow(item.href)}
+        </a>
+      ))}
+      <SmallOutlineLink className="mt-1 w-full" href="#/partnership" onClick={onSelect}>
+        {partnerLabel}
+      </SmallOutlineLink>
+      {status === "signed-in" ? (
+        <>
+          <a className={`${btnOutlineSm} mt-1 w-full`} href="#/coupons" onClick={onSelect}>Coupons</a>
+          <a className={`${btnOutlineSm} mt-1 w-full`} href="#/account" onClick={onSelect}><UserRound className="mr-1 inline h-4 w-4" aria-hidden="true" />My account</a>
+          <button className={`${btnOutlineSm} mt-1 w-full`} type="button" onClick={handleSignOut}>Sign out</button>
+        </>
+      ) : (
+        <button className={`${btnPrimarySm} mt-1 w-full`} type="button" onClick={onAuth}><UserRoundPlus className="mr-1 inline h-4 w-4" aria-hidden="true" />Sign in or create account</button>
+      )}
+    </nav>
+  );
+}
+
+export function SiteHeader() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [currentHash, setCurrentHash] = useState(() => window.location.hash);
+  const { cartQuantity, openCart, openAuth } = useCart();
+  const { status, signOut } = useCustomerAuth();
+  const { blocks } = useContent();
+  const { partnerLabel, joinLabel, joinShortLabel } = blocks.nav;
+  useEffect(() => {
+    const onHashChange = () => {
+      setCurrentHash(window.location.hash);
+      setMenuOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("hashchange", onHashChange);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, []);
+  const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const handleOpenCart = useCallback(() => {
+    closeMenu();
+    openCart();
+  }, [closeMenu, openCart]);
+  const handleOpenAuth = useCallback(() => {
+    closeMenu();
+    openAuth();
+  }, [closeMenu, openAuth]);
+  const handleSignOut = useCallback(() => {
+    closeMenu();
+    void signOut();
+  }, [closeMenu, signOut]);
+  const handleJoin = useCallback((event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const waitlist = document.getElementById("waitlist");
+    if (!waitlist) {
+      setPendingSection("waitlist");
+      window.location.hash = "#/";
+      return;
+    }
+    waitlist.scrollIntoView({ behavior: "smooth", block: "center" });
+    requestAnimationFrame(() => document.getElementById("email")?.focus({ preventScroll: true }));
+  }, []);
+
+  return (
+    <header className="site-header sticky top-0 z-20 w-full border-b-3 border-brand-forest">
+      <div className="mx-auto grid min-w-0 w-full max-w-[90rem] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-[clamp(0.75rem,2vw,1.5rem)] px-[clamp(0.75rem,2.2vw,2.75rem)] py-[0.6rem] sm:py-[0.7rem] lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-x-[clamp(0.75rem,1.4vw,1.75rem)]">
+        <a className="brand inline-flex shrink-0 items-center" href="#/" aria-label="Zama home">
+          <img
+            className="h-14 w-[5.35rem] sm:h-16 sm:w-[6.1rem] xl:h-20 xl:w-[7.65rem]"
+            src="assets/zama_logo.png"
+            alt="Zama"
+            width="144"
+            height="94"
+          />
+        </a>
+
+        <DesktopNav currentHash={currentHash} />
+
+        <div className="header-actions hidden min-w-0 items-center justify-end gap-x-1.5 lg:flex xl:gap-x-2.5" aria-label="Primary actions">
+          {status === "signed-in" ? (
+            <>
+              <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
+              <HeaderLinkAction href="#/account" label="My account" icon={UserRound} />
+              <NotificationBell />
+              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderButtonAction label="Sign out" icon={LogOut} onClick={handleSignOut} />
+            </>
+          ) : (
+            <>
+              <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
+              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderButtonAction label="Sign in or create account" icon={UserRoundPlus} onClick={handleOpenAuth} />
+            </>
+          )}
+          <SmallPrimaryLink className="shrink-0 px-3 2xl:px-[0.9rem]" href="#waitlist" onClick={handleJoin}>
+            <span className="2xl:hidden">{joinShortLabel}</span>
+            <span className="hidden 2xl:inline">{joinLabel}</span>
+          </SmallPrimaryLink>
+          <CartButton onOpen={handleOpenCart} />
+        </div>
+
+        <div className="flex items-center justify-end gap-[0.55rem] lg:hidden">
+          <SmallPrimaryLink className="px-3 text-[0.92rem]" href="#waitlist" onClick={handleJoin}>
+            {joinShortLabel}
+          </SmallPrimaryLink>
+          {status === "signed-in" ? <NotificationBell compact /> : null}
+          <CartButton onOpen={handleOpenCart} />
+          <button
+            type="button"
+            className="grid h-11 w-11 shrink-0 touch-manipulation place-items-center rounded-wobbly-md border-3 border-brand-forest bg-brand-white text-brand-forest shadow-brand-tight transition-transform duration-120 ease-in-out active:translate-x-px active:translate-y-px active:shadow-none focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4"
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            onClick={toggleMenu}
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              {menuOpen ? (
+                <path d="M4 4l12 12M16 4L4 16" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+              ) : (
+                <>
+                  <path d="M3 5.5h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                  <path d="M3 10h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                  <path d="M3 14.5h14" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+                </>
+              )}
+            </svg>
+          </button>
+        </div>
+      </div>
+      <span className="sr-only" role="status" aria-live="polite">{cartQuantity} item{cartQuantity === 1 ? "" : "s"} in cart</span>
+
+      <div
+        id="mobile-menu"
+        className={`mobile-menu grid overflow-hidden transition-[grid-template-rows,opacity,margin-top] duration-300 ease-in-out lg:hidden ${
+          menuOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+        aria-hidden={!menuOpen}
+        inert={!menuOpen}
+      >
+        <MobileNav onSelect={closeMenu} onAuth={handleOpenAuth} isOpen={menuOpen} currentHash={currentHash} />
+      </div>
+    </header>
+  );
+}

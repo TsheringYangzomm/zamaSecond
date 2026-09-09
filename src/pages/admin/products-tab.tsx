@@ -1,0 +1,442 @@
+import { useEffect, useMemo, useState } from "react";
+import { GripVertical } from "lucide-react";
+import {
+  deleteProduct,
+  inventoryTableExists,
+  listInventory,
+  listInventoryItems,
+  listProductIngredients,
+  listProductSeasonalUpdates,
+  listProducts,
+  nextSlugId,
+  productSeasonalUpdatesTableExists,
+  productIngredientsTableExists,
+  reorderRows,
+  saveProductIngredients,
+  upsertProduct,
+  upsertProductSeasonalUpdate,
+  type ProductIngredientInput,
+} from "../../admin/admin-api";
+import { btnOutlineSm, btnPrimarySm } from "../../components/ui/styles";
+import { ConfirmDialog } from "../../components/ui/confirm-dialog";
+import { inputClasses } from "./admin-fields";
+import { amountRangeKeyFor, buildAmountRanges, ClearFiltersButton, ColumnFilterDropdown } from "./column-filter-dropdown";
+import type { InventoryItemRow, InventoryRow, ProductRow, ProductSeasonalUpdateRow } from "../../cms/types";
+import { blankProduct, blankProductSeasonalUpdate, ProductForm } from "./product-form";
+import { ProductCategoryPicker } from "./product-category-picker";
+import { ProductDetail } from "./product-detail";
+import { StockBadge, stockInfo, stockLevel } from "./commerce-shared";
+import { useRowDragSort } from "./use-row-drag";
+
+export function ProductsTab() {
+  const [products, setProducts] = useState<ProductRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [editing, setEditing] = useState<ProductRow | null>(null);
+  const [selected, setSelected] = useState<ProductRow | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [choosingCategory, setChoosingCategory] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<ProductRow | null>(null);
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState({ category: "", stock: "", price: "", status: "" });
+  const [stockAvailable, setStockAvailable] = useState(false);
+  const [ingredientsAvailable, setIngredientsAvailable] = useState(false);
+  const [editingIngredients, setEditingIngredients] = useState<ProductIngredientInput[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<InventoryItemRow[]>([]);
+  const [inventory, setInventory] = useState<InventoryRow[]>([]);
+  const [seasonalAvailable, setSeasonalAvailable] = useState(false);
+  const [seasonalMap, setSeasonalMap] = useState<Record<string, ProductSeasonalUpdateRow>>({});
+  const [seasonalInfo, setSeasonalInfo] = useState<ProductSeasonalUpdateRow | null>(null);
+  const [selectedIngredients, setSelectedIngredients] = useState<ProductIngredientInput[]>([]);
+
+  const inventoryMap = useMemo(
+    () => new Map(inventory.map((row) => [row.product_id, row])),
+    [inventory],
+  );
+
+  const categories = useMemo(() => {
+    const set = new Set((products ?? []).map((row) => row.category).filter(Boolean));
+    return [...set].sort();
+  }, [products]);
+
+  const stockOptions = [
+  { value: "in", label: "In stock" },
+  { value: "low", label: "Low stock" },
+  { value: "out", label: "Out of stock" },
+  { value: "untracked", label: "Not tracked" },
+];
+
+  const priceRanges = useMemo(() => buildAmountRanges((products ?? []).map((row) => row.price_amount ?? 0)), [products]);
+
+  const filtered = useMemo(() => {
+    if (!products) return [];
+    const needle = query.trim().toLowerCase();
+    return products.filter((row) => {
+      if (filters.category && row.category !== filters.category) return false;
+      if (filters.stock) {
+        const info = stockInfo(row.id, inventoryMap, stockAvailable);
+        if (stockLevel(info.quantity, info.alertAt) !== filters.stock) return false;
+      }
+      if (filters.price && amountRangeKeyFor(priceRanges, row.price_amount ?? 0) !== filters.price) return false;
+      if (filters.status && (row.published ? "Active" : "Inactive") !== filters.status) return false;
+      if (!needle) return true;
+      return (
+        row.name.toLowerCase().includes(needle) ||
+        row.id.toLowerCase().includes(needle) ||
+        row.sku.toLowerCase().includes(needle) ||
+        row.category.toLowerCase().includes(needle)
+      );
+    });
+  }, [products, query, filters, stockAvailable, inventoryMap, priceRanges]);
+
+  const activeFilterCount = (["category", "stock", "price", "status"] as const).filter((key) => filters[key] !== "").length;
+
+  const reorderEnabled = products !== null && query === "" && activeFilterCount === 0;
+
+  async function load() {
+    setProducts(null);
+    setError(null);
+    try {
+      const [rows, hasStock, hasIngredients] = await Promise.all([
+        listProducts(),
+        inventoryTableExists(),
+        productIngredientsTableExists(),
+      ]);
+      const [inventoryRows, items] = await Promise.all([
+        hasStock ? listInventory() : Promise.resolve([]),
+        hasIngredients ? listInventoryItems() : Promise.resolve([]),
+      ]);
+      setProducts(rows);
+      setStockAvailable(hasStock);
+      setIngredientsAvailable(hasIngredients);
+      setInventory(inventoryRows);
+      setInventoryItems(items);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load products.");
+    }
+    try {
+      const enabled = await productSeasonalUpdatesTableExists();
+      setSeasonalAvailable(enabled);
+      if (enabled) {
+        const rows = await listProductSeasonalUpdates();
+        const latest: Record<string, ProductSeasonalUpdateRow> = {};
+        for (const row of rows) {
+          if (!latest[row.product_id]) latest[row.product_id] = row;
+        }
+        setSeasonalMap(latest);
+      }
+    } catch {
+      setSeasonalAvailable(false);
+      setSeasonalMap({});
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function handleAdd() {
+    setStatus(null);
+    setError(null);
+    setBusy(true);
+    try {
+      const id = await nextSlugId("New product", "products");
+      const maxSort = (products ?? []).reduce((max, item) => Math.max(max, item.sort_order), -1);
+      setEditing({ ...blankProduct(id), sort_order: maxSort + 1 });
+      setEditingIngredients([]);
+      setSeasonalInfo(blankProductSeasonalUpdate(id));
+      setCreating(true);
+      setChoosingCategory(true);
+    } catch (addError) {
+      setError(addError instanceof Error ? addError.message : "Could not start a new product.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleChooseCategory(category: string) {
+    setEditing((current) => (current ? { ...current, category } : current));
+    setChoosingCategory(false);
+  }
+
+async function handleToggleActive(row: ProductRow) {
+  setStatus(null);
+  try {
+    await upsertProduct({ ...row, published: !row.published });
+    setProducts((current) => (current ?? []).map((item) => (item.id === row.id ? { ...item, published: !row.published } : item)));
+    setSelected((current) => (current && current.id === row.id ? { ...current, published: !row.published } : current));
+    setStatus(row.published ? `${row.name} is inactive (shows as out of stock).` : `${row.name} is now active.`);
+  } catch (toggleError) {
+    setStatus(toggleError instanceof Error ? toggleError.message : "Could not change the product status.");
+  }
+}
+
+function handleView(row: ProductRow) {
+    setStatus(null);
+    setError(null);
+    setSelected(row);
+    setSelectedIngredients([]);
+    if (!ingredientsAvailable) return;
+    void listProductIngredients(row.id)
+      .then((ingredients) => setSelectedIngredients(ingredients))
+      .catch((viewError) => setStatus(viewError instanceof Error ? viewError.message : "Could not load the product contents."));
+  }
+
+async function handleEdit(row: ProductRow) {
+    try {
+      const ingredients = ingredientsAvailable ? await listProductIngredients(row.id) : [];
+      setEditingIngredients(ingredients);
+    } catch (editError) {
+      setStatus(editError instanceof Error ? editError.message : "Could not load the product contents.");
+      setEditingIngredients([]);
+    }
+    setCreating(false);
+    setChoosingCategory(false);
+    setSeasonalInfo(seasonalMap[row.id] ?? blankProductSeasonalUpdate(row.id));
+    setEditing(row);
+  }
+
+  async function handleSave(row: ProductRow, ingredients: ProductIngredientInput[], seasonalRow: ProductSeasonalUpdateRow | null) {
+    await upsertProduct(row);
+    if (ingredientsAvailable) {
+      await saveProductIngredients(row.id, ingredients);
+    }
+    if (seasonalAvailable && seasonalRow && (seasonalMap[row.id] || seasonalRow.content.trim() !== "" || seasonalRow.published)) {
+      await upsertProductSeasonalUpdate(seasonalRow);
+      setSeasonalMap((current) => ({ ...current, [seasonalRow.product_id]: seasonalRow }));
+    }
+    const [next, inventoryRows, items] = await Promise.all([
+      listProducts(),
+      stockAvailable ? listInventory() : Promise.resolve([]),
+      ingredientsAvailable ? listInventoryItems() : Promise.resolve([]),
+    ]);
+    setProducts(next);
+    setInventory(inventoryRows);
+    setInventoryItems(items);
+    setStatus(creating ? `Created ${row.name}.` : `Saved ${row.name}.`);
+    setEditing(null);
+    setCreating(false);
+    setSeasonalInfo(null);
+  }
+
+  async function handleDelete(row: ProductRow) {
+    setStatus(null);
+    try {
+      await deleteProduct(row.id);
+      setProducts((current) => (current ?? []).filter((item) => item.id !== row.id));
+      setSeasonalMap((current) => {
+        const next = { ...current };
+        delete next[row.id];
+        return next;
+      });
+      setStatus(`Deleted ${row.name}.`);
+    } catch (deleteError) {
+      setStatus(deleteError instanceof Error ? deleteError.message : "Could not delete the product.");
+    } finally {
+      setPendingDelete(null);
+    }
+  }
+
+  async function handleReorder(orderedIds: string[]) {
+    setStatus(null);
+    if (!products) return;
+    const byId = new Map(products.map((row) => [row.id, row]));
+    const next = orderedIds
+      .map((id, index) => {
+        const row = byId.get(id);
+        return row ? { ...row, sort_order: index } : undefined;
+      })
+      .filter((row): row is ProductRow => row !== undefined);
+    setProducts(next);
+    try {
+      await reorderRows("products", orderedIds);
+    } catch (reorderError) {
+      setStatus(reorderError instanceof Error ? reorderError.message : "Could not reorder products.");
+      await load();
+    }
+  }
+
+  const { rowProps } = useRowDragSort(filtered, (orderedIds) => void handleReorder(orderedIds));
+
+  if (selected) {
+    const selectedStock = inventoryMap.get(selected.id) ?? null;
+    return (
+      <ProductDetail
+        product={selected}
+        ingredients={selectedIngredients}
+        ingredientsAvailable={ingredientsAvailable}
+        inventoryItems={inventoryItems}
+        inventory={selectedStock}
+        stockAvailable={stockAvailable}
+        seasonalInfo={seasonalMap[selected.id] ?? null}
+        seasonalAvailable={seasonalAvailable}
+        onBack={() => setSelected(null)}
+        onEdit={() => {
+          const row = selected;
+          setSelected(null);
+          void handleEdit(row);
+        }}
+        onToggleActive={() => void handleToggleActive(selected)}
+      />
+    );
+  }
+
+  if (editing && choosingCategory) {
+    return (
+      <div className="grid gap-4">
+        <ProductCategoryPicker
+          onSelect={handleChooseCategory}
+          onCancel={() => { setEditing(null); setCreating(false); setChoosingCategory(false); setEditingIngredients([]); setSeasonalInfo(null); }}
+        />
+      </div>
+    );
+  }
+
+  if (editing) {
+    return (
+      <div className="grid gap-4">
+        <ProductForm
+          initial={editing}
+          initialIngredients={editingIngredients}
+          seasonalInfo={seasonalInfo}
+          seasonalAvailable={seasonalAvailable}
+          inventoryItems={inventoryItems}
+          onSave={handleSave}
+          onCancel={() => { setEditing(null); setCreating(false); setEditingIngredients([]); setSeasonalInfo(null); }}
+          ingredientsAvailable={ingredientsAvailable}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="grid gap-1">
+          <h1 className="font-primary text-[clamp(1.7rem,3.5vw,2.4rem)] font-bold leading-[1.02] text-brand-green-ink">Products</h1>
+          <p className="text-sm text-brand-black/68">{products ? `${products.length} product${products.length === 1 ? "" : "s"}` : "Loading products..."}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className={btnOutlineSm} type="button" onClick={() => void load()} disabled={!products}>Refresh</button>
+          <button className={btnPrimarySm} type="button" onClick={() => void handleAdd()} disabled={busy}>Add product</button>
+        </div>
+      </div>
+
+      {products && !stockAvailable ? (
+        <p className="rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-4 text-sm font-semibold text-brand-black">
+          Showing example stock levels. Run <code className="rounded bg-brand-white px-1 py-0.5 text-xs">supabase/inventory-schema.sql</code> to create the inventory table.
+        </p>
+      ) : null}
+
+      {error ? (
+        <div className="grid gap-3 rounded-wobbly-card border-3 border-dashed border-brand-orange bg-brand-orange/10 p-5">
+          <p className="text-sm font-semibold text-brand-black" role="alert">{error}</p>
+          <div><button className={btnOutlineSm} type="button" onClick={() => void load()}>Try again</button></div>
+        </div>
+      ) : null}
+
+      {status ? <p className="text-sm font-semibold text-brand-green-ink" role="status">{status}</p> : null}
+
+      {products ? (
+        <>
+          <div className="grid gap-3">
+            <input className={`${inputClasses} min-w-0`} type="search" aria-label="Search products" placeholder="Search by name, ID, or SKU..." value={query} onChange={(event) => setQuery(event.target.value)} />
+            <div className="flex flex-wrap items-center gap-2">
+              <ColumnFilterDropdown label="Category" options={categories} value={filters.category} onSelect={(v) => setFilters((f) => ({ ...f, category: v }))} />
+              <ColumnFilterDropdown label="Stock" options={stockOptions} value={filters.stock} onSelect={(v) => setFilters((f) => ({ ...f, stock: v }))} />
+              <ColumnFilterDropdown label="Price" options={priceRanges} value={filters.price} onSelect={(v) => setFilters((f) => ({ ...f, price: v }))} />
+              <ColumnFilterDropdown label="Status" options={["Active", "Inactive"]} value={filters.status} onSelect={(v) => setFilters((f) => ({ ...f, status: v }))} />
+              <ClearFiltersButton count={activeFilterCount} onClear={() => setFilters({ category: "", stock: "", price: "", status: "" })} />
+            </div>
+          </div>
+
+          {products.length === 0 ? (
+            <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">No products yet. Add the first one.</p>
+          ) : filtered.length === 0 ? (
+            <p className="rounded-wobbly-card border-3 border-dashed border-brand-forest/30 bg-brand-white p-6 text-center text-sm font-semibold text-brand-black/64">No products match the current search or filters.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-wobbly-card border-3 border-brand-forest bg-brand-white shadow-brand-soft">
+              <table className="w-full min-w-210 border-collapse text-left">
+                <caption className="sr-only">Products</caption>
+                <thead>
+                  <tr className="border-b-3 border-dashed border-brand-forest/30 bg-brand-warm-white text-xs font-bold uppercase tracking-[0.08em] text-brand-green-ink">
+                    <th className="w-12 px-2 py-3 text-center">
+                      <span className="sr-only">Reorder</span>
+                    </th>
+                    <th className="px-4 py-3">Product</th>
+                    <th className="px-4 py-3">Category</th>
+                    <th className="px-4 py-3">Price</th>
+                    <th className="px-4 py-3">Stock</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((row) => {
+                    const stock = stockInfo(row.id, inventoryMap, stockAvailable);
+                    const level = stockLevel(stock.quantity, stock.alertAt);
+                    const drag = rowProps(row);
+                    return (
+                      <tr
+                        className={`border-b-2 border-dashed border-brand-forest/16 text-sm last:border-b-0 ${reorderEnabled ? "cursor-grab active:cursor-grabbing" : ""} ${drag.isDragging ? "opacity-40" : ""} ${drag.isDropTarget ? "bg-brand-yellow/30" : ""}`}
+                        key={row.id}
+                        draggable={reorderEnabled}
+                        onDragStart={drag.onDragStart}
+                        onDragOver={drag.onDragOver}
+                        onDrop={drag.onDrop}
+                        onDragEnd={drag.onDragEnd}
+                      >
+                        <td className="px-2 py-3 text-center">
+                          <span className={`inline-flex items-center justify-center ${reorderEnabled ? "text-brand-black/40" : "text-brand-black/20"}`} title="Drag to reorder" aria-hidden="true">
+                            <GripVertical className="h-4 w-4" />
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {row.image ? <img className="h-11 w-11 flex-none rounded-wobbly-md border-2 border-brand-forest/30 bg-brand-warm-white object-contain p-0.5" src={row.image} alt="" aria-hidden="true" /> : null}
+                            <div className="grid gap-0.5">
+                              <span className="font-bold text-brand-black">{row.name}</span>
+                              <span className="text-xs text-brand-black/52">{row.id}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-brand-black/72">{row.category}</td>
+                        <td className="px-4 py-3 text-brand-black/72">{row.price_amount == null ? "—" : `Nu. ${row.price_amount}`}</td>
+                        <td className="px-4 py-3"><StockBadge level={level} quantity={stock.quantity} /></td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`rounded-full border-2 px-2 py-0.5 text-xs font-bold ${row.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
+                              {row.published ? "Active" : "Inactive"}
+                            </span>
+                            <button className="min-h-7 touch-manipulation rounded-full border-2 border-brand-forest/60 px-2 py-0.5 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleToggleActive(row)}>{row.published ? "Set inactive" : "Activate"}</button>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest bg-brand-mint px-3 py-1 text-xs font-bold text-brand-green-ink hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => handleView(row)}>View</button>
+                            <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-forest px-3 py-1 text-xs font-bold text-brand-forest hover:bg-brand-yellow focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => void handleEdit(row)}>Edit</button>
+                            <button className="min-h-9 touch-manipulation rounded-full border-2 border-brand-orange-ink px-3 py-1 text-xs font-bold text-brand-black hover:bg-brand-orange focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" type="button" onClick={() => setPendingDelete(row)}>Delete</button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : null}
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete product"
+        message={pendingDelete ? `Delete "${pendingDelete.name}"? Its reviews will be deleted too.` : ""}
+        onConfirm={() => { if (pendingDelete) void handleDelete(pendingDelete); }}
+        onCancel={() => setPendingDelete(null)}
+      />
+    </div>
+  );
+}
