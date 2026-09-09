@@ -1,6 +1,6 @@
 import { categorySlugs } from "./components/shop/shop-utils";
 
-export type Route = "home" | "contact" | "partnership" | "shop" | "product" | "category" | "farmers" | "farmer" | "customize" | "launch-updates" | "membership" | "account" | "account-orders" | "account-wallet" | "account-membership" | "coupons" | "admin" | "admin-password-reset" | "meal-kit-trust";
+export type Route = "home" | "contact" | "partnership" | "shop" | "product" | "category" | "farmers" | "farmer" | "customize" | "launch-updates" | "membership" | "account" | "account-orders" | "account-wallet" | "account-membership" | "coupons" | "admin" | "admin-password-reset" | "auth-jaggle" | "meal-kit-trust";
 
 export function getRoute(
   hash: string,
@@ -12,6 +12,7 @@ export function getRoute(
   const searchParams = new URLSearchParams(search);
   const recoveryError = hashParams.get("error_code") === "otp_expired" || (hashParams.get("error") === "access_denied" && /expired|invalid/i.test(hashParams.get("error_description") ?? ""));
   if (pathname.replace(/\/+$/, "").endsWith("/reset-password") || hash.startsWith("#/reset-password") || hashParams.get("type") === "recovery" || recoveryError || searchParams.has("code")) return "admin-password-reset";
+  if (hash.startsWith("#/auth/jaggle")) return "auth-jaggle";
   if (hash.startsWith("#/admin")) return "admin";
   if (hash.startsWith("#/coupons")) return "coupons";
   if (hash.startsWith("#/account/wallet")) return "account-wallet";

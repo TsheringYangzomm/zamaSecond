@@ -30,6 +30,7 @@ import { AccountMembershipPage } from "./pages/account-membership-page";
 import { CouponsPage } from "./pages/coupons-page";
 import { AdminPage } from "./pages/admin/admin-page";
 import { AdminPasswordResetPage } from "./pages/admin/admin-password-reset";
+import { JaggleCallbackPage } from "./pages/jaggle-callback-page";
 import { AdminAuthProvider } from "./admin/admin-auth";
 import { CustomerAuthProvider } from "./checkout/customer-auth";
 import { getCategoryFromHash, getFarmerId, getProductId, getRoute, setPendingSection, takePendingSection } from "./router";
@@ -105,6 +106,10 @@ function App() {
 
   if (route === "admin-password-reset") {
     return <AdminPasswordResetPage />;
+  }
+
+  if (route === "auth-jaggle") {
+    return <JaggleCallbackPage />;
   }
 
   if (route === "admin") {

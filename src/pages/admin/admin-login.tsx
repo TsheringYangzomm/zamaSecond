@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { btnOutlineSm, btnPrimaryLg } from "../../components/ui/styles";
 import { getSupabaseClient } from "../../supabase";
+import { JaggleSignInButton } from "../../components/shop/auth-pane";
 
 const inputClasses =
   "min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
@@ -63,7 +64,7 @@ export function AdminLogin() {
         <div className="grid gap-2 text-center">
           <div className="flex justify-center"><span className="inline-flex rounded-full border-2 border-brand-forest bg-brand-yellow px-3 py-1 text-xs font-bold uppercase tracking-[0.1em] text-brand-black">Owner only</span></div>
           <h1 id="admin-login-title" className="font-primary text-[clamp(1.7rem,4vw,2.4rem)] font-bold leading-[1.02] text-brand-green-ink">Zama admin</h1>
-          <p className="text-sm text-brand-black/68">Sign in with your Supabase account to manage content.</p>
+          <p className="text-sm text-brand-black/68">Sign in with your Supabase account or your allowlisted Jaggle account to manage content.</p>
         </div>
 
         <form className="mt-6 grid gap-4" onSubmit={handleSubmit}>
@@ -88,6 +89,8 @@ export function AdminLogin() {
           <button className={`${btnPrimaryLg} w-full justify-center`} type="submit" disabled={busy}>
             {busy ? "Signing in..." : "Sign in"}
           </button>
+          <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.12em] text-brand-black/42"><span className="h-px flex-1 bg-brand-forest/16" />or<span className="h-px flex-1 bg-brand-forest/16" /></div>
+          <JaggleSignInButton audience="admin" />
         </form>
 
         <a className={`${btnOutlineSm} mx-auto mt-4 block w-fit`} href="#/">← Back to site</a>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { useCustomerAuth } from "../../checkout/customer-auth";
 import type { CustomerProfile } from "../../checkout/checkout-api";
+import { startJaggleSignIn, type JaggleAuthAudience } from "../../auth/jaggle-sso";
 import { btnOutlineSm, btnPrimaryLg } from "../ui/styles";
 
 export const inputClasses =
@@ -40,6 +41,30 @@ export function FlowBackLink({ onClick, children }: { onClick: () => void; child
     >
       {children}
     </button>
+  );
+}
+
+export function JaggleSignInButton({ audience }: { audience: JaggleAuthAudience }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleClick() {
+    setBusy(true);
+    setError(null);
+    const result = await startJaggleSignIn(audience);
+    if (!result.ok) {
+      setError(result.error ?? "We could not start Jaggle sign-in.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-1.5">
+      <button className={`${btnOutlineSm} w-full`} type="button" onClick={() => void handleClick()} disabled={busy}>
+        {busy ? "Connecting to Jaggle…" : "Continue with Jaggle"}
+      </button>
+      {error ? <p className="text-xs font-semibold text-brand-orange" role="alert">{error}</p> : null}
+    </div>
   );
 }
 
@@ -95,6 +120,7 @@ export function SignUpPanel({ onSwitch, onBack, backLabel = backToCartLabel }: {
         {notice ? <FlowNotice>{notice}</FlowNotice> : null}
         <button className={`${btnPrimaryLg} w-full`} type="submit" disabled={busy}>{busy ? "Creating account..." : "Create account and continue"}</button>
       </form>
+      <JaggleSignInButton audience="customer" />
       <div className="grid gap-1">
         <p className="text-sm text-brand-black/68">Already have an account? <button className="min-h-8 font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={onSwitch}>Sign in</button></p>
         <FlowBackLink onClick={onBack}>{backLabel}</FlowBackLink>
@@ -135,6 +161,7 @@ export function SignInPanel({ onSwitch, onBack, backLabel = backToCartLabel }: {
         {error ? <FlowNotice>{error}</FlowNotice> : null}
         <button className={`${btnPrimaryLg} w-full`} type="submit" disabled={busy}>{busy ? "Signing in..." : "Sign in and continue"}</button>
       </form>
+      <JaggleSignInButton audience="customer" />
       <div className="grid gap-1">
         <p className="text-sm text-brand-black/68">New to Zama? <button className="min-h-8 font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={onSwitch}>Create an account</button></p>
         <FlowBackLink onClick={onBack}>{backLabel}</FlowBackLink>
@@ -173,6 +200,8 @@ export function AuthGate({ mode, onSignUp, onSignIn, onBack }: {
         <button className={`${btnPrimaryLg} w-full`} type="button" onClick={onSignUp}>Create an account</button>
         <button className={`${btnOutlineSm} w-full`} type="button" onClick={onSignIn}>Sign in</button>
       </div>
+      <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-[0.12em] text-brand-black/42"><span className="h-px flex-1 bg-brand-forest/16" />or<span className="h-px flex-1 bg-brand-forest/16" /></div>
+      <JaggleSignInButton audience="customer" />
       <p className="text-xs text-brand-black/58">{copy.footnote}</p>
       <FlowBackLink onClick={onBack}>{copy.backLabel}</FlowBackLink>
     </div>

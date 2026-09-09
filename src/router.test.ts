@@ -7,6 +7,11 @@ describe("routing", () => {
     expect(getRoute("#/coupons?source=account")).toBe("coupons");
   });
 
+  it("opens the Jaggle callback route", () => {
+    expect(getRoute("#/auth/jaggle?audience=customer&ticket=abc")).toBe("auth-jaggle");
+    expect(getRoute("#/auth/jaggle?audience=admin&ticket=abc")).toBe("auth-jaggle");
+  });
+
   it("opens the dedicated membership account page", () => {
     expect(getRoute("#/account/membership")).toBe("account-membership");
     expect(getRoute("#/account/membership?source=account")).toBe("account-membership");
