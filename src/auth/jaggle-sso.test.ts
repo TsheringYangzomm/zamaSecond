@@ -7,7 +7,7 @@ describe("Jaggle SSO client", () => {
     expect(url.origin).toBe("https://accounts.jaggle.ai");
     expect(url.pathname).toBe("/api/v1/sso/authorize");
     expect(url.searchParams.get("client_id")).toBe("client id");
-    expect(url.searchParams.get("redirect")).toBe("https://zama.bt/.netlify/functions/jaggle-customer-callback");
+    expect(url.searchParams.get("redirect")).toBe("https://zama.bt/api/jaggle-customer-callback");
   });
 
   it("keeps customer and admin callbacks separate", () => {
@@ -15,4 +15,3 @@ describe("Jaggle SSO client", () => {
     expect(getJaggleCallbackUrl("admin", "https://zama.bt")).toContain("jaggle-admin-callback");
   });
 });
-

@@ -97,7 +97,7 @@ Signed-in customers receive account-only notifications from the bell in the site
 
 ### Jaggle SSO
 
-Jaggle is an additional sign-in method for customers and allowlisted admins. Apply `supabase/jaggle-sso-schema.sql` after the CMS and commerce schemas, then configure the following variables in Netlify:
+Jaggle is an additional sign-in method for customers and allowlisted admins. Apply `supabase/jaggle-sso-schema.sql` after the CMS and commerce schemas, then configure the following variables in Vercel:
 
 ```text
 VITE_JAGGLE_CLIENT_ID=your_jaggle_client_id
@@ -106,11 +106,11 @@ JAGGLE_CLIENT_SECRET=your_server_only_jaggle_secret
 SUPABASE_URL=https://<project>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your_server_only_service_role_key
 APP_ORIGIN=https://zama.bt
-JAGGLE_CUSTOMER_CALLBACK_URL=https://zama.bt/.netlify/functions/jaggle-customer-callback
-JAGGLE_ADMIN_CALLBACK_URL=https://zama.bt/.netlify/functions/jaggle-admin-callback
+JAGGLE_CUSTOMER_CALLBACK_URL=https://zama.bt/api/jaggle-customer-callback
+JAGGLE_ADMIN_CALLBACK_URL=https://zama.bt/api/jaggle-admin-callback
 ```
 
-Register the two callback URLs above in Jaggle exactly as written. For Netlify Dev, use `http://127.0.0.1:8888/.netlify/functions/jaggle-customer-callback` and `http://127.0.0.1:8888/.netlify/functions/jaggle-admin-callback`, and set `APP_ORIGIN=http://127.0.0.1:8888`. The frontend never receives `JAGGLE_CLIENT_SECRET` or the Supabase service-role key. Jaggle SSO links verified email identities to existing customer records, while admin access still requires the existing `admin_users` allowlist.
+Register the two callback URLs above in Jaggle exactly as written. For local Vercel development, use `http://localhost:3000/api/jaggle-customer-callback` and `http://localhost:3000/api/jaggle-admin-callback`, and set `APP_ORIGIN=http://localhost:3000`. The frontend never receives `JAGGLE_CLIENT_SECRET` or the Supabase service-role key. Jaggle SSO links verified email identities to existing customer records, while admin access still requires the existing `admin_users` allowlist.
 
 ## Quality Checks
 
