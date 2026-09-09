@@ -28,10 +28,10 @@ function appOrigin(origin?: string): string {
 }
 
 function functionPrefix(): string {
-  const configured = String(import.meta.env.VITE_JAGGLE_FUNCTION_PREFIX ?? "").trim().replace(/\/$/, "");
-  if (configured) return configured.startsWith("/") ? configured : `/${configured}`;
-  // Vercel uses /api by default. Netlify Dev is detected locally so the
-  // existing Netlify handlers remain usable when that workflow is selected.
+  // Vercel uses /api. Netlify Dev is detected locally so the existing
+  // Netlify handlers remain usable when that workflow is selected. Keeping
+  // the production path explicit prevents a stale build variable from
+  // sending Jaggle a previously used Netlify callback URL.
   if (typeof window !== "undefined" && window.location.port === "8888") return "/.netlify/functions";
   return "/api";
 }
