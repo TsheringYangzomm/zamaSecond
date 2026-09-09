@@ -24,17 +24,24 @@ const devJaggleSessionKey = "zama-jaggle-dev-session";
 function appOrigin(origin?: string): string {
   if (origin) return origin.replace(/\/$/, "");
   if (typeof window === "undefined") return "";
-
-  // Netlify Dev proxies the Vite app on 8888. Keeping this callback on the
-  // proxy means the local function and the SPA share the same origin.
-  if ((window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") && window.location.port !== "8888") {
-    return "http://127.0.0.1:8888";
-  }
   return window.location.origin.replace(/\/$/, "");
 }
 
+function functionPrefix(): string {
+  const configured = String(import.meta.env.VITE_JAGGLE_FUNCTION_PREFIX ?? "").trim().replace(/\/$/, "");
+  if (configured) return configured.startsWith("/") ? configured : `/${configured}`;
+  // Vercel uses /api by default. Netlify Dev is detected locally so the
+  // existing Netlify handlers remain usable when that workflow is selected.
+  if (typeof window !== "undefined" && window.location.port === "8888") return "/.netlify/functions";
+  return "/api";
+}
+
+export function getJaggleFunctionPath(name: "customer-callback" | "admin-callback" | "handoff"): string {
+  return `${functionPrefix()}/jaggle-${name}`;
+}
+
 export function getJaggleCallbackUrl(audience: JaggleAuthAudience, origin?: string): string {
-  return `${appOrigin(origin)}/.netlify/functions/jaggle-${audience}-callback`;
+  return `${appOrigin(origin)}${getJaggleFunctionPath(`${audience}-callback`)}`;
 }
 
 export function buildJaggleAuthorizationUrl(audience: JaggleAuthAudience, clientId: string, origin?: string): string {
@@ -109,7 +116,7 @@ export async function completeJaggleSignIn(handoffId: string, audience: JaggleAu
 
   let handoff: { ok?: boolean; email?: string; tokenHash?: string; error?: string };
   try {
-    const response = await fetch(`/.netlify/functions/jaggle-handoff?ticket=${encodeURIComponent(ticket)}&audience=${encodeURIComponent(audience)}`, {
+    const response = await fetch(`${getJaggleFunctionPath("handoff")}?ticket=${encodeURIComponent(ticket)}&audience=${encodeURIComponent(audience)}`, {
       headers: { Accept: "application/json" },
     });
     handoff = await response.json() as typeof handoff;
