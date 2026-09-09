@@ -137,9 +137,9 @@ export function FarmersPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-8 sm:grid-cols-2" id="farmers-grid" key={`${activeDzongkhag}:${activeTag}:${search}:${sort}`}>
+          <div className="farmers-masonry" id="farmers-grid" key={`${activeDzongkhag}:${activeTag}:${search}:${sort}`}>
             {filtered.map((farmer, index) => (
-              <div className="farmers-grid-item min-w-0 self-start" key={farmer.id} data-farmer-id={farmer.id} style={{ animationDelay: `${index * 50}ms` }}>
+              <div className="farmers-masonry-item farmers-grid-item min-w-0" key={farmer.id} data-farmer-id={farmer.id} style={{ animationDelay: `${index * 50}ms` }}>
                 <FarmerCard farmer={farmer} image={farmer.image || "assets/farmer.webp"} detailed />
               </div>
             ))}

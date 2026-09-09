@@ -795,6 +795,20 @@ body::before {
 .farmers-grid-item {
   animation: shop-grid-item-in 360ms ease-out both;
 }
+.farmers-masonry {
+  columns: 1;
+  column-gap: clamp(1rem, 2.5vw, 2rem);
+}
+.farmers-masonry-item {
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 clamp(1rem, 2.5vw, 2rem);
+  break-inside: avoid;
+  vertical-align: top;
+}
+@media (min-width: 640px) {
+  .farmers-masonry { columns: 2; }
+}
 .source-map-shell::before {
   position: absolute;
   inset: 10% -5% 18% 8%;

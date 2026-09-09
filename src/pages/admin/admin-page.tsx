@@ -43,7 +43,6 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
@@ -193,9 +192,6 @@ function AdminSidebar({
       data-collapsed={state === "collapsed"}
       className={className}
     >
-      <SidebarHeader>
-        <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-      </SidebarHeader>
       <SidebarContent>
         {navGroups.map((group) => (
           <SidebarGroup key={group.label}>
