@@ -1,6 +1,7 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { btnOutlineSm, btnPrimaryLg } from "../../components/ui/styles";
+import { getSupabaseClient } from "../../supabase";
 
 const inputClasses =
   "min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
@@ -11,6 +12,15 @@ export function AdminLogin() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null);
+  const [recoveryCooldown, setRecoveryCooldown] = useState(0);
+
+  useEffect(() => {
+    if (recoveryCooldown <= 0) return;
+    const timer = window.setInterval(() => setRecoveryCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [recoveryCooldown]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -19,6 +29,32 @@ export function AdminLogin() {
     const result = await signIn(email, password);
     setBusy(false);
     if (!result.ok) setSubmitError(result.error);
+  }
+
+  async function handlePasswordRecovery() {
+    const recoveryEmail = email.trim();
+    if (!recoveryEmail) {
+      setSubmitError("Enter your admin email first, then choose Forgot password.");
+      return;
+    }
+    if (recoveryCooldown > 0) return;
+    const client = getSupabaseClient();
+    if (!client) {
+      setSubmitError("Supabase is not configured.");
+      return;
+    }
+    setRecoveryBusy(true);
+    setSubmitError(null);
+    setRecoveryNotice(null);
+    const redirectTo = `${window.location.origin}/reset-password`;
+    const { error: recoveryError } = await client.auth.resetPasswordForEmail(recoveryEmail, { redirectTo });
+    setRecoveryBusy(false);
+    if (recoveryError) {
+      setSubmitError(recoveryError.message);
+      return;
+    }
+    setRecoveryCooldown(60);
+    setRecoveryNotice("If that admin email is registered, a reset link has been sent. Open the newest email once; the link will return here to set your password.");
   }
 
   return (
@@ -40,9 +76,14 @@ export function AdminLogin() {
             <input id="admin-password" className={inputClasses} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
 
+          <button className="w-fit justify-self-end text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 disabled:cursor-not-allowed disabled:opacity-50" type="button" onClick={() => void handlePasswordRecovery()} disabled={recoveryBusy || recoveryCooldown > 0}>
+            {recoveryBusy ? "Sending reset link…" : recoveryCooldown > 0 ? `Try again in ${recoveryCooldown}s` : "Forgot password?"}
+          </button>
+
           {(submitError || error) ? (
             <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 px-3 py-2 text-sm font-semibold text-brand-black" role="alert">{submitError ?? error}</p>
           ) : null}
+          {recoveryNotice ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-mint/40 px-3 py-2 text-sm font-semibold text-brand-green-ink" role="status">{recoveryNotice}</p> : null}
 
           <button className={`${btnPrimaryLg} w-full justify-center`} type="submit" disabled={busy}>
             {busy ? "Signing in..." : "Sign in"}

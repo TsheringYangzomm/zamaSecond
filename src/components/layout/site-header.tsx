@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type MouseEvent } from "react";
-import { Handshake, LogIn, LogOut, TicketPercent, UserRound } from "lucide-react";
+import { Handshake, LogOut, TicketPercent, UserRound, UserRoundPlus } from "lucide-react";
 import { useCart } from "../../cart-context";
 import { useContent } from "../../cms/content-context";
 import { useCustomerAuth } from "../../checkout/customer-auth";
@@ -130,11 +130,11 @@ function MobileNav({ onSelect, onAuth, isOpen, currentHash }: { onSelect: () => 
       {status === "signed-in" ? (
         <>
           <a className={`${btnOutlineSm} mt-1 w-full`} href="#/coupons" onClick={onSelect}>Coupons</a>
-          <a className={`${btnOutlineSm} mt-1 w-full`} href="#/account" onClick={onSelect}>My account</a>
+          <a className={`${btnOutlineSm} mt-1 w-full`} href="#/account" onClick={onSelect}><UserRound className="mr-1 inline h-4 w-4" aria-hidden="true" />My account</a>
           <button className={`${btnOutlineSm} mt-1 w-full`} type="button" onClick={handleSignOut}>Sign out</button>
         </>
       ) : (
-        <button className={`${btnPrimarySm} mt-1 w-full`} type="button" onClick={onAuth}>Sign in</button>
+        <button className={`${btnPrimarySm} mt-1 w-full`} type="button" onClick={onAuth}><UserRoundPlus className="mr-1 inline h-4 w-4" aria-hidden="true" />Sign in or create account</button>
       )}
     </nav>
   );
@@ -216,7 +216,7 @@ export function SiteHeader() {
             <>
               <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
               <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} arrow />
-              <HeaderButtonAction label="Sign in" icon={LogIn} onClick={handleOpenAuth} />
+              <HeaderButtonAction label="Sign in or create account" icon={UserRoundPlus} onClick={handleOpenAuth} />
             </>
           )}
           <SmallPrimaryLink className="shrink-0 px-3 2xl:px-[0.9rem]" href="#waitlist" onClick={handleJoin}>

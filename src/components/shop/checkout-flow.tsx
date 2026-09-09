@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Copy, LockKeyhole, TicketPercent } from "lucide-react";
 import { useCart } from "../../cart-context";
 import { useCustomerAuth } from "../../checkout/customer-auth";
 import { submitOrder, type CustomerProfile } from "../../checkout/checkout-api";
 import { fetchAccountRewards } from "../../account-rewards/account-rewards-api";
 import type { AccountRewardsSnapshot } from "../../account-rewards/account-rewards-types";
 import { checkoutPointsPreview, maximumCheckoutPoints } from "../../checkout/checkout-points";
-import { listMyCoupons, previewCoupon } from "../../coupons/coupons-api";
-import type { CouponPreview, CustomerCoupon } from "../../coupons/coupon-types";
+import { listMyCoupons, listPublicCoupons, previewCoupon } from "../../coupons/coupons-api";
+import type { Coupon, CouponPreview, CustomerCoupon } from "../../coupons/coupon-types";
 import { fetchMyMembership } from "../../membership/membership-api";
 import { chooseBestDiscount, membershipDiscount } from "../../membership/membership-rules";
 import { btnOutlineSm, btnPrimaryLg, btnPrimarySm } from "../ui/styles";
 import { PackageIcon } from "../ui/icons";
 import { numberFormatter } from "./shop-utils";
 import type { CartLine } from "./cart-lines";
-import { AuthGate, Field, FlowBackLink, FlowNotice, SignInPanel, SignUpPanel, inputClasses, labelClasses, selectClasses, textAreaClasses } from "./auth-pane";
+import { Field, FlowBackLink, FlowNotice, SignInPanel, SignUpPanel, inputClasses, labelClasses, selectClasses, textAreaClasses } from "./auth-pane";
 
 export function CheckoutFlow({ items, subtotal, onBack }: { items: CartLine[]; subtotal: number; onBack: () => void }) {
   const { status, profile, signOut } = useCustomerAuth();
@@ -63,14 +64,7 @@ export function CheckoutFlow({ items, subtotal, onBack }: { items: CartLine[]; s
     return <SignInPanel onSwitch={() => setStep("signup")} onBack={onBack} />;
   }
 
-  return (
-    <AuthGate
-      mode="checkout"
-      onSignUp={() => setStep("signup")}
-      onSignIn={() => setStep("login")}
-      onBack={onBack}
-    />
-  );
+  return <GuestSavingsPreview items={items} subtotal={subtotal} onSignUp={() => setStep("signup")} onSignIn={() => setStep("login")} onBack={onBack} />;
 }
 
 function OrderSummary({ items }: { items: CartLine[] }) {
@@ -120,6 +114,123 @@ function OrderSummary({ items }: { items: CartLine[] }) {
         </div>
       ) : null}
     </section>
+  );
+}
+
+function guestCouponDiscount(coupon: Coupon): string {
+  return coupon.discountType === "percentage"
+    ? `${coupon.discountValue}% off`
+    : `Nu. ${numberFormatter.format(coupon.discountValue)} off`;
+}
+
+function guestCouponTargets(coupon: Coupon): string {
+  const labels = coupon.targets.map((target) => target.label || target.value).filter(Boolean);
+  return labels.length > 0 ? labels.join(" · ") : "Eligible Zama products";
+}
+
+function guestCouponExpiry(coupon: Coupon): string {
+  if (!coupon.expiresAt) return "No expiry listed";
+  const date = new Date(coupon.expiresAt);
+  if (Number.isNaN(date.getTime())) return "Check offer terms";
+  return `Ends ${date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+}
+
+function isUsablePublicCoupon(coupon: Coupon, now = new Date()): boolean {
+  const startsAt = Date.parse(coupon.startsAt);
+  const expiresAt = coupon.expiresAt ? Date.parse(coupon.expiresAt) : Number.NaN;
+  const started = Number.isNaN(startsAt) || startsAt <= now.getTime();
+  const notExpired = Number.isNaN(expiresAt) || expiresAt > now.getTime();
+  const notExhausted = coupon.usageLimit == null || (coupon.redeemedCount ?? 0) < coupon.usageLimit;
+  return coupon.active && !coupon.memberOnly && started && notExpired && notExhausted;
+}
+
+function GuestSavingsPreview({ items, subtotal, onSignUp, onSignIn, onBack }: {
+  items: CartLine[];
+  subtotal: number;
+  onSignUp: () => void;
+  onSignIn: () => void;
+  onBack: () => void;
+}) {
+  const { closeCart } = useCart();
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [loadingCoupons, setLoadingCoupons] = useState(true);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void listPublicCoupons()
+      .then((nextCoupons) => {
+        if (!active) return;
+        setCoupons(nextCoupons.filter((coupon) => isUsablePublicCoupon(coupon)));
+      })
+      .catch(() => {
+        if (active) setCouponError("We could not load public coupons right now.");
+      })
+      .finally(() => {
+        if (active) setLoadingCoupons(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function copyCode(code: string) {
+    try {
+      await navigator.clipboard?.writeText(code);
+      setCopiedCode(code);
+      window.setTimeout(() => setCopiedCode((current) => current === code ? null : current), 1800);
+    } catch {
+      setCopiedCode(null);
+    }
+  }
+
+  function browseCoupons() {
+    closeCart();
+    window.location.hash = "#/coupons";
+  }
+
+  return (
+    <div className="grid flex-1 content-start gap-4 overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-5">
+      <div className="grid gap-1">
+        <span className={labelClasses}>Before you checkout</span>
+        <h3 className="font-primary text-2xl font-bold text-brand-black">See your savings first</h3>
+        <p className="text-sm leading-snug text-brand-black/68">You can browse public offers now. Sign in or create an account to collect savings, redeem points, and place your order.</p>
+      </div>
+
+      <OrderSummary items={items} />
+      <div className="flex items-center justify-between gap-3 rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white px-3 py-2 text-sm">
+        <span className="font-bold text-brand-black">Estimated subtotal</span>
+        <strong className="text-brand-orange-ink">Nu. {numberFormatter.format(subtotal)}</strong>
+      </div>
+
+      <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-4 shadow-brand-soft" aria-labelledby="guest-coupons-title">
+        <div className="flex items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-brand-forest bg-brand-yellow text-brand-green-ink"><TicketPercent className="h-5 w-5" aria-hidden="true" /></span>
+          <div className="grid gap-1">
+            <h4 id="guest-coupons-title" className={`${labelClasses} text-brand-orange-ink`}>Available coupons</h4>
+            <p className="text-sm text-brand-black/62">Public offers you can collect after signing in.</p>
+          </div>
+        </div>
+        {loadingCoupons ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-3 text-sm text-brand-black/60">Finding available coupons…</p> : couponError ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{couponError}</p> : coupons.length === 0 ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-warm-white p-3 text-sm text-brand-black/60">There are no public coupons available right now.</p> : <div className="grid gap-2">{coupons.map((coupon) => <article className="grid gap-2 rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-yellow/25 p-3" key={coupon.id}><div className="flex items-start gap-2"><div className="min-w-0 flex-1"><strong className="block text-sm text-brand-green-ink">{coupon.title}</strong><span className="text-xs font-bold text-brand-orange-ink">{guestCouponDiscount(coupon)}</span></div><code className="shrink-0 rounded-full border-2 border-brand-forest bg-brand-forest px-2 py-1 text-xs font-bold tracking-[0.08em] text-brand-white">{coupon.code}</code></div><p className="text-xs leading-snug text-brand-black/65">{coupon.description}</p><div className="grid gap-1 text-[0.68rem] text-brand-black/60"><span><strong className="text-brand-green-ink">For:</strong> {guestCouponTargets(coupon)}</span><span><strong className="text-brand-green-ink">Minimum:</strong> {coupon.minimumOrderAmount > 0 ? `Nu. ${numberFormatter.format(coupon.minimumOrderAmount)}` : "None"} · {guestCouponExpiry(coupon)}</span></div><div className="flex flex-wrap gap-2"><button className="inline-flex min-h-9 items-center gap-1.5 rounded-full border-2 border-brand-forest bg-brand-white px-3 py-1 text-xs font-bold text-brand-green-ink hover:bg-brand-mint" type="button" onClick={() => void copyCode(coupon.code)}>{copiedCode === coupon.code ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}{copiedCode === coupon.code ? "Copied" : "Copy code"}</button><button className="inline-flex min-h-9 items-center rounded-full border-2 border-brand-forest bg-brand-forest px-3 py-1 text-xs font-bold text-brand-white hover:bg-brand-leaf" type="button" onClick={onSignIn}>Sign in to collect</button></div></article>)}</div>}
+        <button className="w-fit justify-self-start text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={browseCoupons}>View all public coupons →</button>
+      </section>
+
+      <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-mint p-4 shadow-brand-soft" aria-labelledby="guest-points-title">
+        <div className="flex items-start gap-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 border-brand-forest bg-brand-white text-brand-green-ink"><LockKeyhole className="h-5 w-5" aria-hidden="true" /></span>
+          <div className="grid gap-1"><h4 id="guest-points-title" className={`${labelClasses} text-brand-orange-ink`}>Redeem points</h4><p className="text-sm leading-relaxed text-brand-black/68">Your points balance is private. Sign in to view your available points and use them on this order.</p></div>
+        </div>
+        <button className={`${btnPrimarySm} w-full`} type="button" onClick={onSignIn}>Sign in to redeem points</button>
+      </section>
+
+      <section className="grid gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-yellow p-4 shadow-brand-soft" aria-labelledby="guest-checkout-title">
+        <div className="grid gap-1"><h4 id="guest-checkout-title" className="font-primary text-xl font-bold text-brand-green-ink">Ready to place your order?</h4><p className="text-sm leading-relaxed text-brand-black/68">An account is required so we can save your delivery details and apply your selected savings securely.</p></div>
+        <div className="grid gap-2 sm:grid-cols-2"><button className={`${btnPrimaryLg} w-full`} type="button" onClick={onSignUp}>Create an account</button><button className={`${btnOutlineSm} w-full`} type="button" onClick={onSignIn}>Sign in</button></div>
+      </section>
+
+      <FlowBackLink onClick={onBack}>← Back to cart</FlowBackLink>
+    </div>
   );
 }
 

@@ -12,6 +12,10 @@ describe("routing", () => {
     expect(getRoute("#/account/membership?source=account")).toBe("account-membership");
   });
 
+  it("opens the reset page for an expired recovery response", () => {
+    expect(getRoute("#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired")).toBe("admin-password-reset");
+  });
+
   it("opens the dedicated partnership enquiry page", () => {
     expect(getRoute("#/partnership")).toBe("partnership");
   });

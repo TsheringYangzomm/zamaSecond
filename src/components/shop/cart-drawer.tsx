@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../../cart-context";
 import { useContent } from "../../cms/content-context";
+import { useCustomerAuth } from "../../checkout/customer-auth";
 import { loadInventoryCatalog } from "../../checkout/inventory-catalog";
 import { btnPrimaryKit, btnPrimaryLg } from "../ui/styles";
 import { PackageIcon } from "../ui/icons";
@@ -120,6 +121,7 @@ export function CartDrawer() {
     removeFromCart,
     closeCart,
   } = useCart();
+  const { status: customerAuthStatus } = useCustomerAuth();
   const { products } = useContent();
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [inventoryItems, setInventoryItems] = useState<InventoryItemRow[]>([]);
@@ -304,7 +306,7 @@ export function CartDrawer() {
                   <p className="text-right font-bold text-brand-orange-ink">{hasCompletePricing ? `Nu. ${numberFormatter.format(subtotal)}` : "Pricing pending"}</p>
                 </div>
                 <button className={`${btnPrimaryLg} w-full`} type="button" onClick={() => setCheckoutOpen(true)}>
-                  Checkout
+                  {customerAuthStatus === "signed-in" ? "Checkout" : "Review savings"}
                 </button>
                 <p className="text-xs text-brand-black/58">{hasCompletePricing ? "Estimated subtotal" : "Final total shown before payment"}</p>
               </div>

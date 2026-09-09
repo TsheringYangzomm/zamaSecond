@@ -10,7 +10,8 @@ export function getRoute(
   const hashValue = hash.startsWith("#") ? hash.slice(1) : hash;
   const hashParams = new URLSearchParams(hashValue.includes("?") ? hashValue.slice(hashValue.indexOf("?") + 1) : hashValue);
   const searchParams = new URLSearchParams(search);
-  if (pathname.replace(/\/+$/, "").endsWith("/reset-password") || hash.startsWith("#/reset-password") || hashParams.get("type") === "recovery" || searchParams.has("code")) return "admin-password-reset";
+  const recoveryError = hashParams.get("error_code") === "otp_expired" || (hashParams.get("error") === "access_denied" && /expired|invalid/i.test(hashParams.get("error_description") ?? ""));
+  if (pathname.replace(/\/+$/, "").endsWith("/reset-password") || hash.startsWith("#/reset-password") || hashParams.get("type") === "recovery" || recoveryError || searchParams.has("code")) return "admin-password-reset";
   if (hash.startsWith("#/admin")) return "admin";
   if (hash.startsWith("#/coupons")) return "coupons";
   if (hash.startsWith("#/account/wallet")) return "account-wallet";
