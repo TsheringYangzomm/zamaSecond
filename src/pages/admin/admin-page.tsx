@@ -124,7 +124,7 @@ function AdminShell() {
 
   return (
     <SidebarProvider className="flex min-h-svh w-full flex-col">
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b-4 border-brand-forest bg-brand-yellow px-4 sm:px-6 lg:px-8">
+      <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between gap-3 border-b-4 border-brand-forest bg-brand-yellow px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
           <SidebarTrigger />
           <img className="h-12 w-auto shrink-0" src="/assets/zama_logo.png" alt="Zama" width="144" height="94" />
@@ -136,7 +136,7 @@ function AdminShell() {
         </div>
       </header>
 
-      <div className="flex flex-1 min-w-0">
+      <div className="flex min-w-0 flex-1 pt-16">
         <AdminSidebar
           className="top-16! h-[calc(100svh-4rem)]!"
           tab={tab}

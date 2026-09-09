@@ -114,7 +114,12 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     const { data, error: signUpError } = await client.auth.signUp({
       email,
       password: input.password,
-      options: { data: { full_name: name } },
+      options: {
+        data: { full_name: name },
+        // Supabase otherwise falls back to the project's Site URL, which can
+        // still be configured as a local address from development.
+        emailRedirectTo: `${window.location.origin}/`,
+      },
     });
     if (signUpError) {
       setError(signUpError.message);
