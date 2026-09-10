@@ -109,7 +109,7 @@ const detailsLinkClasses =
   "inline-flex min-h-10 w-full items-center justify-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2";
 
 const viewContentsButtonClasses =
-  "inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-wobbly-md border-2 border-brand-forest bg-brand-mint px-3 text-xs font-bold text-brand-green-ink transition-all duration-150 ease-out hover:bg-brand-yellow hover:shadow-brand-soft focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2";
+  "inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-wobbly-md border-2 border-brand-forest bg-brand-mint px-3 text-xs font-bold text-brand-green-ink transition-[background-color,box-shadow,transform] duration-150 ease-out hover:bg-brand-yellow hover:shadow-brand-soft focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2";
 
 export function FeaturedShopCard({ product, onAdd, onViewDetail, preview = false }: { product: ShopProduct; onAdd: (product: ShopProduct) => void; onViewDetail?: (product: ShopProduct) => void; preview?: boolean }) {
   const headingId = `${product.id}-title`;

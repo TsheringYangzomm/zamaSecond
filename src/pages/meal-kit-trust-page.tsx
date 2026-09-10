@@ -125,12 +125,12 @@ export function MealKitTrustPage() {
   return (
     <section className={`grid gap-6 py-[clamp(3rem,6vw,5rem)] ${sectionShell}`} aria-labelledby="trust-page-title">
       <div className="section-heading grid gap-4">
-        <a className="inline-flex w-fit items-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href="#/">{page.backLabel}</a>
+        <a className="inline-flex w-fit items-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href="/">{page.backLabel}</a>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Meal kits</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Meal kits</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">Trust standards</li>
           </ol>

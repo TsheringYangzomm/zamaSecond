@@ -82,7 +82,7 @@ export function MealKitsSection() {
           <h2 id="meal-title" className={`${sectionTitle} max-w-190 text-brand-green-ink`}>{mealKitBlock.heading}</h2>
           <p className="max-w-150 text-[1.05rem] leading-[1.5] text-brand-black/72">{mealKitBlock.copy}</p>
         </div>
-        <OutlineLink href="#/shop?category=meal-kits">{mealKitBlock.browseLabel}</OutlineLink>
+        <OutlineLink href="/shop?category=meal-kits">{mealKitBlock.browseLabel}</OutlineLink>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.16fr)_minmax(360px,0.84fr)] lg:items-stretch">
@@ -111,7 +111,7 @@ export function MealKitsSection() {
             </div>
           ) : null}
         </div>
-        <OutlineLink href="#/meal-kit-trust">{mealKitBlock.nutritionLinkLabel}</OutlineLink>
+        <OutlineLink href="/meal-kit-trust">{mealKitBlock.nutritionLinkLabel}</OutlineLink>
       </aside>
     </section>
   );

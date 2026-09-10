@@ -299,7 +299,7 @@ class CommerceDataStore {
           title: "Order status updated",
           message: `Your order ${order.id} is now ${status.replaceAll("_", " ")}.`,
           status,
-          link: "#/account/orders",
+          link: "/account/orders",
         });
       }
       return;
@@ -330,7 +330,7 @@ class CommerceDataStore {
           title: "Membership status updated",
           message: `Your Zama+ membership is now ${status.replaceAll("_", " ")}.`,
           status,
-          link: "#/account/membership",
+          link: "/account/membership",
         });
       }
       return;
@@ -365,7 +365,7 @@ class CommerceDataStore {
           title: "Order status updated",
           message: `Your order ${delivery.order_id} is now ${orderStatus.replaceAll("_", " ")}.`,
           status: orderStatus,
-          link: "#/account/orders",
+          link: "/account/orders",
         });
       }
       return;
@@ -410,7 +410,7 @@ class CommerceDataStore {
           title: "Payment status updated",
           message: `Payment for order ${payment.order_id} is now ${status}.`,
           status,
-          link: "#/account/orders",
+          link: "/account/orders",
         });
       }
       return;

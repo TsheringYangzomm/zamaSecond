@@ -3,9 +3,7 @@ import { completeJaggleSignIn, startJaggleSignIn, type JaggleAuthAudience, type 
 import { btnOutlineSm, btnPrimaryLg } from "../components/ui/styles";
 
 function callbackParams() {
-  const hash = window.location.hash;
-  const query = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
-  const params = new URLSearchParams(query);
+  const params = new URLSearchParams(window.location.search);
   const audience: JaggleAuthAudience = params.get("audience") === "admin" ? "admin" : "customer";
   return { audience, ticket: params.get("ticket") ?? "", error: params.get("error") ?? "" };
 }
@@ -18,6 +16,8 @@ function readableError(code: string): string {
       return "This Jaggle identity is already linked to another email address.";
     case "missing_callback_data":
       return "Jaggle did not return a complete sign-in response.";
+    case "invalid_state":
+      return "This Jaggle sign-in request expired or was opened in a different browser session.";
     default:
       return "We could not complete Jaggle sign-in. Please try again.";
   }
@@ -44,7 +44,7 @@ export function JaggleCallbackPage() {
       }
       setStatus("success");
       window.setTimeout(() => {
-        window.location.hash = initial.audience === "admin" ? "#/admin" : "#/account";
+        window.location.assign(initial.audience === "admin" ? "/admin" : "/account");
       }, 150);
     });
   }, [initial.audience, initial.error, initial.ticket]);
@@ -81,7 +81,7 @@ export function JaggleCallbackPage() {
             <p className="mt-3 text-sm text-brand-black/68">{error}</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <button className={`${btnPrimaryLg} w-full justify-center`} type="button" onClick={() => void retry()}>Try Jaggle again</button>
-              <a className={`${btnOutlineSm} w-full justify-center`} href="#/">Back to site</a>
+              <a className={`${btnOutlineSm} w-full justify-center`} href="/">Back to site</a>
             </div>
           </>
         )}
@@ -89,4 +89,3 @@ export function JaggleCallbackPage() {
     </main>
   );
 }
-

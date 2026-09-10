@@ -95,7 +95,7 @@ export function LaunchDetailsSection() {
           <p className="text-[1.05rem] text-brand-black/72">{launch.policiesCopy}</p>
         </div>
 
-        <div className="field-notebook relative  overflow-hidden rounded-[38px_24px_44px_28px/28px_44px_24px_38px] border-4 border-brand-forest bg-brand-warm-white shadow-brand-big lg:grid-cols-2">
+        <div className="field-notebook relative grid overflow-hidden rounded-[38px_24px_44px_28px/28px_44px_24px_38px] border-4 border-brand-forest bg-brand-warm-white shadow-brand-big lg:grid-cols-2">
           <div className="notebook-page relative z-[1] grid content-start gap-4 border-b-3 border-dashed border-brand-forest/28 p-5 sm:p-7 lg:border-r-3 lg:border-b-0">
             <div className="grid gap-1">
               <span className="text-xs font-bold uppercase tracking-[0.12em] text-brand-orange-ink">{launch.practicalLabel}</span>
@@ -112,10 +112,10 @@ export function LaunchDetailsSection() {
                 </details>
               ))}
             </div>
-            <PrimaryLink href="#/contact">{launch.askCtaLabel}</PrimaryLink>
+            <PrimaryLink href="/contact">{launch.askCtaLabel}</PrimaryLink>
           </div>
 
-          {/* <article className="notebook-page relative z-[1] grid content-start gap-5 p-5 sm:p-7" id="about" aria-labelledby="about-title">
+          <article className="notebook-page relative z-[1] grid content-start gap-5 p-5 sm:p-7" id="about" aria-labelledby="about-title">
             <div className="grid gap-2">
               <YellowTag>02 · About Zama</YellowTag>
               <h3 id="about-title" className={`${sectionTitleCompact} text-brand-green-ink`}>A field notebook for better everyday food.</h3>
@@ -140,7 +140,7 @@ export function LaunchDetailsSection() {
               <PrimaryLink href="#shop">Browse the market</PrimaryLink>
               <a className="inline-flex min-h-11 items-center font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3" href="#farmers">Read sourcing notes</a>
             </div>
-          </article> */}
+          </article>
 
           <div className="relative z-[1] col-span-full grid gap-3 border-t-3 border-dashed border-brand-forest/28 bg-brand-mint/72 p-5 sm:p-7">
             <div className="flex flex-wrap items-end justify-between gap-2">
@@ -163,7 +163,7 @@ export function LaunchDetailsSection() {
                 <p className="font-primary text-[clamp(1.3rem,2.4vw,1.8rem)] font-bold leading-[1.05] text-brand-black">{launch.faqsCtaTitle}</p>
                 <p className="text-sm text-brand-black/72">{launch.faqsCtaCopy}</p>
               </div>
-              <PrimaryLink href="#/contact">{launch.faqsCtaLabel}</PrimaryLink>
+              <PrimaryLink href="/contact">{launch.faqsCtaLabel}</PrimaryLink>
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@ export function LaunchDetailsSection() {
             <h2 id="b2b-title" className={`${sectionTitle} max-w-190 text-brand-forest`}>{launch.b2bHeading}</h2>
             <p className="max-w-170 text-[1.05rem] text-brand-black/72">{launch.b2bCopy}</p>
             <div>
-              <PrimaryLink href="#/partnership">{launch.b2bCtaLabel}</PrimaryLink>
+              <PrimaryLink href="/partnership">{launch.b2bCtaLabel}</PrimaryLink>
             </div>
           </div>
           <aside className="postcard-stamp relative z-[1] grid justify-items-center gap-3 rotate-[2deg] rounded-wobbly-card border-3 border-dashed border-brand-forest bg-brand-warm-white p-5 text-center shadow-brand">

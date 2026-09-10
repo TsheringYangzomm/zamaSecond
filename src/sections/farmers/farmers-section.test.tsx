@@ -17,7 +17,7 @@ describe("FarmersSection", () => {
 
   it("includes a link to the farmers page", () => {
     render(<FarmersSection />);
-    expect(screen.getByRole("link", { name: /View all farmers/ })).toHaveAttribute("href", "#/farmers");
+    expect(screen.getByRole("link", { name: /View all farmers/ })).toHaveAttribute("href", "/farmers");
   });
 
   it("shows the latest seasonal update as a quote on the landing cards", () => {

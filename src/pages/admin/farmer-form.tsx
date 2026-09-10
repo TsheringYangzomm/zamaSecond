@@ -177,7 +177,7 @@ export function FarmerForm({ initial, privateInfo, storyInfo, privateEnabled, st
           <p className="text-xs font-bold uppercase tracking-[0.1em] text-brand-green-ink">Landing page preview</p>
           <p className="italic leading-[1.5] text-brand-black/68">&ldquo;{draft.bio}&rdquo;</p>
           {storyDraft.content.trim() && storyDraft.published ? (
-            <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="#/farmers">Read their story →</a>
+            <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="/farmers">Read their story →</a>
           ) : null}
           {storyDraft.content.trim() && !storyDraft.published ? (
             <p className="text-xs font-semibold text-brand-black/52">Story saved as a draft — not linked until &ldquo;Show story on the site&rdquo; is checked.</p>

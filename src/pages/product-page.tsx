@@ -102,12 +102,12 @@ function ProductDetails({ product }: { product: ShopProduct }) {
   return (
     <section className={`grid gap-6 py-[clamp(3rem,6vw,5rem)] ${sectionShell}`} aria-labelledby="product-title">
       <div className="grid gap-2">
-        <a className="inline-flex w-fit items-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href="#/shop">{page.backLabel}</a>
+        <a className="inline-flex w-fit items-center gap-1 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2" href="/shop">{page.backLabel}</a>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/shop">Shop</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/shop">Shop</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">{product.name}</li>
           </ol>
@@ -154,7 +154,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
         <aside className="grid content-start gap-4 border-t-2 border-dashed border-brand-forest/26 pt-6" aria-labelledby="related-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 id="related-title" className="font-primary text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none text-brand-black">{page.relatedHeading} {product.category.toLowerCase()}</h2>
-            <OutlineLink href="#/shop">Browse the full shop</OutlineLink>
+            <OutlineLink href="/shop">Browse the full shop</OutlineLink>
           </div>
           <div className="grid content-start items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
             {related.map((candidate) => <SupportingShopCard key={candidate.id} product={candidate} onAdd={handleAddRelated} />)}
@@ -166,7 +166,7 @@ function ProductDetails({ product }: { product: ShopProduct }) {
         <aside className="grid content-start gap-4 border-t-2 border-dashed border-brand-forest/26 pt-6" aria-labelledby="suggestions-title">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <h2 id="suggestions-title" className="font-primary text-[clamp(1.6rem,3vw,2.2rem)] font-bold leading-none text-brand-black">{page.suggestionsHeading}</h2>
-            <OutlineLink href="#/shop">Browse the full shop</OutlineLink>
+            <OutlineLink href="/shop">Browse the full shop</OutlineLink>
           </div>
           <div className="grid content-start items-start gap-4 md:grid-cols-2 lg:grid-cols-3">
             {suggestions.map((candidate) => <SupportingShopCard key={candidate.id} product={candidate} onAdd={handleAddRelated} />)}
@@ -189,7 +189,7 @@ function ProductNotFound() {
         <h1 id="not-found-title" className={`${sectionTitleCompact} max-w-180 text-brand-green-ink`}>{page.notFoundTitle}</h1>
         <p className="max-w-140 text-[1.05rem] leading-[1.5] text-brand-black/72">{page.notFoundCopy}</p>
         <div>
-          <OutlineLink href="#/shop">{page.notFoundCtaLabel}</OutlineLink>
+          <OutlineLink href="/shop">{page.notFoundCtaLabel}</OutlineLink>
         </div>
       </div>
     </section>

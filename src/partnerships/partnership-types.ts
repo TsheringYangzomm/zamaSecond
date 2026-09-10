@@ -35,6 +35,7 @@ export type PartnershipRequestInput = {
   message: string;
   location: string;
   dzongkhag: string;
+  turnstileToken?: string;
 };
 
 export type PartnershipRequest = PartnershipRequestInput & {

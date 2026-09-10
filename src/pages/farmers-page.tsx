@@ -15,7 +15,7 @@ const sortOptions: { key: SortKey; label: string }[] = [
 ];
 
 const filterButtonClasses =
-  "min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 hover:shadow-brand-soft";
+  "min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 hover:shadow-brand-soft";
 
 const activeFilterButtonClasses = "bg-brand-forest text-brand-white";
 const inactiveFilterButtonClasses = "bg-brand-white text-brand-forest hover:bg-brand-yellow";
@@ -54,8 +54,7 @@ export function FarmersPage() {
   const resultCount = filtered.length;
 
   useEffect(() => {
-    const match = window.location.hash.match(/[?&]farmer=([^&]+)/);
-    const farmerId = match ? decodeURIComponent(match[1]) : null;
+    const farmerId = new URLSearchParams(window.location.search).get("farmer");
     if (!farmerId || farmers.length === 0) return;
     const frame = requestAnimationFrame(() => {
       document.querySelector(`[data-farmer-id="${farmerId}"]`)?.scrollIntoView({ block: "center" });
@@ -68,7 +67,7 @@ export function FarmersPage() {
       <div className={`relative z-[1] grid gap-7 ${sectionShell}`}>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">Farmers</li>
           </ol>

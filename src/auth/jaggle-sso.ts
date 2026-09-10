@@ -36,7 +36,7 @@ function functionPrefix(): string {
   return "/api";
 }
 
-export function getJaggleFunctionPath(name: "customer-callback" | "admin-callback" | "handoff"): string {
+export function getJaggleFunctionPath(name: "customer-callback" | "admin-callback" | "handoff" | "start"): string {
   return `${functionPrefix()}/jaggle-${name}`;
 }
 
@@ -96,14 +96,14 @@ export async function startJaggleSignIn(audience: JaggleAuthAudience): Promise<J
   if (!clientId) {
     if (import.meta.env.DEV && !getSupabaseClient()) {
       recordDevJaggleSession(audience);
-      window.location.hash = audience === "admin" ? "#/admin" : "#/account";
+      window.location.assign(audience === "admin" ? "/admin" : "/account");
       window.location.reload();
       return { ok: true, audience };
     }
     return { ok: false, error: "Jaggle sign-in is not configured yet. Add VITE_JAGGLE_CLIENT_ID and try again." };
   }
 
-  window.location.assign(buildJaggleAuthorizationUrl(audience, clientId));
+  window.location.assign(`${getJaggleFunctionPath("start")}?audience=${encodeURIComponent(audience)}`);
   return { ok: true, audience };
 }
 

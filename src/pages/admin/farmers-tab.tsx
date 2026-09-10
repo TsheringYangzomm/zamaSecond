@@ -26,11 +26,11 @@ import type { FarmerDocumentRow, FarmerPrivateInfoRow, FarmerRow, FarmerStoryRow
 import { blankFarmer, blankFarmerPrivateInfo, blankFarmerStory, FarmerForm } from "./farmer-form";
 import { FarmerDetail } from "./farmer-detail";
 import { useRowDragSort } from "./use-row-drag";
+import { navigateTo } from "../../router";
 
-function farmerIdFromHash(): string | null {
+function farmerIdFromUrl(): string | null {
   if (typeof window === "undefined") return null;
-  const query = window.location.hash.split("?")[1] ?? "";
-  const farmerId = new URLSearchParams(query).get("farmer");
+  const farmerId = new URLSearchParams(window.location.search).get("farmer");
   return farmerId;
 }
 
@@ -95,7 +95,7 @@ export function FarmersTab() {
       loadedFarmers = farmerRows;
       setFarmers(farmerRows);
       setProducts(productRows);
-      const requestedFarmerId = farmerIdFromHash();
+      const requestedFarmerId = farmerIdFromUrl();
       if (requestedFarmerId) {
         const requestedFarmer = farmerRows.find((row) => row.id === requestedFarmerId);
         if (requestedFarmer) setSelected(requestedFarmer);
@@ -149,7 +149,7 @@ export function FarmersTab() {
 
   useEffect(() => {
     const syncSelectedFarmer = () => {
-      const requestedFarmerId = farmerIdFromHash();
+      const requestedFarmerId = farmerIdFromUrl();
       if (!requestedFarmerId) {
         setSelected(null);
         return;
@@ -160,19 +160,19 @@ export function FarmersTab() {
         setSelected(requestedFarmer);
       }
     };
-    window.addEventListener("hashchange", syncSelectedFarmer);
-    return () => window.removeEventListener("hashchange", syncSelectedFarmer);
+    window.addEventListener("popstate", syncSelectedFarmer);
+    return () => window.removeEventListener("popstate", syncSelectedFarmer);
   }, [farmers]);
 
   function openFarmer(row: FarmerRow) {
     setSelected(row);
-    window.location.hash = `#/admin?tab=farmers&farmer=${encodeURIComponent(row.id)}`;
+    navigateTo(`/admin?tab=farmers&farmer=${encodeURIComponent(row.id)}`);
   }
 
   function closeFarmer() {
     setSelected(null);
-    if (window.location.hash.includes("farmer=")) {
-      window.location.hash = "#/admin?tab=farmers";
+    if (window.location.search.includes("farmer=")) {
+      navigateTo("/admin?tab=farmers");
     }
   }
 
@@ -303,7 +303,7 @@ export function FarmersTab() {
           const row = selected;
           setSelected(null);
           setCreating(false);
-          window.location.hash = "#/admin?tab=farmers";
+          navigateTo("/admin?tab=farmers");
           setEditing(row);
           setPrivateInfo(privateMap[row.id] ?? blankFarmerPrivateInfo(row.id));
           setStoryInfo(storyMap[row.id] ?? blankFarmerStory(row.id));

@@ -158,7 +158,7 @@ export async function requestCustomerReturn(email: string, input: ReturnRequestI
     type: "return_requested",
     title: "New return request",
     message: "A customer requested a return for order " + next.orderId + ".",
-    link: "#/admin?tab=orders&view=returns",
+    link: "/admin?tab=orders&view=returns",
   });
   return next;
 }

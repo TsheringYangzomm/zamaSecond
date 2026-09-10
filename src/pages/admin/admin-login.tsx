@@ -93,7 +93,7 @@ export function AdminLogin() {
           <JaggleSignInButton audience="admin" />
         </form>
 
-        <a className={`${btnOutlineSm} mx-auto mt-4 block w-fit`} href="#/">← Back to site</a>
+        <a className={`${btnOutlineSm} mx-auto mt-4 block w-fit`} href="/">← Back to site</a>
       </div>
     </section>
   );

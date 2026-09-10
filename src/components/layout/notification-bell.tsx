@@ -4,6 +4,7 @@ import { useCustomerAuth } from "../../checkout/customer-auth";
 import { processMembershipDueCycles } from "../../membership/membership-benefits-api";
 import { fetchCustomerNotifications, markAllNotificationsRead, markNotificationRead } from "../../returns/returns-notifications-api";
 import type { CustomerNotification } from "../../returns/returns-types";
+import { navigateTo } from "../../router";
 
 function relativeDate(value: string): string {
   const timestamp = new Date(value).getTime();
@@ -21,8 +22,8 @@ function relativeDate(value: string): string {
 
 function notificationHref(notification: CustomerNotification): string | null {
   if (notification.link) return notification.link;
-  if (notification.returnId) return "#/account/orders?section=returns";
-  if (notification.orderId) return "#/account/orders";
+  if (notification.returnId) return "/account/orders?section=returns";
+  if (notification.orderId) return "/account/orders";
   return null;
 }
 
@@ -109,7 +110,7 @@ export function NotificationBell({ compact = false }: { compact?: boolean }) {
           {notifications.map((notification) => <div className={`grid gap-1 rounded-wobbly-md border-2 p-3 ${notification.readAt ? "border-brand-forest/10 bg-brand-white" : "border-brand-forest bg-brand-mint"}`} key={notification.id}>
             <div className="flex items-start justify-between gap-2"><p className="text-sm font-bold text-brand-green-ink">{notification.title}</p><span className="shrink-0 text-[0.68rem] text-brand-black/50">{relativeDate(notification.createdAt)}</span></div>
             <p className="text-xs leading-relaxed text-brand-black/70">{notification.message}</p>
-            <div className="flex flex-wrap items-center gap-3 pt-1">{notificationHref(notification) ? <button className="text-xs font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={() => { void readOne(notification); setOpen(false); const href = notificationHref(notification); if (href) window.location.hash = href; }}>{notificationActionLabel(notification)}</button> : null}{!notification.readAt ? <button className="text-xs font-bold text-brand-black/55 underline decoration-dashed underline-offset-4" type="button" onClick={() => void readOne(notification)}>Mark as read</button> : null}</div>
+            <div className="flex flex-wrap items-center gap-3 pt-1">{notificationHref(notification) ? <button className="text-xs font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={() => { void readOne(notification); setOpen(false); const href = notificationHref(notification); if (href) navigateTo(href); }}>{notificationActionLabel(notification)}</button> : null}{!notification.readAt ? <button className="text-xs font-bold text-brand-black/55 underline decoration-dashed underline-offset-4" type="button" onClick={() => void readOne(notification)}>Mark as read</button> : null}</div>
           </div>)}
         </div>
       </div> : null}

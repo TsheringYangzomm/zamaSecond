@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { CartProvider } from "../cart-provider";
 import { ContentProvider } from "../cms/content-context";
 import { CustomerAuthProvider } from "../checkout/customer-auth";
@@ -8,15 +9,18 @@ import { CartDrawer } from "../components/shop/cart-drawer";
 import { CouponsPage } from "./coupons-page";
 
 function renderPage() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <ContentProvider>
-      <CartProvider>
-        <CustomerAuthProvider>
-          <CouponsPage />
-          <CartDrawer />
-        </CustomerAuthProvider>
-      </CartProvider>
-    </ContentProvider>,
+    <QueryClientProvider client={queryClient}>
+      <ContentProvider>
+        <CartProvider>
+          <CustomerAuthProvider>
+            <CouponsPage />
+            <CartDrawer />
+          </CustomerAuthProvider>
+        </CartProvider>
+      </ContentProvider>
+    </QueryClientProvider>,
   );
 }
 

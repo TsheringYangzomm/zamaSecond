@@ -1,11 +1,10 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { getSupabaseClient } from "../supabase";
 import { useOptionalCustomerAuth } from "../checkout/customer-auth";
@@ -526,45 +525,30 @@ export function ContentProvider({
 }: {
   children: ReactNode;
 }) {
-  const [content, setContent] =
-    useState<Content>(staticContent);
   const auth = useOptionalCustomerAuth();
-  const [canAccessEarlyProducts, setCanAccessEarlyProducts] = useState(false);
+  const contentQuery = useQuery({
+    queryKey: ["public-content"],
+    queryFn: loadRemoteContent,
+    staleTime: 5 * 60_000,
+    refetchOnMount: "always",
+  });
+  const membershipQuery = useQuery({
+    queryKey: ["membership-access", auth?.profile?.email ?? "anonymous"],
+    queryFn: () => fetchMyMembership(auth?.profile?.email ?? ""),
+    enabled: auth?.status === "signed-in" && Boolean(auth.profile?.email),
+    staleTime: 60_000,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    if (auth?.status !== "signed-in" || !auth.profile) {
-      setCanAccessEarlyProducts(false);
-      return () => { cancelled = true; };
-    }
-    void fetchMyMembership(auth.profile.email)
-      .then((snapshot) => {
-        if (!cancelled) setCanAccessEarlyProducts(snapshot.status === "active" && snapshot.plan?.earlyAccessEnabled === true);
-      })
-      .catch(() => {
-        if (!cancelled) setCanAccessEarlyProducts(false);
-      });
-    return () => { cancelled = true; };
-  }, [auth?.profile, auth?.status]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    loadRemoteContent().then((remote) => {
-      if (cancelled) return;
-
-      setContent(
-        mergeContent(
-          staticContent,
-          remote,
-        ),
-      );
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canAccessEarlyProducts]);
+  const content = useMemo(
+    () => contentQuery.data
+      ? mergeContent(staticContent, contentQuery.data)
+      : contentQuery.isError
+        ? { ...staticContent, status: "error" as const }
+        : staticContent,
+    [contentQuery.data, contentQuery.isError],
+  );
+  const canAccessEarlyProducts = membershipQuery.data?.status === "active"
+    && membershipQuery.data.plan?.earlyAccessEnabled === true;
 
   const visibleContent = useMemo(
     () => withMembershipProductVisibility(content, canAccessEarlyProducts),

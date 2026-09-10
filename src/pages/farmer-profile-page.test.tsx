@@ -11,13 +11,13 @@ describe("FarmerProfilePage", () => {
     expect(screen.getByRole("heading", { name: "Products supplied" })).toBeVisible();
     expect(screen.getByText("Cabbage")).toBeVisible();
     expect(screen.getByText(/terraced fields above Paro/)).toBeVisible();
-    expect(screen.getByRole("link", { name: "← Back to all farmers" })).toHaveAttribute("href", "#/farmers");
+    expect(screen.getByRole("link", { name: "← Back to all farmers" })).toHaveAttribute("href", "/farmers");
   });
 
   it("shows a friendly fallback for an unknown farmer", () => {
     render(<FarmerProfilePage farmerId="missing-farmer" />);
 
     expect(screen.getByRole("heading", { name: "Farmer profile not found" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Back to all farmers" })).toHaveAttribute("href", "#/farmers");
+    expect(screen.getByRole("link", { name: "Back to all farmers" })).toHaveAttribute("href", "/farmers");
   });
 });

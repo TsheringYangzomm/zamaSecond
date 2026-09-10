@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 
 const JAGGLE_VALIDATE_URL = "https://accounts.jaggle.ai/api/v1/auth/token/validate";
+const JAGGLE_AUTHORIZE_URL = "https://accounts.jaggle.ai/api/v1/sso/authorize";
 const allowedAudiences = new Set(["customer", "admin"]);
 
 function value(name) {
@@ -12,7 +14,7 @@ function config(audience) {
   const serviceRoleKey = value("SUPABASE_SERVICE_ROLE_KEY");
   const jaggleClientId = value("JAGGLE_CLIENT_ID");
   const jaggleClientSecret = value("JAGGLE_CLIENT_SECRET");
-  const appOrigin = (value("APP_ORIGIN") || "https://zama.bt").replace(/\/$/, "");
+  const appOrigin = (value("APP_ORIGIN") || "https://zamaecom.vercel.app").replace(/\/$/, "");
   const callbackUrl = value(audience === "admin" ? "JAGGLE_ADMIN_CALLBACK_URL" : "JAGGLE_CUSTOMER_CALLBACK_URL");
 
   if (!supabaseUrl || !serviceRoleKey || !jaggleClientId || !jaggleClientSecret || !callbackUrl) {
@@ -37,12 +39,34 @@ function jsonResponse(body, status = 200) {
   };
 }
 
-function redirectResponse(location) {
+function redirectResponse(location, headers = {}) {
   return {
     statusCode: 302,
-    headers: { Location: location, "Cache-Control": "no-store" },
+    headers: { Location: location, "Cache-Control": "no-store", ...headers },
     body: "",
   };
+}
+
+function stateCookieName(audience) {
+  return `zama_jaggle_state_${audience}`;
+}
+
+function stateCookie(audience, state, maxAge = 600) {
+  return `${stateCookieName(audience)}=${encodeURIComponent(state)}; Max-Age=${maxAge}; Path=/; HttpOnly; Secure; SameSite=Lax`;
+}
+
+function cookieValue(headers, name) {
+  const raw = String(headers?.cookie ?? headers?.Cookie ?? "");
+  for (const entry of raw.split(";")) {
+    const [key, ...parts] = entry.trim().split("=");
+    if (key === name) return decodeURIComponent(parts.join("="));
+  }
+  return "";
+}
+
+function sameState(expected, actual) {
+  if (!expected || !actual || expected.length !== actual.length) return false;
+  return timingSafeEqual(Buffer.from(expected), Buffer.from(actual));
 }
 
 function callbackResultUrl(origin, audience, params) {
@@ -52,8 +76,9 @@ function callbackResultUrl(origin, audience, params) {
   return target.toString();
 }
 
-function errorRedirect(origin, audience, error) {
-  return redirectResponse(callbackResultUrl(origin, audience, { error }));
+function errorRedirect(origin, audience, error, clearState = false) {
+  const headers = clearState ? { "Set-Cookie": stateCookie(audience, "", 0) } : {};
+  return redirectResponse(callbackResultUrl(origin, audience, { error }), headers);
 }
 
 function normalizeEmail(email) {
@@ -174,14 +199,17 @@ async function storeIdentity(supabase, claims, audience, customerId) {
 }
 
 export async function handleJaggleCallback(event, audience) {
-  const origin = (value("APP_ORIGIN") || "https://zama.bt").replace(/\/$/, "");
+  const origin = (value("APP_ORIGIN") || "https://zamaecom.vercel.app").replace(/\/$/, "");
   try {
     if (!allowedAudiences.has(audience)) return errorRedirect(origin, "customer", "invalid_audience");
     const settings = config(audience);
     const query = event.queryStringParameters ?? {};
     const token = String(query.token ?? "").trim();
     const session = String(query.session ?? "").trim();
-    if (!token || !session) return errorRedirect(settings.appOrigin, audience, "missing_callback_data");
+    const state = String(query.state ?? "").trim();
+    const expectedState = cookieValue(event.headers, stateCookieName(audience));
+    if (!token || !session) return errorRedirect(settings.appOrigin, audience, "missing_callback_data", true);
+    if (!sameState(expectedState, state)) return errorRedirect(settings.appOrigin, audience, "invalid_state", true);
 
     const claims = await validateJaggleToken(token);
     if (audience === "admin" && !(await findAdmin(settings.supabase, claims.email))) {
@@ -192,13 +220,34 @@ export async function handleJaggleCallback(event, audience) {
     await assertIdentityMapping(settings.supabase, claims);
     const handoffId = await createHandoff(settings.supabase, claims, audience);
     await storeIdentity(settings.supabase, claims, audience, customerId);
-    return redirectResponse(callbackResultUrl(settings.appOrigin, audience, { ticket: handoffId }));
+    return redirectResponse(callbackResultUrl(settings.appOrigin, audience, { ticket: handoffId }), {
+      "Set-Cookie": stateCookie(audience, "", 0),
+    });
   } catch (error) {
     const code = error instanceof Error && [
       "admin_not_allowed",
       "identity_email_mismatch",
     ].includes(error.message) ? error.message : "sign_in_failed";
-    return errorRedirect(origin, audience, code);
+    return errorRedirect(origin, audience, code, true);
+  }
+}
+
+export async function handleJaggleStart(event) {
+  const audience = String(event.queryStringParameters?.audience ?? "").trim();
+  const origin = (value("APP_ORIGIN") || "https://zamaecom.vercel.app").replace(/\/$/, "");
+  if (event.httpMethod && event.httpMethod !== "GET") return jsonResponse({ ok: false, error: "Method not allowed." }, 405);
+  if (!allowedAudiences.has(audience)) return errorRedirect(origin, "customer", "invalid_audience");
+
+  try {
+    const settings = config(audience);
+    const state = randomBytes(32).toString("base64url");
+    const authorizeUrl = new URL(JAGGLE_AUTHORIZE_URL);
+    authorizeUrl.searchParams.set("redirect", settings.callbackUrl);
+    authorizeUrl.searchParams.set("client_id", settings.jaggleClientId);
+    authorizeUrl.searchParams.set("state", state);
+    return redirectResponse(authorizeUrl.toString(), { "Set-Cookie": stateCookie(audience, state) });
+  } catch {
+    return errorRedirect(origin, audience, "sign_in_failed");
   }
 }
 

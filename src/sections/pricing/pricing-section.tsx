@@ -21,7 +21,7 @@ type PricingPlan = {
 
 function PlanCard({ name, price, cadence, eyebrow, features, action, tone, rotation }: PricingPlan) {
   const actionClass = tone === "yellow" ? btnPrimaryLg : btnOutlineLg;
-  const actionHref = name === "Zama+ Membership" ? "#/membership" : "#waitlist";
+  const actionHref = name === "Zama+ Membership" ? "/membership" : "#waitlist";
 
   return (
     <article className={`price-card relative grid min-w-0 min-h-97.5 ${rotation} content-start gap-4 overflow-hidden rounded-wobbly-card border-3 border-brand-black ${planToneClasses[tone]} p-[1.2rem] transition-shadow duration-120 ease-in-out`}>

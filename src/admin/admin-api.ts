@@ -703,14 +703,12 @@ export async function reorderRows(
   table: "products" | "farmers" | "dieticians",
   orderedIds: string[],
 ): Promise<void> {
-  for (let index = 0; index < orderedIds.length; index++) {
-    const { error } = await requireClient()
-      .from(table)
-      .update({ sort_order: index })
-      .eq("id", orderedIds[index]);
+  const { error } = await requireClient().rpc("reorder_catalog_rows", {
+    p_table: table,
+    p_ordered_ids: orderedIds,
+  });
 
-    if (error) throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 }
 
 /* =========================================================

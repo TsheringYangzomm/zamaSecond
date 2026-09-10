@@ -277,13 +277,13 @@ function notifyDevInvoice(profile: MembershipDeliveryProfile, cycle: MembershipD
     title: "Your scheduled box is ready to pay",
     message: `Your ${cycle.deliveryDate} saved-box invoice is Nu. ${new Intl.NumberFormat("en-BT").format(cycle.total)}. Submit your bank-transfer reference by 18:00 Bhutan time on the day before delivery.`,
     status: cycle.status,
-    link: "#/account/membership",
+    link: "/account/membership",
   });
   recordDevAdminNotification({
     type: "membership_delivery_invoice",
     title: "Scheduled box invoice created",
     message: `A saved-box invoice is ready for ${cycle.deliveryDate}.`,
-    link: "#/admin?tab=subscriptions",
+    link: "/admin?tab=subscriptions",
   });
 }
 
@@ -315,14 +315,14 @@ async function processDevProductNotifications(state: DevState): Promise<boolean>
         title: "Early access is open",
         message: `${product.name} is available to Zama+ members before public release.`,
         status: "active",
-        link: `#/shop/${product.id}`,
+        link: `/shop/${product.id}`,
       });
     }
     recordDevAdminNotification({
       type: "member_early_access",
       title: "Member early access opened",
       message: `${product.name} is visible to eligible Zama+ members.`,
-      link: "#/admin?tab=products",
+      link: "/admin?tab=products",
     });
     state.notifiedEarlyAccessProducts.push(token);
     changed = true;
@@ -343,7 +343,7 @@ async function processDevProductNotifications(state: DevState): Promise<boolean>
         title: "New product available",
         message: `${product.name} is now available in the Zama shop.`,
         status: null,
-        link: `#/shop/${product.id}`,
+        link: `/shop/${product.id}`,
       });
     }
     state.notifiedPublicReleaseProducts.push(token);
@@ -397,13 +397,13 @@ export async function processMembershipDueCycles(): Promise<void> {
         title: "Scheduled delivery skipped",
         message: `We did not receive a payment reference by the 18:00 Bhutan-time cutoff, so the ${cycle.deliveryDate} delivery was skipped. Your next scheduled date has been updated.`,
         status: cycle.status,
-        link: "#/account/membership",
+        link: "/account/membership",
       });
       recordDevAdminNotification({
         type: "membership_delivery_skipped",
         title: "Scheduled box skipped",
         message: `The ${cycle.deliveryDate} saved-box cycle was skipped because no payment reference was submitted.`,
-        link: "#/admin?tab=subscriptions",
+        link: "/admin?tab=subscriptions",
       });
       changed = true;
     } else if (cycle.status === "payment_submitted") {
@@ -414,7 +414,7 @@ export async function processMembershipDueCycles(): Promise<void> {
         type: "membership_delivery_payment_submitted",
         title: "Urgent scheduled-box payment review",
         message: `A payment reference was submitted for the ${cycle.deliveryDate} saved-box cycle and needs verification.`,
-        link: "#/admin?tab=subscriptions",
+        link: "/admin?tab=subscriptions",
       });
       changed = true;
     }
@@ -532,7 +532,7 @@ export async function saveMembershipDeliveryProfile(email: string, input: Member
       title: "Saved-box changes scheduled",
       message: `Your changes will start with the next unbilled cycle after the ${openCurrentCycle.deliveryDate} delivery.`,
       status: profile.status,
-      link: "#/account/membership",
+      link: "/account/membership",
     });
   }
   await processMembershipDueCycles();
@@ -567,7 +567,7 @@ export async function updateMembershipDeliveryProfile(email: string, profileId: 
       title: patch.status === "paused" ? "Scheduled delivery paused" : patch.status === "cancelled" ? "Scheduled delivery cancelled" : "Scheduled delivery resumed",
       message: `Your saved-box delivery is now ${patch.status}. Future unbilled cycles follow this change.`,
       status: patch.status,
-      link: "#/account/membership",
+      link: "/account/membership",
     });
     return updated;
   }
@@ -627,13 +627,13 @@ export async function submitMembershipDeliveryPayment(email: string, cycleId: st
     title: "Saved-box payment submitted",
     message: `Your bank-transfer reference for the ${updated.deliveryDate} delivery was sent for verification.`,
     status: updated.status,
-    link: "#/account/membership",
+    link: "/account/membership",
   });
   recordDevAdminNotification({
     type: "membership_delivery_payment_submitted",
     title: "Saved-box payment needs verification",
     message: `A bank-transfer reference was submitted for the ${updated.deliveryDate} scheduled box.`,
-    link: "#/admin?tab=subscriptions",
+    link: "/admin?tab=subscriptions",
   });
   return updated;
 }
@@ -755,7 +755,7 @@ export async function reviewMembershipDeliveryCycle(cycleId: string, input: Memb
       title: "Scheduled delivery payment verified",
       message: `Your payment was verified and order ${order.id} is now being prepared for ${cycle.deliveryDate}.`,
       status: "paid",
-      link: "#/account/orders",
+      link: "/account/orders",
     });
     if (updated.freebieProductName) {
       createDevCustomerNotification({
@@ -766,7 +766,7 @@ export async function reviewMembershipDeliveryCycle(cycleId: string, input: Memb
         title: "A Zama+ freebie was added",
         message: `${updated.freebieProductName} was added to your paid scheduled delivery at no extra cost.`,
         status: "paid",
-        link: "#/account/orders",
+        link: "/account/orders",
       });
     }
   } else if (input.status === "skipped" || input.status === "cancelled") {
@@ -778,7 +778,7 @@ export async function reviewMembershipDeliveryCycle(cycleId: string, input: Memb
       title: input.status === "cancelled" ? "Scheduled delivery cancelled" : "Scheduled delivery skipped",
       message: input.adminNote?.trim() || `Your ${cycle.deliveryDate} scheduled delivery was ${input.status}.`,
       status: input.status,
-      link: "#/account/membership",
+      link: "/account/membership",
     });
   }
   state.cycles = state.cycles.map((item) => item.id === cycleId ? updated : item);

@@ -51,7 +51,7 @@ const stepperButtonClasses =
   "grid h-11 w-11 touch-manipulation place-items-center rounded-wobbly-md font-bold text-brand-forest hover:bg-brand-white focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent";
 
 const filterButtonClasses =
-  "min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-all duration-150 ease-out focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 hover:shadow-brand-soft";
+  "min-h-11 touch-manipulation rounded-full border-2 border-brand-forest px-4 py-2 text-sm font-bold transition-[color,background-color,border-color,box-shadow,transform] duration-150 ease-out focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2 hover:shadow-brand-soft";
 
 const fieldClasses =
   "min-h-11.5 w-full min-w-0 rounded-[20px_28px_16px_24px/24px_16px_28px_20px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
@@ -158,9 +158,9 @@ export function CustomizeBoxPage() {
       <div className={`relative z-[1] grid gap-7 py-[clamp(2.5rem,5vw,4.5rem)] ${sectionShell}`}>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/shop">Shop</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/shop">Shop</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">Customize your box</li>
           </ol>
@@ -235,7 +235,7 @@ export function CustomizeBoxPage() {
               <ShoppingBagIcon />
               Add {selectedCount > 0 ? `${selectedCount} item${selectedCount === 1 ? "" : "s"}` : "items"} to basket
             </button>
-            <a className={btnOutlineSm} href="#/shop">Browse the shop instead</a>
+            <a className={btnOutlineSm} href="/shop">Browse the shop instead</a>
           </div>
         </div>
 

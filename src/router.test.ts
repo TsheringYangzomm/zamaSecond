@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getFarmerId, getRoute } from "./router";
+import { getCategoryFromHash, getFarmerId, getProductId, getRoute } from "./router";
 
 describe("routing", () => {
   it("opens the dedicated coupons page", () => {
@@ -15,6 +15,20 @@ describe("routing", () => {
   it("opens the dedicated membership account page", () => {
     expect(getRoute("#/account/membership")).toBe("account-membership");
     expect(getRoute("#/account/membership?source=account")).toBe("account-membership");
+  });
+
+  it("supports direct production paths as well as legacy hashes", () => {
+    expect(getRoute("", "", "/shop")).toBe("shop");
+    expect(getRoute("", "", "/shop/meal-kits")).toBe("category");
+    expect(getRoute("", "", "/shop/veg-box")).toBe("product");
+    expect(getRoute("", "", "/farmers/pema-dorji")).toBe("farmer");
+    expect(getProductId("/shop/veg-box")).toBe("veg-box");
+    expect(getCategoryFromHash("/shop/meal-kits")).toBe("meal-kits");
+    expect(getFarmerId("/farmers/pema-dorji")).toBe("pema-dorji");
+  });
+
+  it("returns a not-found route for unknown direct paths", () => {
+    expect(getRoute("", "", "/missing-page")).toBe("not-found");
   });
 
   it("opens the reset page for an expired recovery response", () => {

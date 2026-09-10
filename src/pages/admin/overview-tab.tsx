@@ -31,7 +31,7 @@ function BarChart({ segments, total }: { segments: { label: string; count: numbe
           seg.count > 0 ? (
             <div
               key={seg.label}
-              className={`${seg.color} transition-all duration-300`}
+              className={`${seg.color} transition-[width] duration-300`}
               style={{ width: total > 0 ? `${(seg.count / total) * 100}%` : "0%" }}
               title={`${seg.label}: ${seg.count}`}
             />
@@ -56,7 +56,7 @@ function HorizontalBar({ label, count, max, color }: { label: string; count: num
     <div className="grid items-center gap-1" style={{ gridTemplateColumns: "3rem 1fr 2rem" }}>
       <span className="text-right text-xs font-bold text-brand-black/72">{label}</span>
       <div className="h-4 overflow-hidden rounded-full bg-brand-black/6">
-        <div className={`h-full rounded-full ${color} transition-all duration-300`} style={{ width: max > 0 ? `${(count / max) * 100}%` : "0%" }} />
+        <div className={`h-full rounded-full ${color} transition-[width] duration-300`} style={{ width: max > 0 ? `${(count / max) * 100}%` : "0%" }} />
       </div>
       <span className="text-xs font-bold text-brand-black/56">{count}</span>
     </div>
@@ -89,7 +89,7 @@ function DonutRing({ segments, size = 80, stroke = 10 }: { segments: { count: nu
             strokeDasharray={`${dash} ${circumference - dash}`}
             strokeDashoffset={-currentOffset}
             strokeLinecap="round"
-            className="transition-all duration-500"
+            className="transition-[stroke-dasharray,stroke-dashoffset] duration-500"
           />
         );
       })}
@@ -155,8 +155,8 @@ export function OverviewTab() {
 
   const data = commerce.phase === "ready" ? commerce.data : null;
 
-  const orders = data?.orders ?? [];
-  const customers = data?.customers ?? [];
+  const orders = useMemo(() => data?.orders ?? [], [data]);
+  const customers = useMemo(() => data?.customers ?? [], [data]);
 
   const stats = {
     orders: orders.length,

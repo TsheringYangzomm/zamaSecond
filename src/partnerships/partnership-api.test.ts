@@ -71,7 +71,7 @@ describe("partnership development fallback", () => {
     const [notification] = await fetchAdminNotifications("admin@zama.bt");
     expect(notification).toMatchObject({
       type: "partnership_request_received",
-      link: "#/admin?tab=partnerships",
+      link: "/admin?tab=partnerships",
     });
   });
 

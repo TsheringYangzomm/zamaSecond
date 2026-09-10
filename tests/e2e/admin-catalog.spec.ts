@@ -95,6 +95,21 @@ async function mockCatalogAdmin(page) {
   await page.route("**/rest/v1/rpc/is_admin", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: "true" }),
   );
+  await page.route("**/rest/v1/rpc/reorder_catalog_rows", async (route) => {
+    const payload = JSON.parse(route.request().postData() ?? "{}");
+    const table = payload.p_table as "products" | "farmers";
+    const ids = payload.p_ordered_ids as string[];
+
+    if (table in store && Array.isArray(ids)) {
+      const positions = new Map(ids.map((id, index) => [id, index]));
+      store[table] = store[table].map((row) => ({
+        ...row,
+        sort_order: positions.get(String(row.id)) ?? row.sort_order,
+      }));
+    }
+
+    await route.fulfill({ status: 204, body: "" });
+  });
 
   const handleTable = (table: "products" | "farmers") =>
     async (route) => {
@@ -227,7 +242,7 @@ async function mockCatalogAdmin(page) {
 }
 
 async function signInAsAdmin(page) {
-  await page.goto("/#/admin");
+  await page.goto("/admin");
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -246,10 +261,10 @@ test("creates and edits a product", async ({ page }) => {
   await page.getByRole("button", { name: /Meal Kits/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("heading", { name: "New product" })).toBeVisible();
-  await page.getByLabel("Name *").fill("Meal Kit");
-  await page.getByLabel("Cuisine *").selectOption("Bhutanese");
-  await page.getByLabel("Servings *").fill("2");
-  await page.getByLabel("Difficulty *").selectOption("Easy");
+  await page.getByLabel("Name", { exact: true }).fill("Meal Kit");
+  await page.getByLabel("Cuisine", { exact: true }).selectOption("Bhutanese");
+  await page.getByLabel("Servings", { exact: true }).fill("2");
+  await page.getByLabel("Difficulty", { exact: true }).selectOption("Easy");
   await page.getByRole("button", { name: "+ Add Item" }).click();
   await page.getByRole("dialog").getByText("Potato", { exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: /^Add 1 item/ }).click();
@@ -260,7 +275,7 @@ test("creates and edits a product", async ({ page }) => {
   await expect(page.getByRole("cell", { name: "Meal kits" })).toBeVisible();
 
   await page.getByRole("row", { name: /Meal Kit/ }).getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Name *").fill("Meal Kit Pro");
+  await page.getByLabel("Name", { exact: true }).fill("Meal Kit Pro");
   await page.getByRole("button", { name: "Save product" }).click();
 
   await expect(page.getByText("Saved Meal Kit Pro.")).toBeVisible();
@@ -308,7 +323,7 @@ test("creates, edits, and deletes a farmer", async ({ page }) => {
   await expect(page.getByRole("row", { name: /Pema Dorji/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Add farmer" }).click();
-  await page.getByLabel("Name *").fill("Yeshey Wangmo");
+  await page.getByLabel("Name", { exact: true }).fill("Yeshey Wangmo");
   await page.getByRole("button", { name: "Save farmer" }).click();
 
   await expect(page.getByText("Created Yeshey Wangmo.")).toBeVisible();
@@ -319,8 +334,6 @@ test("creates, edits, and deletes a farmer", async ({ page }) => {
   await page.getByLabel("Phone number").fill("+975 17 000 000");
   await page.getByLabel("Farmer story").fill("Yeshey grew up in Dotey and now runs the family farm.");
   await page.getByLabel("Show story on the site").check();
-  await page.getByLabel("Seasonal update").fill("Expecting a strong tomato harvest this summer.");
-  await page.getByLabel("Publish this update (show on the landing page)").check();
   await page.getByRole("button", { name: "Save farmer" }).click();
   await expect(page.getByText("Saved Yeshey Wangmo.")).toBeVisible();
 
@@ -329,8 +342,6 @@ test("creates, edits, and deletes a farmer", async ({ page }) => {
   await expect(page.getByLabel("Phone number")).toHaveValue("+975 17 000 000");
   await expect(page.getByLabel("Farmer story")).toHaveValue("Yeshey grew up in Dotey and now runs the family farm.");
   await expect(page.getByLabel("Show story on the site")).toBeChecked();
-  await expect(page.getByLabel("Seasonal update")).toHaveValue("Expecting a strong tomato harvest this summer.");
-  await expect(page.getByLabel("Publish this update (show on the landing page)")).toBeChecked();
   await page.getByRole("button", { name: "Cancel" }).click();
 
   await page.getByRole("row", { name: /Yeshey Wangmo/ }).getByRole("button", { name: "Delete" }).click();
@@ -348,7 +359,7 @@ test("reorders products by dragging", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "What type of product are you adding?" })).toBeVisible();
   await page.getByRole("button", { name: /Vegetables/ }).click();
   await page.getByRole("button", { name: "Continue" }).click();
-  await page.getByLabel("Name *").fill("Second Box");
+  await page.getByLabel("Name", { exact: true }).fill("Second Box");
   await page.getByRole("button", { name: "Save product" }).click();
   await expect(page.getByRole("row", { name: /Second Box/ })).toBeVisible();
 

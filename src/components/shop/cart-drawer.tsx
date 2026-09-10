@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "../../cart-context";
+import { navigateTo } from "../../router";
 import { useContent } from "../../cms/content-context";
 import { useCustomerAuth } from "../../checkout/customer-auth";
 import { loadInventoryCatalog } from "../../checkout/inventory-catalog";
@@ -207,7 +208,7 @@ export function CartDrawer() {
         productGrid.scrollIntoView({ behavior: "smooth", block: "start" });
         productGrid.querySelector<HTMLButtonElement>("button")?.focus();
       } else {
-        window.location.hash = "#/shop";
+        navigateTo("/shop");
       }
     }, 0);
   }

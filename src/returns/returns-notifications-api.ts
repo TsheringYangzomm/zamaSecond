@@ -58,7 +58,7 @@ function formatPickupWindow(returnItem: CustomerReturn): string {
 }
 
 export function notificationForReturn(returnItem: CustomerReturn, type: NotificationType = typeForReturn(returnItem.status)): Omit<CustomerNotification, "id" | "createdAt" | "readAt"> {
-  const common = { customerId: returnItem.customerId, returnId: returnItem.id, orderId: returnItem.orderId, status: returnItem.status, link: "#/account/orders?section=returns" };
+  const common = { customerId: returnItem.customerId, returnId: returnItem.id, orderId: returnItem.orderId, status: returnItem.status, link: "/account/orders?section=returns" };
   if (type === "return_approved") return { ...common, type, title: "Return approved", message: `Your return for order ${returnItem.orderId} was approved. Pickup is scheduled for ${formatPickupWindow(returnItem)}.` };
   if (type === "pickup_schedule_updated") return { ...common, type, title: "Pickup schedule updated", message: `The pickup for order ${returnItem.orderId} is now scheduled for ${formatPickupWindow(returnItem)}.` };
   if (type === "return_rejected") return { ...common, type, title: "Return rejected", message: `Your return for order ${returnItem.orderId} was rejected${returnItem.rejectionReason ? `: ${returnItem.rejectionReason}` : "."}` };

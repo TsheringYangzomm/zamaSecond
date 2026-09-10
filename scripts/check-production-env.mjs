@@ -36,6 +36,9 @@ function requireValue(name) {
 
 requireEndpoint("VITE_SUPABASE_URL");
 requireValue("VITE_SUPABASE_ANON_KEY");
+requireEndpoint("VITE_PUBLIC_SITE_URL");
+requireEndpoint("SUPABASE_URL");
+requireValue("SUPABASE_SERVICE_ROLE_KEY");
 
 if (process.env["VITE_LAUNCH_INTEREST_ENDPOINT"]?.trim()) {
   requireEndpoint("VITE_LAUNCH_INTEREST_ENDPOINT");
@@ -45,3 +48,12 @@ requireValue("VITE_EMAILJS_PUBLIC_KEY");
 requireValue("VITE_EMAILJS_SERVICE_ID");
 requireValue("VITE_EMAILJS_TEMPLATE_ID");
 requireValue("VITE_EMAILJS_AUTOREPLY_TEMPLATE_ID");
+requireValue("TURNSTILE_SECRET_KEY");
+requireValue("VITE_TURNSTILE_SITE_KEY");
+
+if (process.env.APP_ORIGIN?.trim()) requireEndpoint("APP_ORIGIN");
+if (process.env.JAGGLE_CLIENT_ID?.trim()) {
+  requireValue("JAGGLE_CLIENT_SECRET");
+  requireEndpoint("JAGGLE_CUSTOMER_CALLBACK_URL");
+  requireEndpoint("JAGGLE_ADMIN_CALLBACK_URL");
+}

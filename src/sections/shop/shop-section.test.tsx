@@ -15,7 +15,7 @@ describe("ShopSection", () => {
 
     for (const tile of expectedTiles) {
       const link = screen.getByRole("link", { name: new RegExp(`^${tile.title},`) });
-      expect(link).toHaveAttribute("href", `#/shop/${tile.slug}`);
+      expect(link).toHaveAttribute("href", `/shop/${tile.slug}`);
       expect(link).toHaveTextContent(tile.count);
     }
   });
@@ -24,7 +24,7 @@ describe("ShopSection", () => {
     render(<ShopSection />);
 
     const link = screen.getByRole("link", { name: /^Customize your box,/ });
-    expect(link).toHaveAttribute("href", "#/shop/custom-boxes");
+    expect(link).toHaveAttribute("href", "/shop/custom-boxes");
     expect(link).not.toHaveTextContent("product");
   });
 
@@ -33,7 +33,7 @@ describe("ShopSection", () => {
 
     const fullShopLinks = screen
       .getAllByRole("link")
-      .filter((link) => link.getAttribute("href") === "#/shop");
+      .filter((link) => link.getAttribute("href") === "/shop");
     expect(fullShopLinks.map((link) => link.textContent?.trim())).toEqual(["View full shop"]);
 
     expect(screen.getByRole("link", { name: /delivery details/i })).toHaveAttribute("href", "#delivery");

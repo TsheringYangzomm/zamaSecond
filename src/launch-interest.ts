@@ -14,6 +14,7 @@ export type LaunchInterestPayload = {
   source: LaunchInterestSource;
   area?: string;
   items?: LaunchInterestItem[];
+  turnstileToken?: string;
 };
 
 export type LaunchInterestResult =
@@ -25,6 +26,7 @@ export type MembershipInterestPayload = {
   fullName: string;
   email: string;
   interests: string[];
+  turnstileToken?: string;
 };
 
 export type MembershipInterestResult =
@@ -145,7 +147,8 @@ async function submitMembershipViaSupabase(supabase: SupabaseClient, payload: Me
   });
 
   if (error) {
-    throw new Error(error.message || "Supabase rejected the membership request.");
+    console.error("Supabase membership-interest submission failed:", error);
+    throw new Error("We could not save your membership interest. Please try again or email hello@zama.bt.");
   }
 
   const result = parseLaunchInterestResult(data);
@@ -173,6 +176,25 @@ async function submitMembershipViaSupabase(supabase: SupabaseClient, payload: Me
 }
 
 export async function submitLaunchInterest(payload: LaunchInterestPayload): Promise<LaunchInterestResult> {
+  if (!import.meta.env.DEV) {
+    const prefix = window.location.port === "8888" ? "/.netlify/functions" : "/api";
+    const response = await fetch(`${prefix}/launch-interest`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    });
+    const result = await response.json().catch(() => null) as { status?: string; submissionId?: string } | null;
+    if (!response.ok) {
+      throw new Error(response.status === 429
+        ? "Too many requests were sent. Wait a moment, then try again."
+        : "We could not save your launch request. Please try again or email hello@zama.bt.");
+    }
+    return result?.status === "duplicate"
+      ? { mode: "duplicate" }
+      : { mode: "remote", submissionId: result?.submissionId };
+  }
+
   const supabase = getSupabaseClient();
 
   if (supabase) {
@@ -240,6 +262,31 @@ export async function submitMembershipInterest(payload: MembershipInterestPayloa
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     throw new Error("Enter a complete email address, such as name@example.com.");
+  }
+
+  if (!import.meta.env.DEV) {
+    const prefix = window.location.port === "8888" ? "/.netlify/functions" : "/api";
+    const response = await fetch(`${prefix}/launch-interest`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        source: "membership",
+        fullName,
+        items: payload.interests.filter(Boolean).map((interest) => ({ interest })),
+        turnstileToken: payload.turnstileToken,
+      }),
+      credentials: "same-origin",
+    });
+    const result = await response.json().catch(() => null) as { status?: string; submissionId?: string } | null;
+    if (!response.ok) {
+      throw new Error(response.status === 429
+        ? "Too many requests were sent. Wait a moment, then try again."
+        : "We could not save your membership interest. Please try again or email hello@zama.bt.");
+    }
+    return result?.status === "duplicate"
+      ? { mode: "duplicate", emailWasSent: false }
+      : { mode: "remote", submissionId: result?.submissionId, emailWasSent: false };
   }
 
   const supabase = getSupabaseClient();

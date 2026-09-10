@@ -1,9 +1,9 @@
 export const navItems = [
-  { label: "Shop", href: "#/shop" },
+  { label: "Shop", href: "/shop" },
   { label: "Membership", href: "#pricing" },
   { label: "Meal Kits", href: "#meal-kits" },
   { label: "How it Works", href: "#how-it-works" },
-  { label: "Farmers", href: "#/farmers" },
+  { label: "Farmers", href: "/farmers" },
 ] as const;
 
 export const featureItems = [

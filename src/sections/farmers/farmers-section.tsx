@@ -34,7 +34,7 @@ export function FarmersSection() {
         </div>
 
         <div className="flex justify-center pt-2">
-          <PrimaryLink href="#/farmers">{section.ctaLabel}</PrimaryLink>
+          <PrimaryLink href="/farmers">{section.ctaLabel}</PrimaryLink>
         </div>
       </div>
     </section>

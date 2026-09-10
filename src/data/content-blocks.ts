@@ -290,9 +290,9 @@ export const defaultBlocks: ContentBlocks = {
     supportTitle: "Support",
     supportLinks: [
       { label: "How it Works", href: "#how-it-works" },
-      { label: "Farm Partnership", href: "#/partnership" },
+      { label: "Farm Partnership", href: "/partnership" },
       { label: "Delivery Areas", href: "#delivery" },
-      { label: "Contact Us", href: "#/contact" },
+      { label: "Contact Us", href: "/contact" },
       { label: "Privacy Policy", href: "#privacy-policy" },
     ],
     copyright: "© 2026 Zama Technologies, Thimphu, Bhutan. All Rights Reserved.",

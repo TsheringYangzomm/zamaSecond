@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, type ReactNode } from "react";
 import {
   Apple,
   Boxes,
@@ -19,22 +19,6 @@ import {
 } from "lucide-react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { AdminLogin } from "./admin-login";
-import { OverviewTab } from "./overview-tab";
-import { WaitlistTab } from "./waitlist-tab";
-import { ProductsTab } from "./products-tab";
-import { MealKitNotesTab } from "./meal-kit-notes-tab";
-import { InventoryTab } from "./inventory-tab";
-import { FarmersTab } from "./farmers-tab";
-import { DieticiansTab } from "./dieticians-tab";
-import { ReviewsTab } from "./reviews-tab";
-import { ContentTab } from "./content-tab";
-import { OrdersTab } from "./orders-tab";
-import { CustomersTab } from "./customers-tab";
-import { SubscriptionsTab } from "./subscriptions-tab";
-import { MessagesTab } from "./messages-tab";
-import { CouponsTab } from "./coupons-tab";
-import { AccountsRewardsTab } from "./accounts-rewards-tab";
-import { PartnershipsTab } from "./partnerships-tab";
 import { AdminNotificationBell } from "./admin-notification-bell";
 import {
   Sidebar,
@@ -53,15 +37,32 @@ import {
   useSidebar,
 } from "../../components/ui/sidebar";
 import { btnOutlineSm } from "../../components/ui/styles";
+import { navigateTo } from "../../router";
+
+const OverviewTab = lazy(() => import("./overview-tab").then((module) => ({ default: module.OverviewTab })));
+const WaitlistTab = lazy(() => import("./waitlist-tab").then((module) => ({ default: module.WaitlistTab })));
+const ProductsTab = lazy(() => import("./products-tab").then((module) => ({ default: module.ProductsTab })));
+const MealKitNotesTab = lazy(() => import("./meal-kit-notes-tab").then((module) => ({ default: module.MealKitNotesTab })));
+const InventoryTab = lazy(() => import("./inventory-tab").then((module) => ({ default: module.InventoryTab })));
+const FarmersTab = lazy(() => import("./farmers-tab").then((module) => ({ default: module.FarmersTab })));
+const DieticiansTab = lazy(() => import("./dieticians-tab").then((module) => ({ default: module.DieticiansTab })));
+const ReviewsTab = lazy(() => import("./reviews-tab").then((module) => ({ default: module.ReviewsTab })));
+const ContentTab = lazy(() => import("./content-tab").then((module) => ({ default: module.ContentTab })));
+const OrdersTab = lazy(() => import("./orders-tab").then((module) => ({ default: module.OrdersTab })));
+const CustomersTab = lazy(() => import("./customers-tab").then((module) => ({ default: module.CustomersTab })));
+const SubscriptionsTab = lazy(() => import("./subscriptions-tab").then((module) => ({ default: module.SubscriptionsTab })));
+const MessagesTab = lazy(() => import("./messages-tab").then((module) => ({ default: module.MessagesTab })));
+const CouponsTab = lazy(() => import("./coupons-tab").then((module) => ({ default: module.CouponsTab })));
+const AccountsRewardsTab = lazy(() => import("./accounts-rewards-tab").then((module) => ({ default: module.AccountsRewardsTab })));
+const PartnershipsTab = lazy(() => import("./partnerships-tab").then((module) => ({ default: module.PartnershipsTab })));
 
 type AdminTab = "overview" | "orders" | "products" | "inventory" | "meal-kit-notes" | "coupons" | "farmers" | "partnerships" | "dieticians" | "customers" | "accounts-rewards" | "waitlist" | "reviews" | "messages" | "subscriptions" | "content";
 
 const adminTabs: AdminTab[] = ["overview", "orders", "products", "inventory", "meal-kit-notes", "coupons", "farmers", "partnerships", "dieticians", "customers", "accounts-rewards", "waitlist", "reviews", "messages", "subscriptions", "content"];
 
-function tabFromHash(): AdminTab {
+function tabFromUrl(): AdminTab {
   if (typeof window === "undefined") return "overview";
-  const query = window.location.hash.split("?")[1] ?? "";
-  const requested = new URLSearchParams(query).get("tab");
+  const requested = new URLSearchParams(window.location.search).get("tab");
   return requested && adminTabs.includes(requested as AdminTab) ? requested as AdminTab : "overview";
 }
 
@@ -108,18 +109,18 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 
 function AdminShell() {
   const { email, signOut } = useAdminAuth();
-  const [tab, setTab] = useState<AdminTab>(tabFromHash);
+  const [tab, setTab] = useState<AdminTab>(tabFromUrl);
 
   useEffect(() => {
-    const onHashChange = () => setTab(tabFromHash());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const onLocationChange = () => setTab(tabFromUrl());
+    window.addEventListener("popstate", onLocationChange);
+    return () => window.removeEventListener("popstate", onLocationChange);
   }, []);
 
   const selectTab = (nextTab: AdminTab) => {
-    const nextHash = `#/admin?tab=${encodeURIComponent(nextTab)}`;
-    if (window.location.hash === nextHash) return;
-    window.location.hash = nextHash;
+    const nextPath = `/admin?tab=${encodeURIComponent(nextTab)}`;
+    if (`${window.location.pathname}${window.location.search}` === nextPath) return;
+    navigateTo(nextPath);
   };
 
   return (
@@ -132,7 +133,7 @@ function AdminShell() {
         </div>
         <div className="flex items-center gap-2">
           <AdminNotificationBell />
-          <a className={btnOutlineSm} href="#/">← Back to site</a>
+          <a className={btnOutlineSm} href="/">← Back to site</a>
         </div>
       </header>
 
@@ -146,22 +147,24 @@ function AdminShell() {
         />
         <SidebarInset className="min-w-0">
           <main className="admin-shell px-4 py-8 sm:px-6 lg:px-10">
-            {tab === "overview" ? <OverviewTab /> : null}
-            {tab === "orders" ? <OrdersTab /> : null}
-            {tab === "products" ? <ProductsTab /> : null}
-            {tab === "inventory" ? <InventoryTab /> : null}
-            {tab === "meal-kit-notes" ? <MealKitNotesTab /> : null}
-            {tab === "coupons" ? <CouponsTab /> : null}
-            {tab === "farmers" ? <FarmersTab /> : null}
-            {tab === "partnerships" ? <PartnershipsTab /> : null}
-            {tab === "dieticians" ? <DieticiansTab /> : null}
-            {tab === "customers" ? <CustomersTab /> : null}
-            {tab === "accounts-rewards" ? <AccountsRewardsTab /> : null}
-            {tab === "waitlist" ? <WaitlistTab /> : null}
-            {tab === "reviews" ? <ReviewsTab /> : null}
-            {tab === "messages" ? <MessagesTab /> : null}
-            {tab === "subscriptions" ? <SubscriptionsTab /> : null}
-            {tab === "content" ? <ContentTab /> : null}
+            <Suspense fallback={<p className="font-bold text-brand-green-ink" role="status">Loading admin section…</p>}>
+              {tab === "overview" ? <OverviewTab /> : null}
+              {tab === "orders" ? <OrdersTab /> : null}
+              {tab === "products" ? <ProductsTab /> : null}
+              {tab === "inventory" ? <InventoryTab /> : null}
+              {tab === "meal-kit-notes" ? <MealKitNotesTab /> : null}
+              {tab === "coupons" ? <CouponsTab /> : null}
+              {tab === "farmers" ? <FarmersTab /> : null}
+              {tab === "partnerships" ? <PartnershipsTab /> : null}
+              {tab === "dieticians" ? <DieticiansTab /> : null}
+              {tab === "customers" ? <CustomersTab /> : null}
+              {tab === "accounts-rewards" ? <AccountsRewardsTab /> : null}
+              {tab === "waitlist" ? <WaitlistTab /> : null}
+              {tab === "reviews" ? <ReviewsTab /> : null}
+              {tab === "messages" ? <MessagesTab /> : null}
+              {tab === "subscriptions" ? <SubscriptionsTab /> : null}
+              {tab === "content" ? <ContentTab /> : null}
+            </Suspense>
           </main>
         </SidebarInset>
       </div>

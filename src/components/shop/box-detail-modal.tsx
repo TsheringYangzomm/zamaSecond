@@ -94,7 +94,7 @@ export function BoxDetailModal({ product, onClose }: { product: ShopProduct; onC
         </div>
 
         <button
-          className="grid h-11 w-full place-items-center rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow text-sm font-bold text-brand-black shadow-brand-soft transition-all duration-150 ease-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
+          className="grid h-11 w-full place-items-center rounded-wobbly-md border-3 border-brand-forest bg-brand-yellow text-sm font-bold text-brand-black shadow-brand-soft transition-[background-color,box-shadow,transform] duration-150 ease-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-2"
           type="button"
           onClick={onClose}
         >

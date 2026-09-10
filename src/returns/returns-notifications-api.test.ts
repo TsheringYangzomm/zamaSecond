@@ -61,9 +61,9 @@ describe("account return notifications", () => {
       title: "Order status updated",
       message: "Your order is now delivered.",
       status: "delivered",
-      link: "#/account/orders",
+      link: "/account/orders",
     });
     const notifications = await fetchCustomerNotifications("customer@example.com");
-    expect(notifications[0]).toMatchObject({ type: "order_status_updated", link: "#/account/orders", orderId: sampleReturn.orderId });
+    expect(notifications[0]).toMatchObject({ type: "order_status_updated", link: "/account/orders", orderId: sampleReturn.orderId });
   });
 });

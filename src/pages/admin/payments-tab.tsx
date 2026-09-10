@@ -107,7 +107,7 @@ function PaymentDashboard({ payments, customerLabel, onSelect }: { payments: Pay
                 <span className="text-brand-yellow">{settledShare}%</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-brand-black/25" aria-label={`${settledShare}% of payment volume settled`}>
-                <span className="block h-full rounded-full bg-brand-yellow transition-all duration-500" style={{ width: `${settledShare}%` }} />
+                <span className="block h-full rounded-full bg-brand-yellow transition-[width] duration-500" style={{ width: `${settledShare}%` }} />
               </div>
               <div className="flex flex-wrap justify-between gap-x-4 gap-y-1 text-xs text-brand-white/68">
                 <span>Volume <strong className="text-brand-white">{formatMoney(summary.totalAmount)}</strong></span>
@@ -149,7 +149,7 @@ function PaymentDashboard({ payments, customerLabel, onSelect }: { payments: Pay
                   <span className="flex min-w-0 items-center gap-2 text-brand-black/72"><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${row.color}`} />{row.label}<span className="rounded-full bg-brand-warm-white px-2 py-0.5 text-[0.65rem] font-bold text-brand-black/56">{summary.counts[row.status]}</span></span>
                   <span className="font-bold text-brand-black">{formatMoney(row.amount)}</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-brand-black/6"><span className={`block h-full rounded-full ${row.color} transition-all duration-500`} style={{ width: `${(row.amount / Math.max(summary.totalAmount, 1)) * 100}%` }} /></div>
+                <div className="h-2 overflow-hidden rounded-full bg-brand-black/6"><span className={`block h-full rounded-full ${row.color} transition-[width] duration-500`} style={{ width: `${(row.amount / Math.max(summary.totalAmount, 1)) * 100}%` }} /></div>
               </div>
             ))}
           </div>

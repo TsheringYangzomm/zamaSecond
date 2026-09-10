@@ -89,7 +89,7 @@ function AlsoLikeCard({ item }: { item: { category: ProductCategory; title: stri
   return (
     <a
       className={`group grid content-start gap-3 overflow-hidden rounded-wobbly-card border-3 border-t-8 border-brand-forest ${categoryRailClasses[item.category]} bg-brand-white p-4 shadow-brand-soft transition-shadow duration-150 ease-in-out hover:-translate-x-px hover:-translate-y-px hover:shadow-brand focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3`}
-      href={`#/shop/${slug}`}
+      href={`/shop/${slug}`}
       aria-label={`Browse ${item.title}`}
     >
       <div className="brand-pattern relative grid h-32 place-items-center overflow-hidden rounded-wobbly-md border-2 border-dashed border-brand-forest/30 p-2">
@@ -121,7 +121,7 @@ export function CategoryPage({ categorySlug: slug }: { categorySlug: string }) {
           <h1 id="cat-not-found-title" className={`${sectionTitleCompact} max-w-180 text-brand-green-ink`}>That category does not exist.</h1>
           <p className="max-w-140 text-[1.05rem] leading-[1.5] text-brand-black/72">Try browsing the full shop instead.</p>
           <div>
-            <OutlineLink href="#/shop">Browse all products</OutlineLink>
+            <OutlineLink href="/shop">Browse all products</OutlineLink>
           </div>
         </div>
       </section>
@@ -150,7 +150,7 @@ export function CategoryPage({ categorySlug: slug }: { categorySlug: string }) {
   const items = individualItemsByCategory[category] ?? [];
 
   const hasCustomization = page.customizationTitle && page.customizationCtaLabel;
-  const customizationHref = category === "Custom boxes" ? "#/customize-box" : "#/customize";
+  const customizationHref = "/customize";
 
   const selectedCount = Object.values(selection).reduce((total, qty) => total + qty, 0);
 
@@ -185,9 +185,9 @@ export function CategoryPage({ categorySlug: slug }: { categorySlug: string }) {
       <div className={`relative z-[1] grid gap-7 py-[clamp(2.5rem,5vw,4.5rem)] ${sectionShell}`}>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/shop">Shop</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/shop">Shop</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">{page.heading}</li>
           </ol>
@@ -237,7 +237,7 @@ export function CategoryPage({ categorySlug: slug }: { categorySlug: string }) {
             <p className="font-primary text-[clamp(1.4rem,2.4vw,1.9rem)] font-bold text-brand-black">Coming soon</p>
             <p className="text-sm text-brand-black/64">Products in this category are being prepared for the launch range.</p>
             <div>
-              <OutlineLink href="#/shop">Browse all products</OutlineLink>
+              <OutlineLink href="/shop">Browse all products</OutlineLink>
             </div>
           </div>
         )}

@@ -76,7 +76,7 @@ async function mockContentAdmin(page) {
 }
 
 async function signInAsAdmin(page) {
-  await page.goto("/#/admin");
+  await page.goto("/admin");
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();

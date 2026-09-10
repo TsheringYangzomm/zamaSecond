@@ -368,7 +368,7 @@ export async function submitCustomerReview(email: string, orderId: string, ratin
     type: "review_submitted",
     title: "New customer review",
     message: "A customer submitted a review for order " + orderId + ".",
-    link: "#/admin?tab=reviews",
+    link: "/admin?tab=reviews",
   });
   return { snapshot, review };
 }
@@ -398,7 +398,7 @@ export async function requestPointsRedemption(email: string, points: number): Pr
     type: "points_redemption_requested",
     title: "Points redemption requested",
     message: "A customer requested Nu. " + walletAmount + " in wallet credit.",
-    link: "#/admin?tab=accounts-rewards",
+    link: "/admin?tab=accounts-rewards",
   });
   return snapshot;
 }
@@ -474,7 +474,7 @@ export async function requestWalletWithdrawal(email: string, input: WithdrawalRe
     type: "withdrawal_requested",
     title: "Wallet withdrawal requested",
     message: "A customer requested a Nu. " + input.amount + " withdrawal.",
-    link: "#/admin?tab=accounts-rewards",
+    link: "/admin?tab=accounts-rewards",
   });
   return snapshot;
 }

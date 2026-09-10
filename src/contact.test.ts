@@ -103,6 +103,6 @@ describe("submitContactMessage", () => {
 
     await expect(
       submitContactMessage({ name: "Demo", email: "hello@example.com", topic: "support", message: "Help" }),
-    ).rejects.toThrow("Too Many Requests");
+    ).rejects.toThrow("We couldn't send your message right now. Please try again or email hello@zama.bt.");
   });
 });

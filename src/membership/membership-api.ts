@@ -311,13 +311,13 @@ export async function requestMembership(email: string, input: MembershipRequestI
     title: "Membership request received",
     message: "Your request to join " + plan.name + " is waiting for payment verification.",
     status: "pending",
-    link: "#/account/membership",
+    link: "/account/membership",
   });
   recordDevAdminNotification({
     type: "membership_request",
     title: "New Zama+ membership request",
     message: (request.customerName || "A customer") + " submitted a bank-transfer request for " + plan.name + ".",
-    link: "#/admin?tab=subscriptions",
+    link: "/admin?tab=subscriptions",
   });
   return snapshotFrom(null, request);
 }
@@ -456,7 +456,7 @@ export async function updateMembershipPlan(id: string, draft: MembershipPlanDraf
       title: "Membership plan updated",
       message: `${updated.name} was updated. Your account now shows the latest member benefits and pricing details.`,
       status: "active",
-      link: "#/account/membership",
+      link: "/account/membership",
     }));
   return updated;
 }
@@ -521,6 +521,6 @@ export async function reviewMembershipRequest(requestId: string, status: "approv
     title: status === "approved" ? "Zama+ membership approved" : "Membership request needs attention",
     message: status === "approved" ? "Your " + (plan?.name ?? "Zama+ membership") + " is now active." : "Your membership request was rejected: " + rejectionReason.trim() + ".",
     status,
-    link: "#/account/membership",
+    link: "/account/membership",
   });
 }

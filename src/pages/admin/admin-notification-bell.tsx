@@ -3,6 +3,7 @@ import { Bell, CheckCheck, X } from "lucide-react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { fetchAdminNotifications, markAdminNotificationRead, markAllAdminNotificationsRead, subscribeToAdminNotifications } from "../../admin/admin-notifications-api";
 import type { AdminNotification } from "../../admin/admin-notifications-types";
+import { navigateTo } from "../../router";
 
 function relativeDate(value: string): string {
   const timestamp = new Date(value).getTime();
@@ -108,7 +109,7 @@ export function AdminNotificationBell() {
                 <div className="flex items-start justify-between gap-2"><p className="text-sm font-bold text-brand-green-ink">{notification.title}</p><span className="shrink-0 text-[0.68rem] text-brand-black/50">{relativeDate(notification.createdAt)}</span></div>
                 <p className="text-xs leading-relaxed text-brand-black/70">{notification.message}</p>
                 <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <button className="text-xs font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={() => { void readOne(notification); setOpen(false); if (notification.link) window.location.hash = notification.link; }}>{notification.link ? "View update" : "Mark as read"}</button>
+                  <button className="text-xs font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={() => { void readOne(notification); setOpen(false); if (notification.link) navigateTo(notification.link); }}>{notification.link ? "View update" : "Mark as read"}</button>
                   {!notification.readAt ? <button className="text-xs font-bold text-brand-black/55 underline decoration-dashed underline-offset-4" type="button" onClick={() => void readOne(notification)}>Mark as read</button> : null}
                 </div>
               </div>

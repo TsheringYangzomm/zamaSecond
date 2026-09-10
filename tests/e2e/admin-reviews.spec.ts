@@ -136,7 +136,7 @@ async function mockReviewsAdmin(page) {
 }
 
 async function signInAsAdmin(page) {
-  await page.goto("/#/admin");
+  await page.goto("/admin");
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -144,9 +144,8 @@ async function signInAsAdmin(page) {
 }
 
 async function chooseReviewProduct(page, option: string) {
-  const filter = page.locator("div.group").filter({ has: page.locator('button[aria-haspopup="menu"]') }).filter({ hasText: "Product" }).first();
-  await filter.locator('button[aria-haspopup="menu"]').click();
-  await filter.getByRole("menu").getByRole("button", { name: option, exact: true }).click();
+  await page.getByRole("button", { name: /^Product\b/i }).first().click();
+  await page.getByRole("menu").getByRole("button", { name: option, exact: true }).click();
 }
 
 test("lists reviews with product names", async ({ page }) => {

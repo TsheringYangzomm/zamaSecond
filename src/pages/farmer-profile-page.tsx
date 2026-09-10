@@ -13,14 +13,14 @@ function FarmerNotFound() {
       <OutlineTag>Our farmers</OutlineTag>
       <h1 id="farmer-not-found-title" className={`${sectionTitleCompact} text-brand-green-ink`}>Farmer profile not found</h1>
       <p className="max-w-140 text-[1.05rem] leading-[1.5] text-brand-black/72">This farmer may have been removed or the link is no longer available.</p>
-      <div><OutlineLink href="#/farmers">Back to all farmers</OutlineLink></div>
+      <div><OutlineLink href="/farmers">Back to all farmers</OutlineLink></div>
     </section>
   );
 }
 
 function ProductSupplied({ product }: { product: ShopProduct }) {
   return (
-    <a className="grid gap-2 rounded-wobbly-md border-3 border-brand-forest bg-brand-white p-3 shadow-brand-soft transition-transform hover:-translate-y-0.5 hover:shadow-brand-hover focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4" href={`#/shop/${encodeURIComponent(product.id)}`}>
+    <a className="grid gap-2 rounded-wobbly-md border-3 border-brand-forest bg-brand-white p-3 shadow-brand-soft transition-transform hover:-translate-y-0.5 hover:shadow-brand-hover focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4" href={`/shop/${encodeURIComponent(product.id)}`}>
       <div className="grid h-32 place-items-center overflow-hidden rounded-wobbly-sm border-2 border-brand-forest/15 bg-brand-warm-white">
         {product.image ? <img className="h-full w-full object-contain p-2" src={product.image} alt="" loading="lazy" /> : <span className="font-primary text-2xl font-bold text-brand-forest/35">Zama</span>}
       </div>
@@ -64,15 +64,15 @@ export function FarmerProfilePage({ farmerId }: { farmerId: string | null }) {
       <div className={`relative z-[1] grid gap-7 ${sectionShell}`}>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/farmers">Farmers</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/farmers">Farmers</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">{farmer.name}</li>
           </ol>
         </nav>
 
-        <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4" href="#/farmers">← Back to all farmers</a>
+        <a className="inline-flex w-fit items-center gap-1.5 text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4" href="/farmers">← Back to all farmers</a>
 
         <div className="grid gap-7 lg:grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] lg:items-start lg:gap-10">
           <div className="brand-pattern relative overflow-hidden rounded-[34px_22px_40px_24px/24px_40px_22px_34px] border-3 border-dashed border-brand-forest bg-brand-warm-white p-3 shadow-brand-big sm:p-5">
@@ -120,7 +120,7 @@ export function FarmerProfilePage({ farmerId }: { farmerId: string | null }) {
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-brand-orange-ink">From this farmer</p>
               <h2 id="farmer-products-title" className="font-primary text-[clamp(1.7rem,3vw,2.4rem)] font-bold leading-[1.05] text-brand-green-ink">Products supplied</h2>
             </div>
-            <OutlineLink href="#/shop">Browse the market</OutlineLink>
+            <OutlineLink href="/shop">Browse the market</OutlineLink>
           </div>
           <div className="flex flex-wrap gap-2" aria-label="Products supplied by this farmer">
             {farmer.products.map((product) => <span className="rounded-full border-2 border-brand-forest/20 bg-brand-white px-3 py-1 text-sm font-bold text-brand-black" key={product}>{product}</span>)}
@@ -137,8 +137,8 @@ export function FarmerProfilePage({ farmerId }: { farmerId: string | null }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 border-dashed border-brand-forest/25 pt-5">
           <p className="text-sm font-semibold text-brand-black/64">Want to meet more of the people behind your food?</p>
           <div className="flex flex-wrap gap-2">
-            <OutlineLink href="#/farmers">Meet more farmers</OutlineLink>
-            <PrimaryLink href="#/shop">Shop local produce</PrimaryLink>
+            <OutlineLink href="/farmers">Meet more farmers</OutlineLink>
+            <PrimaryLink href="/shop">Shop local produce</PrimaryLink>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAdminAuth } from "../../admin/admin-auth";
 import { commerceStore, customerName } from "../../admin/commerce-api";
 import { deliveryStatuses, orderStatuses, paymentStatuses, type Delivery, type DeliveryStatus, type Order, type OrderStatus } from "../../admin/commerce-types";
@@ -43,16 +43,16 @@ type ColumnFilter = {
 
 type OrderView = "orders" | "payments" | "returns";
 
-function viewFromHash(): OrderView {
+function viewFromUrl(): OrderView {
   if (typeof window === "undefined") return "orders";
-  const requested = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("view");
+  const requested = new URLSearchParams(window.location.search).get("view");
   return requested === "payments" || requested === "returns" ? requested : "orders";
 }
 
 export function OrdersTab() {
   const { email: adminEmail } = useAdminAuth();
   const state = useCommerceStore();
-  const [view, setView] = useState<OrderView>(viewFromHash);
+  const [view, setView] = useState<OrderView>(viewFromUrl);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ColumnFilter>({ status: "", payment: "", location: "", customer: "", amount: "", placed: "", deliveryStatus: "", deliveryDate: "", driver: "", items: "", notes: "" });
   const [selected, setSelected] = useState<Order | null>(null);
@@ -60,14 +60,33 @@ export function OrdersTab() {
   const [pendingDeliveryChange, setPendingDeliveryChange] = useState<PendingDeliveryChange | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [expandedNotes, setExpandedNotes] = useState<string | null>(null);
+  const notesCloseRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!expandedNotes) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExpandedNotes(null);
+      if (event.key === "Tab") {
+        event.preventDefault();
+        notesCloseRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    notesCloseRef.current?.focus();
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [expandedNotes]);
   const [busy, setBusy] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [driverDraft, setDriverDraft] = useState("");
 
   useEffect(() => {
-    const onHashChange = () => setView(viewFromHash());
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    const onLocationChange = () => setView(viewFromUrl());
+    window.addEventListener("popstate", onLocationChange);
+    return () => window.removeEventListener("popstate", onLocationChange);
   }, []);
 
   const data = state.phase === "ready" ? state.data : null;
@@ -481,11 +500,11 @@ export function OrdersTab() {
       />
 
       {expandedNotes ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-black/40 p-4" role="dialog" onClick={() => setExpandedNotes(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="expanded-notes-title" onClick={() => setExpandedNotes(null)}>
           <div className="grid max-w-md gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-5 shadow-brand" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-bold uppercase tracking-[0.06em] text-brand-green-ink">Notes — {expandedNotes}</h3>
-              <button className="rounded-full border-2 border-brand-forest p-1 text-brand-forest hover:bg-brand-yellow" type="button" onClick={() => setExpandedNotes(null)}>
+              <h3 id="expanded-notes-title" className="text-sm font-bold uppercase tracking-[0.06em] text-brand-green-ink">Notes — {expandedNotes}</h3>
+              <button ref={notesCloseRef} className="rounded-full border-2 border-brand-forest p-1 text-brand-forest hover:bg-brand-yellow" type="button" aria-label="Close order notes" onClick={() => setExpandedNotes(null)}>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>

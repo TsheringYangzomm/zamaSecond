@@ -197,7 +197,7 @@ async function mockAdmin(page, { commerceLive }: { commerceLive: boolean }) {
 }
 
 async function signInAsAdmin(page) {
-  await page.goto("/#/admin");
+  await page.goto("/admin");
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -393,7 +393,7 @@ test("legacy delivery links open the unified orders workspace", async ({ page })
   await mockAdmin(page, { commerceLive: false });
   await signInAsAdmin(page);
 
-  await page.goto("/#/admin?view=deliveries");
+  await page.goto("/admin?view=deliveries");
   await expect(page.getByRole("heading", { name: "Orders" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Deliveries/ })).toHaveCount(0);
 });

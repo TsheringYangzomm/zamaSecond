@@ -160,7 +160,7 @@ export function FarmerDetail({
           <span className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-bold ${farmer.published ? "border-brand-forest bg-brand-mint text-brand-green-ink" : "border-brand-black/30 bg-brand-white text-brand-black/52"}`}>
             {farmer.published ? "Active" : "Inactive"}
           </span>
-          <a className={btnOutlineSm} href={`#/farmers/${encodeURIComponent(farmer.id)}`}>View public profile</a>
+          <a className={btnOutlineSm} href={`/farmers/${encodeURIComponent(farmer.id)}`}>View public profile</a>
           <button className={btnOutlineSm} type="button" onClick={onToggleActive} disabled={busy}>{farmer.published ? "Set inactive" : "Activate"}</button>
           <button className={btnOutlineSm} type="button" onClick={() => requestLeave("edit")} disabled={busy}>Edit</button>
         </div>

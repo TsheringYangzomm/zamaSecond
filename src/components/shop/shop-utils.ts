@@ -100,19 +100,18 @@ export const shopFilters: ShopFilter[] = [
 
 function readQueryParam(key: string): string | null {
   if (typeof window === "undefined") return null;
-  const hashQuery = window.location.hash.slice(1).split("?")[1] ?? "";
   const searchQuery = window.location.search.replace(/^\?/, "");
-  return new URLSearchParams(hashQuery).get(key) ?? new URLSearchParams(searchQuery).get(key);
+  return new URLSearchParams(searchQuery).get(key);
 }
 
 function writeQueryParam(key: string, value: string | null) {
   if (typeof window === "undefined") return;
-  const [path, queryString = ""] = window.location.hash.slice(1).split("?");
-  const params = new URLSearchParams(queryString);
+  const params = new URLSearchParams(window.location.search);
   if (value === null) params.delete(key);
   else params.set(key, value);
   const query = params.toString();
-  window.history.replaceState(window.history.state, "", `#${path}${query ? `?${query}` : ""}`);
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${query ? `?${query}` : ""}`);
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
 export function getInitialCategory(): Category {
@@ -142,5 +141,5 @@ export function findProduct(products: readonly ShopProduct[], productId: string)
 }
 
 export function productDetailHref(product: ShopProduct) {
-  return `#/shop/${product.id}`;
+  return `/shop/${product.id}`;
 }

@@ -68,11 +68,11 @@ test("keeps the home shop tiles simple and links to filtered shop pages", async 
   await expect(tiles.first().getByRole("heading")).toBeVisible();
   await expect(page.locator("#shop-category-grid details")).toHaveCount(0);
 
-  await expect(page.getByRole("link", { name: /^Meal Kits,/ })).toHaveAttribute("href", "#/shop/meal-kits");
-  await expect(page.getByRole("link", { name: /^Groceries,/ })).toHaveAttribute("href", "#/shop/groceries");
-  await expect(page.getByRole("link", { name: /^Vegetables,/ })).toHaveAttribute("href", "#/shop/vegetables");
-  await expect(page.getByRole("link", { name: /^Fruits,/ })).toHaveAttribute("href", "#/shop/fruits");
-  await expect(page.getByRole("link", { name: /^Customize your box,/ })).toHaveAttribute("href", "#/shop/custom-boxes");
+  await expect(page.getByRole("link", { name: /^Meal Kits,/ })).toHaveAttribute("href", "/shop/meal-kits");
+  await expect(page.getByRole("link", { name: /^Groceries,/ })).toHaveAttribute("href", "/shop/groceries");
+  await expect(page.getByRole("link", { name: /^Vegetables,/ })).toHaveAttribute("href", "/shop/vegetables");
+  await expect(page.getByRole("link", { name: /^Fruits,/ })).toHaveAttribute("href", "/shop/fruits");
+  await expect(page.getByRole("link", { name: /^Customize your box,/ })).toHaveAttribute("href", "/shop/custom-boxes");
 });
 
 test("opens a filtered shop page from a home shop tile", async ({ page }) => {
@@ -80,21 +80,21 @@ test("opens a filtered shop page from a home shop tile", async ({ page }) => {
   await page.goto("/#shop");
 
   await page.getByRole("link", { name: /^Vegetables,/ }).click();
-  await expect(page).toHaveURL(/#\/shop\/vegetables/);
+  await expect(page).toHaveURL(/\/shop\/vegetables/);
   await expect(page.getByRole("article", { name: "Seasonal Vegetable Box" })).toBeVisible();
   await expect(page.getByRole("article", { name: "Grocery Top-Up" })).not.toBeVisible();
 });
 
 test("updates the URL when a shop category is selected", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/#/shop");
+  await page.goto("/shop");
   await page.getByRole("button", { name: "Meal kits", exact: true }).click();
   await expect(page).toHaveURL(/category=meal-kits/);
 });
 
 test("adds a product to the header cart and opens the drawer", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto("/#/shop/meal-kit-box");
+  await page.goto("/shop/meal-kit-box");
 
   await page.getByRole("button", { name: "Add Recipe Meal Kit to cart" }).click();
   const cartButton = page.getByRole("button", { name: "Open cart, 1 item" });
@@ -115,7 +115,7 @@ test("adds a product to the header cart and opens the drawer", async ({ page }) 
 test("fills the full phone viewport with the cart drawer", async ({ page }) => {
   const phoneViewport = { width: 390, height: 844 };
   await page.setViewportSize(phoneViewport);
-  await page.goto("/#/shop/seasonal-vegetable-box");
+  await page.goto("/shop/seasonal-vegetable-box");
 
   await page.getByRole("button", { name: "Add Seasonal Vegetable Box to cart" }).click();
   await page.getByRole("button", { name: "Open cart, 1 item" }).click();
@@ -131,7 +131,7 @@ test("renders the farmer carousel on the home page", async ({ page }) => {
   await page.goto("/#farmers");
   await expect(page.getByRole("heading", { name: /Real people behind every ingredient/ })).toBeVisible();
   await expect(page.getByText("Pema Dorji")).toBeVisible();
-  await expect(page.getByRole("link", { name: /View all farmers/i })).toHaveAttribute("href", "#/farmers");
+  await expect(page.getByRole("link", { name: /View all farmers/i })).toHaveAttribute("href", "/farmers");
 });
 
 test("shows the latest seasonal update and a story link on the farmer carousel", async ({ page }) => {
@@ -143,21 +143,21 @@ test("shows the latest seasonal update and a story link on the farmer carousel",
 test("opens a farmer story from the landing carousel", async ({ page }) => {
   await page.goto("/#farmers");
   await page.getByRole("link", { name: /Read their story/i }).first().click();
-  await expect(page).toHaveURL(/#\/farmers\?farmer=pema-dorji/);
+  await expect(page).toHaveURL(/\/farmers\/pema-dorji/);
   await expect(page.getByText(/Pema Dorji's grandfather/)).toBeVisible();
 });
 
-test("opens the contact page from the partnership CTA", async ({ page }) => {
+test("opens the dedicated partnership page from the partnership CTA", async ({ page }) => {
   await page.goto("/#b2b");
 
   await page.getByRole("link", { name: "Start a partnership conversation" }).click();
 
-  await expect(page).toHaveURL(/#\/contact/);
-  await expect(page.getByRole("heading", { name: /ask a question or share feedback/i })).toBeVisible();
+  await expect(page).toHaveURL(/\/partnership/);
+  await expect(page.getByRole("heading", { name: /partnership/i })).toBeVisible();
 });
 
 test("farmers page search filters by name and location", async ({ page }) => {
-  await page.goto("/#/farmers");
+  await page.goto("/farmers");
   await expect(page.getByRole("heading", { name: /Meet the people growing your food/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pema Dorji" })).toBeVisible();
 

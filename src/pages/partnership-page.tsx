@@ -7,6 +7,7 @@ import { submitPartnershipRequest } from "../partnerships/partnership-api";
 import { PrimaryButton } from "../components/ui/action-link";
 import { OutlineTag } from "../components/ui/tag";
 import { btnOutlineSm, sectionShell, sectionTitle } from "../components/ui/styles";
+import { Turnstile, turnstileEnabled } from "../components/ui/turnstile";
 
 const fieldClasses =
   "min-h-11.5 w-full min-w-0 rounded-[20px_28px_16px_24px/24px_16px_28px_20px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
@@ -22,6 +23,8 @@ export function PartnershipPage() {
   const [success, setSuccess] = useState(false);
   const [status, setStatus] = useState("");
   const [partnerType, setPartnerType] = useState(settings.partnerTypes[0]?.id ?? "");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [challengeKey, setChallengeKey] = useState(0);
   const isFarmRequest = partnerType === farmProducerTypeId;
 
   useEffect(() => {
@@ -45,10 +48,13 @@ export function PartnershipPage() {
         message: String(formData.get("message") ?? ""),
         location: isFarmRequest ? String(formData.get("location") ?? "") : "",
         dzongkhag: isFarmRequest ? String(formData.get("dzongkhag") ?? "") : "",
+        turnstileToken,
       }, settings);
       form.reset();
       setPartnerType(settings.partnerTypes[0]?.id ?? "");
       setSuccess(true);
+      setTurnstileToken("");
+      setChallengeKey((current) => current + 1);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "We could not save your partnership request. Please try again.");
     } finally {
@@ -61,7 +67,7 @@ export function PartnershipPage() {
       <div className="grid gap-7">
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">Partner with us</li>
           </ol>
@@ -94,7 +100,7 @@ export function PartnershipPage() {
                 <OutlineTag>Request received</OutlineTag>
                 <h2 className="font-primary text-[clamp(1.7rem,3vw,2.4rem)] font-bold leading-[1.04] text-brand-green-ink">Thanks — we&apos;ll be in touch.</h2>
                 <p className="text-[1.02rem] leading-relaxed text-brand-black/72">Your partnership request is now with the Zama team. We&apos;ll review the details and use the contact information you shared when we are ready to talk.</p>
-                <div><a className={btnOutlineSm} href="#/">Back to Zama</a></div>
+                <div><a className={btnOutlineSm} href="/">Back to Zama</a></div>
               </div>
             ) : !settings.intakeOpen ? (
               <div className="grid gap-4">
@@ -116,7 +122,8 @@ export function PartnershipPage() {
                 <label className="grid gap-2"><span className={labelClasses}>Partnership type</span><select className={fieldClasses} name="partnerType" value={partnerType} onChange={(event) => { setPartnerType(event.target.value); setStatus(""); }} required><option value="" disabled>Select one</option>{settings.partnerTypes.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select></label>
                 {isFarmRequest ? <div className="grid gap-4 rounded-wobbly-md border-2 border-dashed border-brand-forest/35 bg-brand-white/70 p-4 sm:grid-cols-2"><label className="grid gap-2"><span className={labelClasses}>Farm location</span><input className={fieldClasses} name="location" required placeholder="Village or town" onChange={() => setStatus("")} /></label><label className="grid gap-2"><span className={labelClasses}>Dzongkhag</span><select className={fieldClasses} name="dzongkhag" required defaultValue=""><option value="" disabled>Select Dzongkhag</option>{farmerDzongkhags.map((dzongkhag) => <option key={dzongkhag} value={dzongkhag}>{dzongkhag}</option>)}</select></label><p className="sm:col-span-2 text-xs leading-relaxed text-brand-black/60">If approved, these details create an unpublished farmer draft for Zama to review before anything is shown publicly.</p></div> : null}
                 <label className="grid gap-2"><span className={labelClasses}>How would you like to work together?</span><textarea className={`${fieldClasses} resize-y`} name="message" rows={5} required placeholder="Tell us what you need and how Zama could help…" onChange={() => setStatus("")} /></label>
-                <div className="flex flex-wrap items-center gap-3"><PrimaryButton disabled={isSubmitting}>{isSubmitting ? "Sending…" : <>{settings.submitLabel} <span aria-hidden="true">→</span></>}</PrimaryButton>{status ? <p className="text-sm font-bold text-brand-black" role="alert">{status}</p> : null}</div>
+                <Turnstile key={challengeKey} onTokenChange={setTurnstileToken} />
+                <div className="flex flex-wrap items-center gap-3"><PrimaryButton disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}>{isSubmitting ? "Sending…" : <>{settings.submitLabel} <span aria-hidden="true">→</span></>}</PrimaryButton>{status ? <p className="text-sm font-bold text-brand-black" role="alert">{status}</p> : null}</div>
               </form>
             )}
           </div>

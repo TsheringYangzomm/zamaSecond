@@ -173,7 +173,7 @@ async function mockInventoryAdmin(page, slowWriteMs = 0) {
 }
 
 async function signInAsAdmin(page) {
-  await page.goto("/#/admin");
+  await page.goto("/admin");
   await page.getByLabel("Email").fill(adminEmail);
   await page.getByLabel("Password").fill("correct-password");
   await page.getByRole("button", { name: "Sign in" }).click();
@@ -195,9 +195,8 @@ async function openAddStockModal(page) {
 }
 
 async function chooseFilter(page, label: string, option: string) {
-  const filter = page.locator("div.group").filter({ has: page.locator('button[aria-haspopup="menu"]') }).filter({ hasText: label }).first();
-  await filter.locator('button[aria-haspopup="menu"]').click();
-  await filter.getByRole("menu").getByRole("button", { name: option, exact: true }).click();
+  await page.getByRole("button", { name: new RegExp(`^${label}\\b`, "i") }).first().click();
+  await page.getByRole("menu").getByRole("button", { name: option, exact: true }).click();
 }
 
 test("shows stock levels for every item and can filter by level", async ({ page }) => {

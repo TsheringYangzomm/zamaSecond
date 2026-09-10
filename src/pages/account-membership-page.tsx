@@ -210,8 +210,8 @@ export function AccountMembershipPage() {
 
   return (
     <div className={"mx-auto grid w-full max-w-[90rem] gap-7 px-4 pb-28 pt-6 sm:px-6 lg:px-10 lg:pb-12 " + sectionShell}>
-      <nav className="breadcrumb" aria-label="Breadcrumb"><ol className="flex flex-wrap items-center gap-1.5 text-sm"><li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="#/account">My account</a></li><li aria-hidden="true" className="text-brand-black/40">/</li><li aria-current="page" className="font-bold text-brand-black">Membership</li></ol></nav>
-      <div className="flex flex-wrap items-end justify-between gap-4"><div className="grid gap-2"><OutlineTag>Zama+ Membership</OutlineTag><h1 className={sectionTitleCompact + " text-brand-green-ink"}>Membership that rewards your kitchen.</h1><p className="max-w-150 text-[1.05rem] leading-relaxed text-brand-black/68">See your plan, member savings, and exclusive offers in one place.</p></div><a className={btnOutlineSm} href="#/account">← Back to account</a></div>
+      <nav className="breadcrumb" aria-label="Breadcrumb"><ol className="flex flex-wrap items-center gap-1.5 text-sm"><li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href="/account">My account</a></li><li aria-hidden="true" className="text-brand-black/40">/</li><li aria-current="page" className="font-bold text-brand-black">Membership</li></ol></nav>
+      <div className="flex flex-wrap items-end justify-between gap-4"><div className="grid gap-2"><OutlineTag>Zama+ Membership</OutlineTag><h1 className={sectionTitleCompact + " text-brand-green-ink"}>Membership that rewards your kitchen.</h1><p className="max-w-150 text-[1.05rem] leading-relaxed text-brand-black/68">See your plan, member savings, and exclusive offers in one place.</p></div><a className={btnOutlineSm} href="/account">← Back to account</a></div>
 
       {error ? <p className="rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 p-3 text-sm font-semibold text-brand-black" role="alert">{error}</p> : null}
 

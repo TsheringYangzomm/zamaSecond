@@ -223,7 +223,7 @@ function SignedInPanel({ profile, onClose }: { profile: CustomerProfile; onClose
         </p>
       </div>
       <div className="grid w-full gap-2">
-        <a className={`${btnPrimaryLg} w-full`} href="#/account" onClick={onClose}>Open my account</a>
+        <a className={`${btnPrimaryLg} w-full`} href="/account" onClick={onClose}>Open my account</a>
         <button className={`${btnOutlineSm} w-full`} type="button" onClick={onClose}>Continue shopping</button>
       </div>
     </div>

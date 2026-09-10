@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, LockKeyhole, TicketPercent } from "lucide-react";
 import { useCart } from "../../cart-context";
+import { navigateTo } from "../../router";
 import { useCustomerAuth } from "../../checkout/customer-auth";
 import { submitOrder, type CustomerProfile } from "../../checkout/checkout-api";
 import { fetchAccountRewards } from "../../account-rewards/account-rewards-api";
@@ -187,7 +188,7 @@ function GuestSavingsPreview({ items, subtotal, onSignUp, onSignIn, onBack }: {
 
   function browseCoupons() {
     closeCart();
-    window.location.hash = "#/coupons";
+    navigateTo("/coupons");
   }
 
   return (

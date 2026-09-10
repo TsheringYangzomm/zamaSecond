@@ -172,7 +172,7 @@ export function ReviewsTab() {
                       </div>
                       {row.body ? <p className="mt-1 max-w-100 text-xs leading-[1.4] text-brand-black/64">{row.body}</p> : null}
                     </td>
-                    <td className="px-4 py-3 text-xs text-brand-black/68"><div className="grid gap-1"><span className="font-bold capitalize text-brand-green-ink">{row.source === "customer" ? "Customer" : "CMS"}</span>{row.order_id ? <a className="font-semibold text-brand-green-ink underline decoration-dashed underline-offset-2" href={`#/account/orders?order=${encodeURIComponent(row.order_id)}`}>Order {row.order_id}</a> : null}{row.customer_id ? <span>Customer {row.customer_id}</span> : null}</div></td>
+                    <td className="px-4 py-3 text-xs text-brand-black/68"><div className="grid gap-1"><span className="font-bold capitalize text-brand-green-ink">{row.source === "customer" ? "Customer" : "CMS"}</span>{row.order_id ? <a className="font-semibold text-brand-green-ink underline decoration-dashed underline-offset-2" href={`/account/orders?order=${encodeURIComponent(row.order_id)}`}>Order {row.order_id}</a> : null}{row.customer_id ? <span>Customer {row.customer_id}</span> : null}</div></td>
                     <td className="px-4 py-3 text-brand-black/72">{"★".repeat(row.rating)} <span className="text-brand-black/52">{row.rating}/5</span></td>
                     <td className="px-4 py-3 text-brand-black/72">{row.date}</td>
                     <td className="px-4 py-3">

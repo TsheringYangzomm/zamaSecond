@@ -88,6 +88,6 @@ describe("ProductPage", () => {
     renderProductPage("no-such-product");
 
     expect(screen.getByRole("heading", { name: "That product is not on the shelf." })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Browse all products" })).toHaveAttribute("href", "#/shop");
+    expect(screen.getByRole("link", { name: "Browse all products" })).toHaveAttribute("href", "/shop");
   });
 });

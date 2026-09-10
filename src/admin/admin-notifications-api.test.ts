@@ -19,19 +19,19 @@ describe("admin notifications development fallback", () => {
       type: "order_created",
       title: "New order received",
       message: "Order ZAM-2026-5002 was placed.",
-      link: "#/admin?tab=orders",
+      link: "/admin?tab=orders",
     });
     recordDevAdminNotification({
       type: "return_requested",
       title: "New return request",
       message: "A return was requested.",
-      link: "#/admin?tab=orders",
+      link: "/admin?tab=orders",
     });
 
     const notifications = await fetchAdminNotifications("Admin@zama.bt");
     expect(notifications).toHaveLength(2);
     expect(notifications[0].type).toBe("return_requested");
-    expect(notifications[0].link).toBe("#/admin?tab=orders");
+    expect(notifications[0].link).toBe("/admin?tab=orders");
     expect(notifications.every((notification) => notification.readAt === null)).toBe(true);
   });
 
@@ -40,7 +40,7 @@ describe("admin notifications development fallback", () => {
       type: "message_received",
       title: "New customer message",
       message: "A customer sent a message.",
-      link: "#/admin?tab=messages",
+      link: "/admin?tab=messages",
     });
     const [notification] = await fetchAdminNotifications("first@zama.bt");
 
@@ -57,13 +57,13 @@ describe("admin notifications development fallback", () => {
       type: "partnership_request_received",
       title: "New partnership request",
       message: "Pema Farm submitted a partnership request.",
-      link: "#/admin?tab=partnerships",
+      link: "/admin?tab=partnerships",
     });
 
     const [notification] = await fetchAdminNotifications("admin@zama.bt");
     expect(notification).toMatchObject({
       type: "partnership_request_received",
-      link: "#/admin?tab=partnerships",
+      link: "/admin?tab=partnerships",
     });
   });
 });

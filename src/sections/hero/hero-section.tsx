@@ -4,6 +4,7 @@ import { sectionShell } from "../../components/ui/styles";
 import { Toast, type ToastMessage } from "../../components/ui/toast";
 import { useContent } from "../../cms/content-context";
 import { submitLaunchInterest } from "../../launch-interest";
+import { Turnstile, turnstileEnabled } from "../../components/ui/turnstile";
 
 function WaitlistForm() {
   const emailRef = useRef<HTMLInputElement>(null);
@@ -11,6 +12,8 @@ function WaitlistForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [challengeKey, setChallengeKey] = useState(0);
   const { blocks } = useContent();
   const { waitlistEyebrow, emailPlaceholder, submitLabel, submittingLabel } = blocks.hero;
   const handleDismissToast = useCallback(() => setToast(null), []);
@@ -34,7 +37,7 @@ function WaitlistForm() {
     setToast(null);
 
     try {
-      const result = await submitLaunchInterest({ email, source: "hero-waitlist" });
+      const result = await submitLaunchInterest({ email, source: "hero-waitlist", turnstileToken });
       setToast({
         message:
           result.mode === "preview"
@@ -45,6 +48,8 @@ function WaitlistForm() {
         tone: result.mode === "remote" ? "success" : "notice",
       });
       form.reset();
+      setTurnstileToken("");
+      setChallengeKey((current) => current + 1);
     } catch (error) {
       setHasError(true);
       setStatus(error instanceof Error ? error.message : "We could not save your request. Please try again or email hello@zama.bt.");
@@ -52,7 +57,7 @@ function WaitlistForm() {
     } finally {
       setIsSubmitting(false);
     }
-  }, []);
+  }, [turnstileToken]);
 
   return (
     <>
@@ -84,7 +89,8 @@ function WaitlistForm() {
         }}
         className="min-h-11.5 min-w-0 flex-1 rounded-[20px_28px_16px_24px/24px_16px_28px_20px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20"
       />
-      <PrimaryButton className="w-full sm:w-auto" disabled={isSubmitting}>{isSubmitting ? submittingLabel : submitLabel}</PrimaryButton>
+      <PrimaryButton className="w-full sm:w-auto" disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}>{isSubmitting ? submittingLabel : submitLabel}</PrimaryButton>
+      <div className="basis-full"><Turnstile key={challengeKey} onTokenChange={setTurnstileToken} /></div>
       <p id="waitlist-status" className={`form-status min-h-[1.4em] basis-full px-1 text-sm ${hasError ? "font-bold text-brand-black" : "font-medium text-brand-green-ink"}`} role={hasError ? "status" : undefined} aria-live={hasError ? "polite" : undefined}>
         {status}
       </p>

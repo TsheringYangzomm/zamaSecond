@@ -101,6 +101,23 @@ export function validatePartnershipRequest(input: PartnershipRequestInput, setti
 export async function submitPartnershipRequest(input: PartnershipRequestInput, settings: PartnershipPageSettings): Promise<PartnershipRequest> {
   if (!settings.intakeOpen) throw new Error(settings.pausedCopy);
   const clean = validatePartnershipRequest(input, settings);
+  if (!import.meta.env.DEV) {
+    const prefix = window.location.port === "8888" ? "/.netlify/functions" : "/api";
+    const response = await fetch(`${prefix}/partnership`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ ...clean, turnstileToken: input.turnstileToken }),
+      credentials: "same-origin",
+    });
+    const result = await response.json().catch(() => null) as { request?: Record<string, unknown> } | null;
+    if (!response.ok || !result?.request) {
+      throw new Error(response.status === 429
+        ? "Too many requests were sent. Please wait and try again."
+        : "We could not save your partnership request. Please try again.");
+    }
+    return mapRequest(result.request);
+  }
+
   const client = getSupabaseClient();
   if (client) {
     try {
@@ -144,7 +161,7 @@ export async function submitPartnershipRequest(input: PartnershipRequestInput, s
     type: "partnership_request_received",
     title: "New partnership request",
     message: `${request.organisationName} submitted a ${settings.partnerTypes.find((type) => type.id === request.partnerType)?.label ?? "partnership"} request.`,
-    link: "#/admin?tab=partnerships",
+    link: "/admin?tab=partnerships",
   });
   return request;
 }

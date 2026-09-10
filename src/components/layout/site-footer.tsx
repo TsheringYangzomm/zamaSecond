@@ -30,7 +30,7 @@ export function SiteFooter() {
           {footer.supportLinks.map((link) => (
             <a className="footer-link relative inline-flex min-h-11 items-center text-brand-yellow sm:min-h-6" href={link.href} key={link.label}>
               {link.label}
-              {link.href.startsWith("#/") ? <ArrowIcon className="ml-1.5" /> : null}
+              {link.href.startsWith("/") ? <ArrowIcon className="ml-1.5" /> : null}
             </a>
           ))}
         </div>

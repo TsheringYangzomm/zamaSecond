@@ -3,6 +3,7 @@ import { submitContactMessage, type ContactTopic } from "../contact";
 import { PrimaryButton } from "../components/ui/action-link";
 import { OutlineTag } from "../components/ui/tag";
 import { sectionShell, sectionTitle } from "../components/ui/styles";
+import { Turnstile, turnstileEnabled } from "../components/ui/turnstile";
 
 
 const topicOptions = [
@@ -22,6 +23,8 @@ function ContactForm() {
   const [status, setStatus] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [challengeKey, setChallengeKey] = useState(0);
 
   const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -54,9 +57,11 @@ function ContactForm() {
     setStatus("");
 
     try {
-      const result = await submitContactMessage({ name, email, topic, message });
+      const result = await submitContactMessage({ name, email, topic, message, turnstileToken });
       setStatus(result.mode === "preview" ? "Preview saved for this browser session. Connect the contact endpoint before publishing." : "Thanks — your message is on its way to the Zama inbox.");
       form.reset();
+      setTurnstileToken("");
+      setChallengeKey((current) => current + 1);
     } catch (error) {
       setHasError(true);
       setStatus(error instanceof Error ? error.message : "We could not send your message. Please try again or email hello@zama.bt.");
@@ -64,7 +69,7 @@ function ContactForm() {
     } finally {
       setIsSubmitting(false);
     }
-  }, []);
+  }, [turnstileToken]);
 
   const clearFeedback = useCallback(() => {
     if (hasError) setHasError(false);
@@ -132,7 +137,8 @@ function ContactForm() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 pt-1">
-        <PrimaryButton disabled={isSubmitting}>{isSubmitting ? "Sending…" : "Send message"}</PrimaryButton>
+        <Turnstile key={challengeKey} onTokenChange={setTurnstileToken} />
+        <PrimaryButton disabled={isSubmitting || (turnstileEnabled && !turnstileToken)}>{isSubmitting ? "Sending…" : "Send message"}</PrimaryButton>
         <p
           id="contact-status"
           className={`min-h-[1.4em] flex-1 text-sm ${hasError ? "font-bold text-brand-black" : "font-medium text-brand-green-ink"}`}

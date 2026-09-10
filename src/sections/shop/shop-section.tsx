@@ -21,7 +21,7 @@ const focusRing =
   "focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-3";
 
 function CategoryCard({ item, count }: { item: ShopCategoryItem; count: number }) {
-  const href = `#/shop/${categorySlug(item.category)}`;
+  const href = `/shop/${categorySlug(item.category)}`;
   const browseLabel = item.category === "Custom boxes" ? "Start building your box" : `Browse ${item.title.toLowerCase()}`;
   return (
     <a
@@ -61,7 +61,7 @@ export function ShopSection() {
               <h2 id="shop-title" className={`${sectionTitleCompact} max-w-170 text-brand-green-ink`}>{shop.heading}</h2>
               <p className="text-[1.05rem] leading-[1.5] text-brand-black/72">{shop.copy}</p>
             </div>
-            <PrimaryLink href="#/shop">{shop.ctaLabel}</PrimaryLink>
+            <PrimaryLink href="/shop">{shop.ctaLabel}</PrimaryLink>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" id="shop-category-grid">

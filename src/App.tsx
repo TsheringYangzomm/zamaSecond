@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
+import { useLocation, useRouter } from "@tanstack/react-router";
 import "./App.css";
 import { CartProvider } from "./cart-provider";
 import { ContentProvider } from "./cms/content-context";
@@ -13,27 +14,38 @@ import { HeroSection } from "./sections/hero/hero-section";
 import { MealKitsSection } from "./sections/meal-kits/meal-kits-section";
 import { PricingSection } from "./sections/pricing/pricing-section";
 import { ProcessSection } from "./sections/process/process-section";
-import { ContactPage } from "./pages/contact-page";
-import { PartnershipPage } from "./pages/partnership-page";
-import { ShopPage } from "./pages/shop-page";
-import { ProductPage } from "./pages/product-page";
-import { CustomizeBoxPage } from "./pages/customize-box-page";
-import { CategoryPage } from "./pages/category-page";
-import { FarmersPage } from "./pages/farmers-page";
-import { FarmerProfilePage } from "./pages/farmer-profile-page";
-import { LaunchUpdatesPage } from "./pages/launch-updates-page";
-import { MembershipPage } from "./pages/membership-page";
-import { MealKitTrustPage } from "./pages/meal-kit-trust-page";
-import { AccountOrdersPage, AccountPage } from "./pages/account-page";
-import { AccountWalletPage } from "./pages/account-wallet-page";
-import { AccountMembershipPage } from "./pages/account-membership-page";
-import { CouponsPage } from "./pages/coupons-page";
-import { AdminPage } from "./pages/admin/admin-page";
-import { AdminPasswordResetPage } from "./pages/admin/admin-password-reset";
-import { JaggleCallbackPage } from "./pages/jaggle-callback-page";
 import { AdminAuthProvider } from "./admin/admin-auth";
 import { CustomerAuthProvider } from "./checkout/customer-auth";
 import { getCategoryFromHash, getFarmerId, getProductId, getRoute, setPendingSection, takePendingSection } from "./router";
+
+const ContactPage = lazy(() => import("./pages/contact-page").then((module) => ({ default: module.ContactPage })));
+const PartnershipPage = lazy(() => import("./pages/partnership-page").then((module) => ({ default: module.PartnershipPage })));
+const ShopPage = lazy(() => import("./pages/shop-page").then((module) => ({ default: module.ShopPage })));
+const ProductPage = lazy(() => import("./pages/product-page").then((module) => ({ default: module.ProductPage })));
+const CustomizeBoxPage = lazy(() => import("./pages/customize-box-page").then((module) => ({ default: module.CustomizeBoxPage })));
+const CategoryPage = lazy(() => import("./pages/category-page").then((module) => ({ default: module.CategoryPage })));
+const FarmersPage = lazy(() => import("./pages/farmers-page").then((module) => ({ default: module.FarmersPage })));
+const FarmerProfilePage = lazy(() => import("./pages/farmer-profile-page").then((module) => ({ default: module.FarmerProfilePage })));
+const LaunchUpdatesPage = lazy(() => import("./pages/launch-updates-page").then((module) => ({ default: module.LaunchUpdatesPage })));
+const MembershipPage = lazy(() => import("./pages/membership-page").then((module) => ({ default: module.MembershipPage })));
+const MealKitTrustPage = lazy(() => import("./pages/meal-kit-trust-page").then((module) => ({ default: module.MealKitTrustPage })));
+const AccountPage = lazy(() => import("./pages/account-page").then((module) => ({ default: module.AccountPage })));
+const AccountOrdersPage = lazy(() => import("./pages/account-page").then((module) => ({ default: module.AccountOrdersPage })));
+const AccountWalletPage = lazy(() => import("./pages/account-wallet-page").then((module) => ({ default: module.AccountWalletPage })));
+const AccountMembershipPage = lazy(() => import("./pages/account-membership-page").then((module) => ({ default: module.AccountMembershipPage })));
+const CouponsPage = lazy(() => import("./pages/coupons-page").then((module) => ({ default: module.CouponsPage })));
+const AdminPage = lazy(() => import("./pages/admin/admin-page").then((module) => ({ default: module.AdminPage })));
+const AdminPasswordResetPage = lazy(() => import("./pages/admin/admin-password-reset").then((module) => ({ default: module.AdminPasswordResetPage })));
+const JaggleCallbackPage = lazy(() => import("./pages/jaggle-callback-page").then((module) => ({ default: module.JaggleCallbackPage })));
+const NotFoundPage = lazy(() => import("./pages/not-found-page").then((module) => ({ default: module.NotFoundPage })));
+
+function PageFallback() {
+  return (
+    <main className="grid min-h-[50vh] place-items-center px-4" aria-live="polite">
+      <p className="font-bold text-brand-green-ink">Loading Zama…</p>
+    </main>
+  );
+}
 
 function scrollToSection(targetId: string) {
   const target = document.getElementById(targetId);
@@ -49,24 +61,53 @@ function scrollToSection(targetId: string) {
 }
 
 function App() {
-  const [hash, setHash] = useState(window.location.hash);
-  const route = getRoute(hash);
-  const productId = route === "product" ? getProductId(hash) : null;
-  const farmerId = route === "farmer" ? getFarmerId(hash) : null;
-  const categorySlug = route === "category" ? getCategoryFromHash(hash) : null;
+  const location = useLocation();
+  const router = useRouter();
+  const routeLocation = `${location.pathname}${location.searchStr}`;
+  const route = getRoute("", location.searchStr, location.pathname);
+  const productId = route === "product" ? getProductId(routeLocation) : null;
+  const farmerId = route === "farmer" ? getFarmerId(routeLocation) : null;
+  const categorySlug = route === "category" ? getCategoryFromHash(routeLocation) : null;
   const previousRoute = useRef(route);
 
   useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash);
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, []);
+    if (previousRoute.current === route && route !== "product" && route !== "farmer" && route !== "category") return;
+    previousRoute.current = route;
+    const frame = requestAnimationFrame(() => document.getElementById("top")?.focus({ preventScroll: true }));
+    return () => cancelAnimationFrame(frame);
+  }, [route, routeLocation]);
 
   useEffect(() => {
-    if (previousRoute.current === route) return;
-    previousRoute.current = route;
-    window.scrollTo(0, 0);
-  }, [route]);
+    const titleByRoute: Partial<Record<typeof route, string>> = {
+      home: "Zama — Meal Kits & Fresh Groceries for Thimphu",
+      shop: "Shop — Zama",
+      product: "Product — Zama",
+      category: "Shop by category — Zama",
+      farmers: "Our farmers — Zama",
+      farmer: "Farmer story — Zama",
+      membership: "Zama+ membership",
+      contact: "Contact Zama",
+      partnership: "Partner with Zama",
+      coupons: "Coupons — Zama",
+      "not-found": "Page not found — Zama",
+    };
+    document.title = titleByRoute[route] ?? "Zama";
+
+    const publicOrigin = String(import.meta.env.VITE_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
+    const path = (routeLocation.startsWith("#") ? routeLocation.slice(1) : routeLocation).split("?")[0] || "/";
+    const canonicalUrl = `${publicOrigin}${path === "/" ? "/" : path}`;
+    document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute("href", canonicalUrl);
+    document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute("content", canonicalUrl);
+
+    const privateRoute = route === "admin" || route === "admin-password-reset" || route === "auth-jaggle" || route.startsWith("account");
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (!robots) {
+      robots = document.createElement("meta");
+      robots.name = "robots";
+      document.head.appendChild(robots);
+    }
+    robots.content = privateRoute || route === "not-found" ? "noindex, nofollow" : "index, follow";
+  }, [route, routeLocation]);
 
   useEffect(() => {
     if (route !== "product" && route !== "category") return;
@@ -84,38 +125,46 @@ function App() {
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
       if (event.defaultPrevented) return;
-      const anchor = (event.target as Element | null)?.closest?.('a[href^="#"]');
+      const anchor = (event.target as Element | null)?.closest?.("a[href]");
       if (!(anchor instanceof HTMLAnchorElement)) return;
       const href = anchor.getAttribute("href") ?? "";
-      if (href.startsWith("#/")) return;
-      const targetId = decodeURIComponent(href.replace(/^#/, ""));
-      if (!targetId) return;
-      if (document.getElementById(targetId)) {
+      if (href.startsWith("#") && !href.startsWith("#/")) {
+        const targetId = decodeURIComponent(href.slice(1));
+        if (!targetId) return;
+        if (document.getElementById(targetId)) {
+          event.preventDefault();
+          scrollToSection(targetId);
+          return;
+        }
+        if (route === "home") return;
         event.preventDefault();
-        scrollToSection(targetId);
+        setPendingSection(targetId);
+        router.history.push("/");
         return;
       }
-      if (route === "home") return;
+
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
+      const target = new URL(anchor.href, window.location.href);
+      if (target.origin !== window.location.origin || !href.startsWith("/")) return;
       event.preventDefault();
-      setPendingSection(targetId);
-      window.location.hash = "#/";
+      router.history.push(`${target.pathname}${target.search}${target.hash}`);
     };
     document.addEventListener("click", onClick);
     return () => document.removeEventListener("click", onClick);
-  }, [route]);
+  }, [route, router]);
 
   if (route === "admin-password-reset") {
-    return <AdminPasswordResetPage />;
+    return <Suspense fallback={<PageFallback />}><AdminPasswordResetPage /></Suspense>;
   }
 
   if (route === "auth-jaggle") {
-    return <JaggleCallbackPage />;
+    return <Suspense fallback={<PageFallback />}><JaggleCallbackPage /></Suspense>;
   }
 
   if (route === "admin") {
     return (
       <AdminAuthProvider>
-        <AdminPage />
+        <Suspense fallback={<PageFallback />}><AdminPage /></Suspense>
       </AdminAuthProvider>
     );
   }
@@ -128,7 +177,7 @@ function App() {
             Skip to Content
           </a>
       <SiteHeader />
-      {route === "contact" ? (
+      <Suspense fallback={<PageFallback />}>{route === "contact" ? (
         <main id="top" tabIndex={-1}>
           <ContactPage />
         </main>
@@ -192,6 +241,10 @@ function App() {
         <main id="top" tabIndex={-1}>
           <ProductPage key={productId ?? "missing"} productId={productId} />
         </main>
+      ) : route === "not-found" ? (
+        <main id="top" tabIndex={-1}>
+          <NotFoundPage />
+        </main>
       ) : (
         <main id="top" tabIndex={-1}>
           <HeroSection />
@@ -203,7 +256,7 @@ function App() {
           <PricingSection />
           <LaunchDetailsSection />
         </main>
-      )}
+      )}</Suspense>
       <SiteFooter />
       <CartDrawer />
         </ContentProvider>

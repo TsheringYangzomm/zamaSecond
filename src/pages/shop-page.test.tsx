@@ -28,7 +28,7 @@ describe("ShopPage", () => {
     for (const product of shopProducts) {
       const card = screen.getByRole("article", { name: product.name });
       const link = within(card).getByRole("link", { name: `View ${product.name} details` });
-      expect(link).toHaveAttribute("href", `#/shop/${product.id}`);
+      expect(link).toHaveAttribute("href", `/shop/${product.id}`);
     }
   });
 
@@ -122,18 +122,18 @@ describe("ShopPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Top picks" }));
 
-    expect(window.location.hash).toContain("filter=top-pick");
+    expect(window.location.search).toContain("filter=top-pick");
   });
 
   it("reads an initial collection filter from the URL", () => {
-    window.history.replaceState(null, "", "/#/shop?filter=veggie");
+    window.history.replaceState(null, "", "/shop?filter=veggie");
     renderShopPage();
 
     expect(screen.getByRole("button", { name: "Veggies only" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("shows an empty state and clears an impossible URL combination", async () => {
-    window.history.replaceState(null, "", "/#/shop?category=groceries&filter=under-500");
+    window.history.replaceState(null, "", "/shop?category=groceries&filter=under-500");
     const user = userEvent.setup();
     renderShopPage();
 

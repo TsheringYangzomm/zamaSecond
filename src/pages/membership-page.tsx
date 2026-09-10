@@ -9,6 +9,7 @@ import { PrimaryButton } from "../components/ui/action-link";
 import { OutlineTag } from "../components/ui/tag";
 import { btnOutlineLg, btnPrimaryLg, sectionShell, sectionTitle } from "../components/ui/styles";
 import { submitMembershipInterest } from "../launch-interest";
+import { Turnstile, turnstileEnabled } from "../components/ui/turnstile";
 
 const launchPreviewBenefits = [
   "Explore the Zama shop and planned range",
@@ -43,6 +44,7 @@ function MembershipForm() {
   const [status, setStatus] = useState("");
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [errors, setErrors] = useState<{ fullName?: string; email?: string }>({});
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const clearFieldError = (field: "fullName" | "email") => {
     setErrors((current) => ({ ...current, [field]: undefined }));
@@ -86,6 +88,7 @@ function MembershipForm() {
         fullName,
         email,
         interests: selectedInterests,
+        turnstileToken,
       });
 
       if (result.mode === "duplicate" || result.mode === "remote" || result.mode === "preview") {
@@ -111,7 +114,7 @@ function MembershipForm() {
           <p className="text-[1.05rem] leading-[1.5] text-brand-black/72">Membership isn&apos;t open yet. We&apos;ll let you know when enrollment is ready.</p>
           <p className="font-bold text-brand-green-ink">No payment has been taken.</p>
         </div>
-        <a className={`${btnPrimaryLg} w-fit`} href="#/">
+        <a className={`${btnPrimaryLg} w-fit`} href="/">
           <span className="inline-flex items-center gap-2">
             Explore Zama <span aria-hidden="true">→</span>
           </span>
@@ -186,7 +189,8 @@ function MembershipForm() {
       </fieldset>
 
       <div className="grid gap-3">
-        <PrimaryButton disabled={isSubmitting} aria-busy={isSubmitting} className="w-full justify-center sm:w-fit">
+        <Turnstile onTokenChange={setTurnstileToken} />
+        <PrimaryButton disabled={isSubmitting || (turnstileEnabled && !turnstileToken)} aria-busy={isSubmitting} className="w-full justify-center sm:w-fit">
           {isSubmitting ? "Joining..." : "Notify Me About Zama+ →"}
         </PrimaryButton>
         <div className="grid gap-1 text-sm text-brand-black/72">
@@ -259,7 +263,7 @@ function MembershipPlanCard({ plan, loading, signedIn, onSignIn }: {
       {!loading ? <ul className="relative grid gap-2 text-sm leading-relaxed text-brand-black/72 sm:text-base">
         {benefits.map((benefit) => <li className="flex items-start gap-2" key={benefit}><BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-green-ink" /><span>{benefit}</span></li>)}
       </ul> : <div className="min-h-28" aria-hidden="true" />}
-      {loading ? <div className={`${btnPrimaryLg} mt-auto w-full opacity-55`}>Loading…</div> : plan && signedIn ? <a className={`${btnPrimaryLg} mt-auto w-full`} href="#/account/membership">Manage Zama+ <span aria-hidden="true">→</span></a> : plan ? <button className={`${btnPrimaryLg} mt-auto w-full`} type="button" onClick={onSignIn}>Sign in to join Zama+ <span aria-hidden="true">→</span></button> : <button className={`${btnPrimaryLg} mt-auto w-full`} type="button" onClick={scrollToMembershipUpdates}>Get membership updates <span aria-hidden="true">→</span></button>}
+      {loading ? <div className={`${btnPrimaryLg} mt-auto w-full opacity-55`}>Loading…</div> : plan && signedIn ? <a className={`${btnPrimaryLg} mt-auto w-full`} href="/account/membership">Manage Zama+ <span aria-hidden="true">→</span></a> : plan ? <button className={`${btnPrimaryLg} mt-auto w-full`} type="button" onClick={onSignIn}>Sign in to join Zama+ <span aria-hidden="true">→</span></button> : <button className={`${btnPrimaryLg} mt-auto w-full`} type="button" onClick={scrollToMembershipUpdates}>Get membership updates <span aria-hidden="true">→</span></button>}
     </article>
   );
 }
@@ -269,7 +273,7 @@ function AdditionalPlanCard({ plan, signedIn, onSignIn }: { plan: MembershipPlan
     <article className="grid content-start gap-3 rounded-wobbly-card border-3 border-brand-forest bg-brand-white p-5 shadow-brand-soft">
       <div className="flex flex-wrap items-start justify-between gap-3"><div className="grid gap-1"><h3 className="font-primary text-xl font-bold text-brand-green-ink">{plan.name}</h3><p className="text-sm font-bold text-brand-black">Nu. {new Intl.NumberFormat("en-BT").format(plan.price)} {cadenceLabel(plan.cadence)}</p></div><span className="rounded-full border-2 border-brand-forest/20 bg-brand-mint px-2 py-1 text-xs font-bold text-brand-green-ink">{plan.discountPercent}% savings</span></div>
       <p className="text-sm leading-relaxed text-brand-black/68">{plan.description}</p>
-      <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href={signedIn ? "#/account/membership" : undefined} onClick={signedIn ? undefined : (event) => { event.preventDefault(); onSignIn(); }}>{signedIn ? "Manage this plan" : "Sign in to choose this plan"} <span aria-hidden="true">→</span></a>
+      <a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" href={signedIn ? "/account/membership" : undefined} onClick={signedIn ? undefined : (event) => { event.preventDefault(); onSignIn(); }}>{signedIn ? "Manage this plan" : "Sign in to choose this plan"} <span aria-hidden="true">→</span></a>
     </article>
   );
 }
@@ -297,7 +301,7 @@ export function MembershipPage() {
       <div className={`relative z-[1] grid gap-7 py-[clamp(2.5rem,5vw,4.5rem)] ${sectionShell}`}>
         <nav className="breadcrumb" aria-label="Breadcrumb">
           <ol className="flex flex-wrap items-center gap-1.5 text-sm">
-            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="#/">Home</a></li>
+            <li><a className="font-bold text-brand-green-ink underline decoration-dashed underline-offset-4 hover:text-brand-forest" href="/">Home</a></li>
             <li aria-hidden="true" className="text-brand-black/40">/</li>
             <li aria-current="page" className="font-bold text-brand-black">Membership</li>
           </ol>

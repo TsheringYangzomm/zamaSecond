@@ -31,6 +31,7 @@ export type SubmitOrderInput = {
   notes: string;
   couponCode?: string | null;
   pointsToRedeem?: number | null;
+  turnstileToken?: string | null;
 };
 
 export type SubmitOrderResult =
@@ -119,7 +120,7 @@ export function saveDevCustomer(profile: CustomerProfile): Customer {
       type: "customer_created",
       title: "New customer account",
       message: (merged.name || "A customer") + " created an account.",
-      link: "#/admin?tab=customers",
+      link: "/admin?tab=customers",
     });
   }
   return merged;
@@ -173,15 +174,14 @@ function couponErrorCode(value: unknown): CouponErrorCode | undefined {
 async function upsertCustomerLive(profile: CustomerProfile): Promise<{ ok: boolean; error: string | null; customerId?: string }> {
   const client = getSupabaseClient();
   if (!client) return { ok: false, error: "Supabase is not configured." };
-  const { data, error } = await client.rpc("upsert_customer", {
-    p_email: profile.email,
+  const { data, error } = await client.rpc("upsert_my_customer", {
     p_name: profile.name,
     p_phone: profile.phone,
     p_area: profile.area,
     p_dzongkhag: profile.dzongkhag,
     p_address: profile.address,
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: "We could not save your account details." };
   const result = data as UpsertCustomerResponse;
   if (result?.status !== "ok" || !result.customerId) {
     return { ok: false, error: "We could not save your account details." };
@@ -199,10 +199,10 @@ export async function ensureCustomer(profile: CustomerProfile): Promise<{ ok: bo
   return { ok: true, error: null, customer };
 }
 
-export async function fetchCustomerProfile(email: string): Promise<CustomerProfile | null> {
+export async function fetchCustomerProfile(_email: string): Promise<CustomerProfile | null> {
   const client = getSupabaseClient();
   if (!client) return null;
-  const { data, error } = await client.rpc("get_customer", { p_email: email });
+  const { data, error } = await client.rpc("get_my_customer");
   if (error) return null;
   const result = data as { status?: string; customer?: Customer } | null;
   if (result?.status !== "ok" || !result.customer) return null;
@@ -215,7 +215,7 @@ export async function fetchCustomerOrders(email: string): Promise<Order[]> {
     const customer = getDevCustomerByEmail(email);
     return customer ? loadDevOrders().filter((order) => order.customer_id === customer.id) : [];
   }
-  const { data, error } = await client.rpc("get_customer_orders", { p_email: email });
+  const { data, error } = await client.rpc("get_my_orders");
   if (error || !Array.isArray(data)) return [];
   return data as Order[];
 }
@@ -315,7 +315,7 @@ export function createDevMembershipCycleOrder(input: DevMembershipCycleOrderInpu
     type: "order_created",
     title: "Scheduled delivery order created",
     message: `Verified Zama+ saved-box cycle created order ${order.id}.`,
-    link: "#/admin?tab=orders",
+    link: "/admin?tab=orders",
   });
   return order;
 }
@@ -326,19 +326,33 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
 
   if (client) {
     try {
+      const { data: sessionData } = await client.auth.getSession();
+      if (!sessionData.session?.user) {
+        const endpoint = typeof window !== "undefined" && window.location.port === "8888"
+          ? "/.netlify/functions/guest-checkout"
+          : "/api/guest-checkout";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify(input),
+        });
+        const result = await response.json().catch(() => null) as { ok?: boolean; orderId?: string; error?: string } | null;
+        if (!response.ok || !result?.ok || !result.orderId) {
+          return { ok: false, error: result?.error || "The order could not be placed. Please try again." };
+        }
+        return { ok: true, orderId: result.orderId, mode: "live" };
+      }
       const upsert = await upsertCustomerLive(input.profile);
       if (!upsert.ok || !upsert.customerId) {
         throw new Error(upsert.error ?? "We could not save your account details.");
       }
       const orderRpcArgs: Record<string, unknown> = {
-        p_customer_id: upsert.customerId,
         p_items: input.lines.map((line) => ({
           product_id: line.productId,
           name: line.name,
           quantity: line.quantity,
           price: line.price,
         })),
-        p_total: subtotal,
         p_delivery_area: input.profile.area,
         p_payment_method: input.paymentMethod,
         p_delivery_date: input.deliveryDate ?? null,
@@ -346,8 +360,8 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
         p_coupon_code: input.couponCode?.trim().toUpperCase() || null,
       };
       if ((input.pointsToRedeem ?? 0) > 0) orderRpcArgs.p_points_to_redeem = Math.floor(input.pointsToRedeem ?? 0);
-      const { data, error } = await client.rpc("place_order", orderRpcArgs);
-      if (error) return { ok: false, error: error.message };
+      const { data, error } = await client.rpc("place_my_order", orderRpcArgs);
+      if (error) return { ok: false, error: "The order could not be placed. Please try again." };
       const result = data as PlaceOrderResponse;
       if (result?.status !== "ok" || !result.orderId) {
         return {
@@ -357,8 +371,8 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
         };
       }
       return { ok: true, orderId: result.orderId, mode: "live" };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : "The order could not be placed. Please try again." };
+    } catch {
+      return { ok: false, error: "The order could not be placed. Please try again." };
     }
   }
 
@@ -411,7 +425,7 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
     type: "order_created",
     title: "New order received",
     message: "Order " + order.id + " was placed.",
-    link: "#/admin?tab=orders",
+    link: "/admin?tab=orders",
   });
   const { createDevCustomerNotification } = await import("../returns/returns-notifications-api");
   createDevCustomerNotification({
@@ -422,7 +436,7 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
     title: "Order placed",
     message: `Your order ${order.id} was placed successfully.`,
     status: order.status,
-    link: "#/account/orders",
+    link: "/account/orders",
   });
   if (couponId) recordDevRedemption(couponId, input.profile.email, order.id);
   return { ok: true, orderId: order.id, mode: "dev" };

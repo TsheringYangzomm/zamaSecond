@@ -9,6 +9,7 @@ export type ContactPayload = {
   email: string;
   topic: ContactTopic;
   message: string;
+  turnstileToken?: string;
 };
 
 export type ContactResult = {
@@ -66,14 +67,6 @@ function toAutoReplyParams(payload: ContactPayload) {
   };
 }
 
-function emailJsErrorDetail(reason: unknown): string {
-  if (typeof reason === "object" && reason !== null && "text" in reason && typeof reason.text === "string") {
-    return reason.text;
-  }
-  if (reason instanceof Error) return reason.message;
-  return "Unknown error";
-}
-
 export type AdminReplyResult = {
   ok: boolean;
   error?: string;
@@ -104,18 +97,30 @@ export async function sendAdminReply(toEmail: string, toName: string, replyMessa
       { publicKey: config.publicKey },
     );
     return { ok: true };
-  } catch (err) {
-    const detail =
-      typeof err === "object" && err !== null && "text" in err && typeof err.text === "string"
-        ? err.text
-        : err instanceof Error
-          ? err.message
-          : "Unknown error";
-    return { ok: false, error: detail };
+  } catch (error) {
+    console.error("EmailJS admin reply failed:", error);
+    return { ok: false, error: "We could not send this reply. Please try again." };
   }
 }
 
 export async function submitContactMessage(payload: ContactPayload): Promise<ContactResult> {
+  if (!import.meta.env.DEV) {
+    const prefix = window.location.port === "8888" ? "/.netlify/functions" : "/api";
+    const response = await fetch(`${prefix}/contact`, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "same-origin",
+    });
+    if (!response.ok) {
+      const message = response.status === 429
+        ? "Too many messages were sent. Please wait and try again."
+        : "We couldn't send your message right now. Please try again or email hello@zama.bt.";
+      throw new Error(message);
+    }
+    return { mode: "remote" };
+  }
+
   const supabase = getSupabaseClient();
 
   if (supabase) {
@@ -149,7 +154,7 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
         type: "message_received",
         title: "New customer message",
         message: payload.name + " sent a message about " + topicLabels[payload.topic] + ".",
-        link: "#/admin?tab=messages",
+        link: "/admin?tab=messages",
       });
       await Promise.resolve();
       return { mode: "preview" };
@@ -169,10 +174,7 @@ export async function submitContactMessage(payload: ContactPayload): Promise<Con
 
   if (notificationResult.status === "rejected") {
     console.error("EmailJS contact notification failed:", notificationResult.reason);
-    const detail = emailJsErrorDetail(notificationResult.reason);
-    throw new Error(
-      `We couldn't send your message right now${detail ? ` (${detail})` : ""}. Please email hello@zama.bt.`,
-    );
+    throw new Error("We couldn't send your message right now. Please try again or email hello@zama.bt.");
   }
 
   if (autoReplyResult.status === "rejected") {

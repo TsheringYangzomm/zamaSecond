@@ -1,15 +1,14 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { KeyRound, ShieldCheck } from "lucide-react";
 import { getSupabaseClient } from "../../supabase";
+import { navigateTo } from "../../router";
 import { btnOutlineSm, btnPrimaryLg } from "../../components/ui/styles";
 
 const inputClasses =
   "min-h-11.5 w-full rounded-[18px_12px_16px_10px/12px_18px_10px_16px] border-3 border-brand-forest bg-brand-white px-4 py-[0.65rem] text-brand-black shadow-brand-soft outline-none placeholder:text-brand-black/46 focus-visible:border-brand-green-ink focus-visible:ring-4 focus-visible:ring-brand-leaf/20";
 
 function redirectToAdmin() {
-  const basePath = window.location.pathname.replace(/\/reset-password\/?$/, "/") || "/";
-  window.history.replaceState(window.history.state, "", basePath);
-  window.location.hash = "#/admin";
+  navigateTo("/admin", true);
 }
 
 export function AdminPasswordResetPage() {
@@ -122,7 +121,7 @@ export function AdminPasswordResetPage() {
           </form>
         ) : null}
         {!saved && !checking && !email && error ? <p className="mt-6 rounded-wobbly-md border-2 border-dashed border-brand-orange bg-brand-orange/10 px-3 py-2 text-center text-sm font-semibold text-brand-black" role="alert">{error}</p> : null}
-        <a className={`${btnOutlineSm} mx-auto mt-4 block w-fit`} href="#/admin">← Back to admin sign in</a>
+        <a className={`${btnOutlineSm} mx-auto mt-4 block w-fit`} href="/admin">← Back to admin sign in</a>
       </section>
     </main>
   );
