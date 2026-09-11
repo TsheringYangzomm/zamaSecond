@@ -24,19 +24,17 @@ function isNavItemActive(href: string, currentHash: string) {
 }
 
 const compactActionClass =
-  "inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border-2 border-brand-forest/20 bg-brand-white/65 px-2.5 font-secondary font-bold text-brand-forest transition-[background-color,color,box-shadow] duration-120 ease-in-out hover:bg-brand-mint hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4 2xl:rounded-none 2xl:border-0 2xl:bg-transparent 2xl:px-1.5";
+  "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-brand-forest/20 bg-brand-white/65 p-0 font-secondary font-bold text-brand-forest transition-[background-color,color,box-shadow] duration-120 ease-in-out hover:bg-brand-mint hover:text-brand-green-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-dashed focus-visible:outline-brand-green-ink focus-visible:outline-offset-4";
 
 type HeaderActionProps = {
   label: string;
   icon: typeof TicketPercent;
 };
 
-function HeaderLinkAction({ href, label, icon: Icon, arrow = false }: HeaderActionProps & { href: string; arrow?: boolean }) {
+function HeaderLinkAction({ href, label, icon: Icon }: HeaderActionProps & { href: string }) {
   return (
     <a className={compactActionClass} href={href} aria-label={label} title={label}>
-      <Icon className="h-4.5 w-4.5 2xl:hidden" aria-hidden="true" />
-      <span className="hidden whitespace-nowrap 2xl:inline">{label}</span>
-      {arrow ? <ArrowIcon className="hidden h-4 w-4 2xl:inline-flex" /> : null}
+      <Icon className="h-4.5 w-4.5" aria-hidden="true" />
     </a>
   );
 }
@@ -44,8 +42,7 @@ function HeaderLinkAction({ href, label, icon: Icon, arrow = false }: HeaderActi
 function HeaderButtonAction({ label, icon: Icon, onClick }: HeaderActionProps & { onClick: () => void }) {
   return (
     <button className={compactActionClass} type="button" onClick={onClick} aria-label={label} title={label}>
-      <Icon className="h-4.5 w-4.5 2xl:hidden" aria-hidden="true" />
-      <span className="hidden whitespace-nowrap 2xl:inline">{label}</span>
+      <Icon className="h-4.5 w-4.5" aria-hidden="true" />
     </button>
   );
 }
@@ -209,13 +206,13 @@ export function SiteHeader() {
               <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
               <HeaderLinkAction href="#/account" label="My account" icon={UserRound} />
               <NotificationBell />
-              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} />
               <HeaderButtonAction label="Sign out" icon={LogOut} onClick={handleSignOut} />
             </>
           ) : (
             <>
               <HeaderLinkAction href="#/coupons" label="Coupons" icon={TicketPercent} />
-              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} arrow />
+              <HeaderLinkAction href="#/partnership" label={partnerLabel} icon={Handshake} />
               <HeaderButtonAction label="Sign in or create account" icon={UserRoundPlus} onClick={handleOpenAuth} />
             </>
           )}
