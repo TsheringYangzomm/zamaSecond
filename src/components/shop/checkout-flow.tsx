@@ -19,6 +19,7 @@ import { Field, FlowBackLink, FlowNotice, SignInPanel, SignUpPanel, inputClasses
 export function CheckoutFlow({ items, subtotal, onBack }: { items: CartLine[]; subtotal: number; onBack: () => void }) {
   const { status, profile, signOut } = useCustomerAuth();
   const [step, setStep] = useState<"gate" | "signup" | "login">("gate");
+  const [signInEmail, setSignInEmail] = useState("");
   const [result, setResult] = useState<{ orderId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,11 +58,11 @@ export function CheckoutFlow({ items, subtotal, onBack }: { items: CartLine[]; s
   }
 
   if (step === "signup") {
-    return <SignUpPanel onSwitch={() => setStep("login")} onBack={onBack} />;
+    return <SignUpPanel onSwitch={(email) => { if (email) setSignInEmail(email); setStep("login"); }} onBack={onBack} />;
   }
 
   if (step === "login") {
-    return <SignInPanel onSwitch={() => setStep("signup")} onBack={onBack} />;
+    return <SignInPanel initialEmail={signInEmail} onSwitch={() => setStep("signup")} onBack={onBack} />;
   }
 
   return <GuestSavingsPreview items={items} subtotal={subtotal} onSignUp={() => setStep("signup")} onSignIn={() => setStep("login")} onBack={onBack} />;

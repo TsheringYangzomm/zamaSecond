@@ -28,6 +28,7 @@ export type CustomerAuthValue = {
   profile: CustomerProfile | null;
   error: string | null;
   signUp: (input: { name: string; email: string; password: string; phone?: string }) => Promise<{ ok: boolean; error: string | null; needsConfirmation?: boolean }>;
+  resendConfirmation: (email: string) => Promise<{ ok: boolean; error: string | null }>;
   signIn: (input: { email: string; password: string }) => Promise<{ ok: boolean; error: string | null }>;
   updateProfile: (input: CustomerProfileUpdate) => Promise<{ ok: boolean; error: string | null }>;
   signOut: () => Promise<void>;
@@ -136,6 +137,24 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
     return { ok: true, error: null };
   }
 
+  async function resendConfirmation(emailInput: string) {
+    const email = emailInput.trim();
+    if (!emailPattern.test(email)) {
+      return { ok: false, error: "Enter the same valid email address used to create your account." };
+    }
+    const client = getSupabaseClient();
+    if (!client) {
+      return { ok: false, error: "Email confirmation is unavailable in development mode." };
+    }
+    const { error: resendError } = await client.auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/` },
+    });
+    if (resendError) return { ok: false, error: resendError.message };
+    return { ok: true, error: null };
+  }
+
   async function signIn(input: { email: string; password: string }) {
     setError(null);
     const email = input.email.trim();
@@ -210,7 +229,7 @@ export function CustomerAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ mode, status, profile, error, signUp, signIn, updateProfile, signOut }),
+    () => ({ mode, status, profile, error, signUp, resendConfirmation, signIn, updateProfile, signOut }),
     [mode, status, profile, error, updateProfile],
   );
 

@@ -70,21 +70,22 @@ export function JaggleSignInButton({ audience }: { audience: JaggleAuthAudience 
 
 const backToCartLabel = "← Back to cart";
 
-export function SignUpPanel({ onSwitch, onBack, backLabel = backToCartLabel }: { onSwitch: () => void; onBack: () => void; backLabel?: string }) {
-  const { signUp } = useCustomerAuth();
+export function SignUpPanel({ onSwitch, onBack, backLabel = backToCartLabel }: { onSwitch: (email?: string) => void; onBack: () => void; backLabel?: string }) {
+  const { signUp, resendConfirmation } = useCustomerAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resent, setResent] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError(null);
-    setNotice(null);
     const result = await signUp({ name, email, password, phone });
     setBusy(false);
     if (!result.ok) {
@@ -92,9 +93,57 @@ export function SignUpPanel({ onSwitch, onBack, backLabel = backToCartLabel }: {
       return;
     }
     if (result.needsConfirmation) {
-      setNotice("Almost there! We sent a confirmation email. Check your inbox, then sign in to continue.");
+      setConfirmationEmail(email.trim());
       return;
     }
+  }
+
+  async function handleResend() {
+    if (!confirmationEmail || resendBusy) return;
+    setResendBusy(true);
+    setError(null);
+    setResent(false);
+    const result = await resendConfirmation(confirmationEmail);
+    setResendBusy(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setResent(true);
+  }
+
+  if (confirmationEmail) {
+    return (
+      <div className="grid flex-1 content-start gap-4 overflow-y-auto px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-5">
+        <div className="grid justify-items-center gap-3 text-center">
+          <div className="grid h-16 w-16 place-items-center rounded-full border-3 border-brand-forest bg-brand-yellow text-3xl" aria-hidden="true">✉</div>
+          <div className="grid gap-2">
+            <h3 className="font-primary text-2xl font-bold text-brand-black">Check your inbox</h3>
+            <p className="text-sm leading-snug text-brand-black/68">We sent a confirmation link to:</p>
+            <p className="break-all font-bold text-brand-green-ink">{confirmationEmail}</p>
+          </div>
+        </div>
+        <div className="grid gap-2 rounded-wobbly-md border-2 border-dashed border-brand-forest/25 bg-brand-mint/40 p-4 text-sm text-brand-black/72">
+          <p className="font-bold text-brand-green-ink">What to do next</p>
+          <ol className="grid gap-1.5 pl-5" style={{ listStyleType: "decimal" }}>
+            <li>Open the newest email from Zama.</li>
+            <li>Select <span className="font-bold">Confirm my email</span>.</li>
+            <li>Return here and sign in with your new password.</li>
+          </ol>
+          <p className="pt-1 text-xs text-brand-black/58">If you do not see it, check your spam folder. Use only the newest confirmation email.</p>
+        </div>
+        {error ? <FlowNotice>{error}</FlowNotice> : null}
+        {resent ? <p className="rounded-wobbly-md border-2 border-brand-forest/20 bg-brand-white px-3 py-2 text-sm font-semibold text-brand-green-ink" role="status">A new confirmation email is on its way.</p> : null}
+        <div className="grid gap-2">
+          <button className={`${btnPrimaryLg} w-full`} type="button" onClick={() => onSwitch(confirmationEmail)}>I’ve confirmed — sign in</button>
+          <button className={`${btnOutlineSm} w-full`} type="button" onClick={() => void handleResend()} disabled={resendBusy}>{resendBusy ? "Sending confirmation email…" : "Resend confirmation email"}</button>
+        </div>
+        <div className="grid gap-1">
+          <button className="min-h-8 w-fit justify-self-center text-sm font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={() => { setConfirmationEmail(null); setResent(false); setError(null); }}>Use a different email</button>
+          <FlowBackLink onClick={onBack}>{backLabel}</FlowBackLink>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -117,21 +166,20 @@ export function SignUpPanel({ onSwitch, onBack, backLabel = backToCartLabel }: {
           <input className={inputClasses} id="checkout-signup-password" type="password" autoComplete="new-password" required minLength={6} value={password} onChange={(event) => setPassword(event.target.value)} />
         </Field>
         {error ? <FlowNotice>{error}</FlowNotice> : null}
-        {notice ? <FlowNotice>{notice}</FlowNotice> : null}
         <button className={`${btnPrimaryLg} w-full`} type="submit" disabled={busy}>{busy ? "Creating account..." : "Create account and continue"}</button>
       </form>
       <JaggleSignInButton audience="customer" />
       <div className="grid gap-1">
-        <p className="text-sm text-brand-black/68">Already have an account? <button className="min-h-8 font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={onSwitch}>Sign in</button></p>
+        <p className="text-sm text-brand-black/68">Already have an account? <button className="min-h-8 font-bold text-brand-green-ink underline decoration-dashed underline-offset-4" type="button" onClick={() => onSwitch(email)}>Sign in</button></p>
         <FlowBackLink onClick={onBack}>{backLabel}</FlowBackLink>
       </div>
     </div>
   );
 }
 
-export function SignInPanel({ onSwitch, onBack, backLabel = backToCartLabel }: { onSwitch: () => void; onBack: () => void; backLabel?: string }) {
+export function SignInPanel({ onSwitch, onBack, backLabel = backToCartLabel, initialEmail = "" }: { onSwitch: () => void; onBack: () => void; backLabel?: string; initialEmail?: string }) {
   const { signIn } = useCustomerAuth();
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -233,6 +281,7 @@ function SignedInPanel({ profile, onClose }: { profile: CustomerProfile; onClose
 export function AuthPane({ onClose }: { onClose: () => void }) {
   const { status, profile } = useCustomerAuth();
   const [step, setStep] = useState<"gate" | "signup" | "login">("gate");
+  const [signInEmail, setSignInEmail] = useState("");
 
   if (status === "bootstrapping") {
     return (
@@ -247,11 +296,11 @@ export function AuthPane({ onClose }: { onClose: () => void }) {
   }
 
   if (step === "signup") {
-    return <SignUpPanel onSwitch={() => setStep("login")} onBack={onClose} backLabel="Close" />;
+    return <SignUpPanel onSwitch={(email) => { if (email) setSignInEmail(email); setStep("login"); }} onBack={onClose} backLabel="Close" />;
   }
 
   if (step === "login") {
-    return <SignInPanel onSwitch={() => setStep("signup")} onBack={onClose} backLabel="Close" />;
+    return <SignInPanel initialEmail={signInEmail} onSwitch={() => setStep("signup")} onBack={onClose} backLabel="Close" />;
   }
 
   return (
